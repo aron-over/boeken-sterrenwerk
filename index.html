@@ -41,20 +41,8 @@
     top:0;
     z-index:10;
   }
-  .topbar-inner{
-    max-width:900px;
-    margin:0 auto;
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    gap:16px;
-    flex-wrap:wrap;
-  }
-  header.topbar h1{
-    font-size:22px;
-    font-weight:700;
-    color:var(--ink);
-  }
+  .topbar-inner{max-width:900px; margin:0 auto;}
+  header.topbar h1{font-size:22px; font-weight:700;}
   nav.tabs{
     display:flex;
     gap:6px;
@@ -75,16 +63,8 @@
     white-space:nowrap;
     cursor:pointer;
   }
-  nav.tabs button.active{
-    background:var(--ink);
-    color:#fff;
-    border-color:var(--ink);
-  }
-  main{
-    max-width:900px;
-    margin:0 auto;
-    padding:20px;
-  }
+  nav.tabs button.active{background:var(--ink); color:#fff; border-color:var(--ink);}
+  main{max-width:900px; margin:0 auto; padding:20px;}
   .tab-panel{display:none;}
   .tab-panel.active{display:block;}
   .card{
@@ -95,13 +75,7 @@
     margin-bottom:16px;
   }
   .card h2{font-size:17px; margin-bottom:14px;}
-  label{
-    display:block;
-    font-size:13px;
-    font-weight:500;
-    color:var(--ink-soft);
-    margin:14px 0 5px;
-  }
+  label{display:block; font-size:13px; font-weight:500; color:var(--ink-soft); margin:14px 0 5px;}
   label:first-of-type{margin-top:0;}
   input[type=text], input[type=number], input[type=password], select, textarea{
     width:100%;
@@ -114,10 +88,8 @@
     color:var(--ink);
   }
   textarea{resize:vertical; min-height:50px;}
-  input:focus, select:focus, textarea:focus{
-    outline:2px solid var(--gold);
-    outline-offset:1px;
-  }
+  input:focus, select:focus, textarea:focus{outline:2px solid var(--gold); outline-offset:1px;}
+  button{font-family:inherit; cursor:pointer;}
   button.primary{
     font-family:'Space Grotesk', sans-serif;
     margin-top:18px;
@@ -129,7 +101,6 @@
     border-radius:8px;
     font-size:14px;
     font-weight:600;
-    cursor:pointer;
   }
   button.primary:hover{opacity:0.9;}
   button.secondary{
@@ -141,19 +112,23 @@
     border-radius:8px;
     font-size:13px;
     font-weight:600;
-    cursor:pointer;
   }
   button.secondary:disabled{opacity:0.4; cursor:not-allowed;}
-  button.link{
-    background:none;
-    border:none;
+  button.tiny{
+    font-family:'Space Grotesk', sans-serif;
+    background:var(--bg);
+    border:1px solid var(--line);
     color:var(--ink-soft);
-    font-size:13px;
-    text-decoration:underline;
-    cursor:pointer;
-    padding:0;
+    padding:5px 10px;
+    border-radius:6px;
+    font-size:12px;
+    font-weight:600;
+    white-space:nowrap;
   }
-  button.link.danger:hover{color:var(--red);}
+  button.tiny.reject:hover{background:var(--red-soft); color:var(--red); border-color:var(--red-soft);}
+  button.tiny.restore:hover{background:var(--green-soft); color:var(--green); border-color:var(--green-soft);}
+  button.link{background:none; border:none; color:var(--ink-soft); font-size:12px; text-decoration:underline; padding:0;}
+  button.link:hover{color:var(--red);}
   #form-msg{margin-top:10px; font-size:13px;}
   .match-list{
     margin-top:8px;
@@ -165,7 +140,7 @@
   }
   .match-list .match-item{padding:4px 0;}
   .search-row{display:flex; gap:10px; margin-bottom:16px; flex-wrap:wrap;}
-  .search-row input, .search-row select{flex:1 1 160px; width:auto;}
+  .search-row input, .search-row select{flex:1 1 150px; width:auto;}
   .tag{
     display:inline-block;
     font-size:12px;
@@ -174,23 +149,32 @@
     background:var(--bg);
     color:var(--ink-soft);
     margin-right:6px;
+    margin-bottom:4px;
   }
   .tag.status-aangevraagd{background:var(--gold-soft); color:var(--gold-dark);}
   .tag.status-besteld{background:#E4E9F7; color:#3652A3;}
   .tag.status-binnen{background:var(--green-soft); color:var(--green);}
+  .tag.status-afgewezen{background:var(--red-soft); color:var(--red);}
   .book-row{
     border-bottom:1px solid var(--line);
     padding:14px 4px;
-    display:flex;
-    justify-content:space-between;
-    align-items:flex-start;
+    display:grid;
+    grid-template-columns:auto 1fr auto;
     gap:12px;
+    align-items:start;
   }
   .book-row:last-child{border-bottom:none;}
-  .book-row .titel{font-weight:600; font-size:15px;}
-  .book-row .meta{font-size:13px; color:var(--ink-soft); margin-top:4px;}
-  .row-check{display:flex; align-items:flex-start; gap:10px;}
-  .row-check input[type=checkbox]{margin-top:4px; width:auto;}
+  .book-row input[type=checkbox]{margin-top:8px; width:auto;}
+  .row-fields{display:flex; flex-direction:column; gap:6px;}
+  .row-fields .field-line{display:flex; gap:8px; flex-wrap:wrap;}
+  .row-fields input[type=text], .row-fields input[type=number]{
+    padding:6px 9px;
+    font-size:13px;
+  }
+  .row-fields .titel-input{font-weight:600; font-size:14px; flex:1 1 220px;}
+  .row-fields .prijs-input{width:90px; flex:0 0 90px;}
+  .row-fields select{width:auto; flex:1 1 140px; padding:6px 9px; font-size:13px;}
+  .row-meta{font-size:12px; color:var(--ink-soft); margin-top:2px;}
   .row-actions{display:flex; flex-direction:column; align-items:flex-end; gap:6px;}
   .bulk-bar{
     display:flex;
@@ -200,21 +184,16 @@
     flex-wrap:wrap;
     gap:10px;
   }
+  .bulk-info{font-size:13px; color:var(--ink-soft);}
+  .bulk-info strong{color:var(--ink);}
   .empty-state{padding:36px 4px; text-align:center; color:var(--ink-soft); font-size:14px;}
   .budget-box{margin-bottom:16px;}
   .budget-numbers{display:flex; justify-content:space-between; font-size:13px; color:var(--ink-soft); margin-bottom:6px;}
   .budget-numbers strong{color:var(--ink); font-size:15px;}
-  .budget-bar{
-    height:10px;
-    background:var(--bg);
-    border-radius:999px;
-    overflow:hidden;
-    border:1px solid var(--line);
-  }
+  .budget-bar{height:10px; background:var(--bg); border-radius:999px; overflow:hidden; border:1px solid var(--line);}
   .budget-bar-fill{height:100%; background:var(--gold);}
   .budget-edit{display:flex; gap:8px; margin-top:12px; align-items:center;}
   .budget-edit input{width:120px;}
-  .klas-input{width:140px; padding:5px 8px; font-size:13px; border-radius:6px;}
   .lock-screen{max-width:320px; margin:60px auto; text-align:center;}
   .lock-screen p{color:var(--ink-soft); font-size:14px; margin-bottom:16px;}
   .subsection-title{font-size:14px; font-weight:600; color:var(--ink-soft); margin:24px 0 10px;}
@@ -224,9 +203,7 @@
 <body>
 
 <header class="topbar">
-  <div class="topbar-inner">
-    <h1>Boekenlijst</h1>
-  </div>
+  <div class="topbar-inner"><h1>Boekenlijst</h1></div>
   <nav class="tabs">
     <button data-tab="aanvraag" class="active">Aanvraag indienen</button>
     <button data-tab="zoeken">Boeken zoeken</button>
@@ -273,6 +250,7 @@
         <div id="overig-veld" style="display:none">
           <label for="overig_thema">Voor welk overig thema?</label>
           <select id="overig_thema"></select>
+          <input type="text" id="overig_thema_anders" placeholder="Vul het thema in" style="display:none; margin-top:8px;">
         </div>
 
         <label for="opmerking">Opmerking (optioneel)</label>
@@ -290,6 +268,13 @@
       <h2>Wat staat er al?</h2>
       <div class="search-row">
         <input type="text" id="zoek-input" placeholder="Zoek op titel of ISBN…">
+        <select id="zoek-categorie">
+          <option value="">Alle categorieën</option>
+          <option value="Groep">Groep</option>
+          <option value="Jeelo">Jeelo</option>
+          <option value="Overig">Overige thema's</option>
+        </select>
+        <select id="zoek-thema"><option value="">Alle thema's</option></select>
       </div>
       <div id="zoek-list"></div>
     </div>
@@ -322,7 +307,7 @@
       <div class="card">
         <div class="subsection-title">Te bestellen</div>
         <div class="bulk-bar">
-          <span id="te-bestellen-count" style="font-size:13px; color:var(--ink-soft)"></span>
+          <span class="bulk-info" id="te-bestellen-info">0 geselecteerd</span>
           <button class="secondary" id="bulk-besteld" disabled>Markeer geselecteerd als besteld</button>
         </div>
         <div id="lijst-aangevraagd"></div>
@@ -331,24 +316,15 @@
       <div class="card">
         <div class="subsection-title">Onderweg (besteld, nog niet binnen)</div>
         <div class="bulk-bar">
-          <span id="onderweg-count" style="font-size:13px; color:var(--ink-soft)"></span>
+          <span class="bulk-info" id="onderweg-info">0 geselecteerd</span>
           <button class="secondary" id="bulk-binnen" disabled>Markeer geselecteerd als binnengekomen</button>
         </div>
         <div id="lijst-besteld"></div>
       </div>
 
       <div class="card">
-        <div class="subsection-title">Volledige catalogus</div>
-        <div class="search-row">
-          <input type="text" id="catalogus-zoek" placeholder="Zoek op titel…">
-          <select id="catalogus-status-filter">
-            <option value="">Alle statussen</option>
-            <option value="aangevraagd">Aangevraagd</option>
-            <option value="besteld">Besteld</option>
-            <option value="binnen">Binnen</option>
-          </select>
-        </div>
-        <div id="lijst-catalogus"></div>
+        <div class="subsection-title">Niet leverbaar</div>
+        <div id="lijst-afgewezen"></div>
       </div>
     </div>
   </section>
@@ -366,18 +342,38 @@ const COORD_PASSWORD = 'sterrenwerk2026';
 const GROEPEN = ['Kleuters','Groep 3','Groep 4','Groep 5','Groep 6','Groep 7','Groep 8'];
 const JEELO_THEMAS = ['Omgaan met elkaar','Maken van je eigen product','Leren voor later','Zorgen voor dieren','Beleven van onze planeet','Veilig in het verkeer','Zorgen voor jezelf en anderen','Omgaan met geld','Leren van personen van vroeger','Inrichten van je eigen omgeving','Omgaan met natuur','Veilig helpen'];
 const OVERIGE_THEMAS = ['Lessen taal','Gedichten',"Sprookjes (verhalen, legenden, mythen)",'Bekende personen','Engelse boeken','Andere talen','Geschiedenis','Oorlog','Aardrijkskunde','Burgerschap','Relaties en Seksualiteit','Gedrag','Kunst','Digitale geletterdheid','Hoogbegaafdheid','Voorleesboeken'];
+const ANDERS = '__anders__';
 
 function fillSelect(id, options){
   document.getElementById(id).innerHTML = options.map(o => `<option value="${o}">${o}</option>`).join('');
 }
 fillSelect('groep', GROEPEN);
 fillSelect('jeelo_thema', JEELO_THEMAS);
-fillSelect('overig_thema', OVERIGE_THEMAS);
+document.getElementById('overig_thema').innerHTML =
+  OVERIGE_THEMAS.map(o => `<option value="${o}">${o}</option>`).join('') +
+  `<option value="${ANDERS}">Anders, namelijk…</option>`;
 
 function escapeHtml(str){
   const div = document.createElement('div');
   div.textContent = str == null ? '' : str;
   return div.innerHTML;
+}
+function euro(n){ return '€' + Number(n || 0).toFixed(2); }
+
+function themaVan(b){
+  if (b.categorie === 'Groep') return b.groep;
+  if (b.categorie === 'Jeelo') return b.jeelo_thema;
+  return b.overig_thema;
+}
+
+async function dbUpdate(id, fields){
+  const { error } = await client.from('boeken').update(fields).eq('id', id);
+  if (error){
+    console.error('Update mislukt', error);
+    alert('Opslaan is mislukt: ' + error.message);
+    return false;
+  }
+  return true;
 }
 
 // ---------- Tabs ----------
@@ -402,6 +398,10 @@ function updateCategorieVelden(){
   document.getElementById('overig-veld').style.display = val === 'Overig' ? '' : 'none';
 }
 updateCategorieVelden();
+
+document.getElementById('overig_thema').addEventListener('change', e => {
+  document.getElementById('overig_thema_anders').style.display = e.target.value === ANDERS ? '' : 'none';
+});
 
 // ---------- Dubbele-aanvraag check ----------
 let allBooksCache = [];
@@ -429,15 +429,13 @@ function showMatches(containerId, matches){
 const checkTitelMatch = debounce(() => {
   const val = document.getElementById('titel').value.trim().toLowerCase();
   if (val.length < 3){ showMatches('titel-match', []); return; }
-  const matches = allBooksCache.filter(b => b.titel && b.titel.toLowerCase().includes(val));
-  showMatches('titel-match', matches);
+  showMatches('titel-match', allBooksCache.filter(b => b.titel && b.titel.toLowerCase().includes(val)));
 }, 350);
 
 const checkIsbnMatch = debounce(() => {
   const val = document.getElementById('isbn').value.trim().toLowerCase();
   if (val.length < 3){ showMatches('isbn-match', []); return; }
-  const matches = allBooksCache.filter(b => b.isbn && b.isbn.toLowerCase().includes(val));
-  showMatches('isbn-match', matches);
+  showMatches('isbn-match', allBooksCache.filter(b => b.isbn && b.isbn.toLowerCase().includes(val)));
 }, 350);
 
 document.getElementById('titel').addEventListener('input', checkTitelMatch);
@@ -447,6 +445,15 @@ document.getElementById('isbn').addEventListener('input', checkIsbnMatch);
 document.getElementById('book-form').addEventListener('submit', async e => {
   e.preventDefault();
   const categorie = categorieSelect.value;
+  let overigWaarde = null;
+  if (categorie === 'Overig'){
+    const sel = document.getElementById('overig_thema').value;
+    overigWaarde = sel === ANDERS ? document.getElementById('overig_thema_anders').value.trim() : sel;
+    if (!overigWaarde){
+      alert('Vul het overige thema in.');
+      return;
+    }
+  }
   const nieuwBoek = {
     naam_aanvrager: document.getElementById('naam_aanvrager').value.trim(),
     titel: document.getElementById('titel').value.trim(),
@@ -455,7 +462,7 @@ document.getElementById('book-form').addEventListener('submit', async e => {
     categorie: categorie,
     groep: categorie === 'Groep' ? document.getElementById('groep').value : null,
     jeelo_thema: categorie === 'Jeelo' ? document.getElementById('jeelo_thema').value : null,
-    overig_thema: categorie === 'Overig' ? document.getElementById('overig_thema').value : null,
+    overig_thema: categorie === 'Overig' ? overigWaarde : null,
     klas_of_kast: null,
     aantal: 1,
     status: 'aangevraagd',
@@ -472,6 +479,7 @@ document.getElementById('book-form').addEventListener('submit', async e => {
   msg.textContent = 'Aanvraag ingediend, dank je wel!';
   document.getElementById('book-form').reset();
   updateCategorieVelden();
+  document.getElementById('overig_thema_anders').style.display = 'none';
   showMatches('titel-match', []);
   showMatches('isbn-match', []);
   setTimeout(() => msg.textContent = '', 3000);
@@ -480,31 +488,50 @@ document.getElementById('book-form').addEventListener('submit', async e => {
 
 // ---------- Tab 2: Boeken zoeken ----------
 document.getElementById('zoek-input').addEventListener('input', renderZoekLijst);
+document.getElementById('zoek-categorie').addEventListener('change', () => { populateZoekThema(); renderZoekLijst(); });
+document.getElementById('zoek-thema').addEventListener('change', renderZoekLijst);
+
+function populateZoekThema(){
+  const cat = document.getElementById('zoek-categorie').value;
+  const themaSelect = document.getElementById('zoek-thema');
+  if (!cat){
+    themaSelect.innerHTML = '<option value="">Alle thema\'s</option>';
+    themaSelect.disabled = true;
+    return;
+  }
+  themaSelect.disabled = false;
+  const veld = cat === 'Groep' ? 'groep' : cat === 'Jeelo' ? 'jeelo_thema' : 'overig_thema';
+  const waarden = [...new Set(
+    allBooksCache.filter(b => b.status === 'binnen' && b.categorie === cat && b[veld]).map(b => b[veld])
+  )].sort();
+  themaSelect.innerHTML = '<option value="">Alle thema\'s</option>' + waarden.map(w => `<option value="${escapeHtml(w)}">${escapeHtml(w)}</option>`).join('');
+}
 
 function renderZoekLijst(){
   const q = document.getElementById('zoek-input').value.trim().toLowerCase();
-  const binnen = allBooksCache.filter(b => b.status === 'binnen');
-  const lijst = q ? binnen.filter(b =>
-    (b.titel && b.titel.toLowerCase().includes(q)) || (b.isbn && b.isbn.toLowerCase().includes(q))
-  ) : binnen;
+  const cat = document.getElementById('zoek-categorie').value;
+  const thema = document.getElementById('zoek-thema').value;
+
+  let lijst = allBooksCache.filter(b => b.status === 'binnen');
+  if (q) lijst = lijst.filter(b => (b.titel && b.titel.toLowerCase().includes(q)) || (b.isbn && b.isbn.toLowerCase().includes(q)));
+  if (cat) lijst = lijst.filter(b => b.categorie === cat);
+  if (thema) lijst = lijst.filter(b => themaVan(b) === thema);
 
   const container = document.getElementById('zoek-list');
   if (!lijst.length){
-    container.innerHTML = `<div class="empty-state">${q ? 'Geen boeken gevonden.' : 'Er staan nog geen boeken in de catalogus.'}</div>`;
+    container.innerHTML = `<div class="empty-state">Geen boeken gevonden.</div>`;
     return;
   }
-  container.innerHTML = lijst.map(b => {
-    const thema = b.categorie === 'Groep' ? b.groep : b.categorie === 'Jeelo' ? b.jeelo_thema : b.overig_thema;
-    return `<div class="book-row">
+  container.innerHTML = lijst.map(b => `
+    <div class="book-row" style="grid-template-columns:1fr;">
       <div>
-        <div class="titel">${escapeHtml(b.titel)}</div>
-        <div class="meta">
-          <span class="tag">${escapeHtml(b.categorie || '')}${thema ? ' · ' + escapeHtml(thema) : ''}</span>
-          ${b.klas_of_kast ? `<span class="tag">${escapeHtml(b.klas_of_kast)}</span>` : '<span class="tag">Locatie nog niet ingevuld</span>'}
+        <div style="font-weight:600; font-size:15px;">${escapeHtml(b.titel)}</div>
+        <div class="row-meta">
+          <span class="tag">${escapeHtml(b.categorie || '')}${themaVan(b) ? ' · ' + escapeHtml(themaVan(b)) : ''}</span>
         </div>
       </div>
-    </div>`;
-  }).join('');
+    </div>
+  `).join('');
 }
 
 // ---------- Tab 3: Coördinator ----------
@@ -539,7 +566,7 @@ async function refreshCoordinatorData(){
   renderBudget();
   renderTeBestellen();
   renderOnderweg();
-  renderCatalogus();
+  renderAfgewezen();
 }
 
 function renderBudget(){
@@ -548,8 +575,8 @@ function renderBudget(){
     .filter(b => (b.status === 'besteld' || b.status === 'binnen') && b.besteld_op && new Date(b.besteld_op).getFullYear() === jaar)
     .reduce((sum, b) => sum + (b.prijs || 0), 0);
   const budget = jaarbudgetInstelling ? (jaarbudgetInstelling.jaarbudget || 0) : 0;
-  document.getElementById('budget-uitgegeven').textContent = '€' + uitgegeven.toFixed(2);
-  document.getElementById('budget-totaal').textContent = budget ? '€' + Number(budget).toFixed(2) : 'nog niet ingesteld';
+  document.getElementById('budget-uitgegeven').textContent = euro(uitgegeven);
+  document.getElementById('budget-totaal').textContent = budget ? euro(budget) : 'nog niet ingesteld';
   document.getElementById('budget-fill').style.width = budget ? Math.min(100, (uitgegeven / budget) * 100) + '%' : '0%';
   document.getElementById('budget-input').value = budget || '';
 }
@@ -557,132 +584,196 @@ function renderBudget(){
 document.getElementById('budget-save').addEventListener('click', async () => {
   const waarde = parseFloat(document.getElementById('budget-input').value) || 0;
   if (jaarbudgetInstelling && jaarbudgetInstelling.id != null){
-    await client.from('instellingen').update({ jaarbudget: waarde }).eq('id', jaarbudgetInstelling.id);
+    const { error } = await client.from('instellingen').update({ jaarbudget: waarde }).eq('id', jaarbudgetInstelling.id);
+    if (error){ alert('Opslaan mislukt: ' + error.message); return; }
   } else {
-    await client.from('instellingen').insert({ jaarbudget: waarde });
+    const { error } = await client.from('instellingen').insert({ jaarbudget: waarde });
+    if (error){ alert('Opslaan mislukt: ' + error.message); return; }
   }
   await fetchInstellingen();
   renderBudget();
 });
 
-function bookMetaLine(b){
-  const thema = b.categorie === 'Groep' ? b.groep : b.categorie === 'Jeelo' ? b.jeelo_thema : b.overig_thema;
-  const prijs = b.prijs != null ? `€${Number(b.prijs).toFixed(2)}` : '';
-  return `<span class="tag">${escapeHtml(b.categorie || '')}${thema ? ' · ' + escapeHtml(thema) : ''}</span>` +
-    (b.naam_aanvrager ? ` &middot; aangevraagd door ${escapeHtml(b.naam_aanvrager)}` : '') +
-    (prijs ? ` &middot; ${prijs}` : '') +
-    (b.opmerking ? `<br>${escapeHtml(b.opmerking)}` : '');
+// ---- Herbruikbare categorie/thema-select voor editable rijen ----
+function themaSelectHtml(b, idPrefix){
+  const cat = b.categorie;
+  if (cat === 'Groep'){
+    return GROEPEN.map(o => `<option value="${o}" ${o===b.groep?'selected':''}>${o}</option>`).join('');
+  }
+  if (cat === 'Jeelo'){
+    return JEELO_THEMAS.map(o => `<option value="${o}" ${o===b.jeelo_thema?'selected':''}>${o}</option>`).join('');
+  }
+  // Overig
+  const current = b.overig_thema;
+  const isKnown = OVERIGE_THEMAS.includes(current);
+  let html = OVERIGE_THEMAS.map(o => `<option value="${o}" ${o===current?'selected':''}>${o}</option>`).join('');
+  html += `<option value="${ANDERS}" ${(!isKnown && current) ? 'selected' : ''}>${(!isKnown && current) ? escapeHtml(current) + ' (eigen thema)' : 'Anders, namelijk…'}</option>`;
+  return html;
+}
+
+function editableRowHtml(b, checkboxClass){
+  return `
+    <div class="book-row" data-id="${b.id}">
+      <input type="checkbox" class="${checkboxClass}" data-id="${b.id}">
+      <div class="row-fields">
+        <div class="field-line">
+          <input type="text" class="titel-input" data-field="titel" data-id="${b.id}" value="${escapeHtml(b.titel)}">
+          <input type="number" class="prijs-input" step="0.01" min="0" data-field="prijs" data-id="${b.id}" value="${b.prijs != null ? b.prijs : ''}" placeholder="Prijs">
+        </div>
+        <div class="field-line">
+          <select data-field="categorie" data-id="${b.id}">
+            <option value="Groep" ${b.categorie==='Groep'?'selected':''}>Groep</option>
+            <option value="Jeelo" ${b.categorie==='Jeelo'?'selected':''}>Jeelo</option>
+            <option value="Overig" ${b.categorie==='Overig'?'selected':''}>Overig</option>
+          </select>
+          <select data-field="thema" data-id="${b.id}">${themaSelectHtml(b, b.id)}</select>
+        </div>
+        <div class="row-meta">
+          ${b.naam_aanvrager ? 'Aangevraagd door ' + escapeHtml(b.naam_aanvrager) : 'Geen naam opgegeven'}
+          ${b.isbn ? ' &middot; ISBN ' + escapeHtml(b.isbn) : ''}
+          ${b.opmerking ? '<br>' + escapeHtml(b.opmerking) : ''}
+        </div>
+      </div>
+      <div class="row-actions">
+        <button class="tiny reject" data-reject="${b.id}">Niet leverbaar</button>
+        <button class="link" data-delete="${b.id}">Verwijderen</button>
+      </div>
+    </div>
+  `;
+}
+
+function wireEditableRow(row){
+  const id = row.dataset.id;
+  row.querySelector('[data-field="titel"]').addEventListener('change', async e => {
+    await dbUpdate(id, { titel: e.target.value.trim() });
+    await refreshCoordinatorData();
+  });
+  row.querySelector('[data-field="prijs"]').addEventListener('change', async e => {
+    await dbUpdate(id, { prijs: e.target.value ? parseFloat(e.target.value) : null });
+    await refreshCoordinatorData();
+  });
+  row.querySelector('[data-field="categorie"]').addEventListener('change', async e => {
+    await dbUpdate(id, { categorie: e.target.value, groep: null, jeelo_thema: null, overig_thema: null });
+    await refreshCoordinatorData();
+  });
+  row.querySelector('[data-field="thema"]').addEventListener('change', async e => {
+    const book = allBooksCache.find(b => String(b.id) === String(id));
+    let waarde = e.target.value;
+    if (waarde === ANDERS){
+      waarde = prompt('Vul het thema in:', '');
+      if (!waarde){ await refreshCoordinatorData(); return; }
+    }
+    const veld = book.categorie === 'Groep' ? 'groep' : book.categorie === 'Jeelo' ? 'jeelo_thema' : 'overig_thema';
+    await dbUpdate(id, { [veld]: waarde });
+    await refreshCoordinatorData();
+  });
+  const rejectBtn = row.querySelector('[data-reject]');
+  if (rejectBtn) rejectBtn.addEventListener('click', async () => {
+    await dbUpdate(id, { status: 'afgewezen' });
+    await refreshCoordinatorData();
+  });
+  row.querySelector('[data-delete]').addEventListener('click', async () => {
+    if (!confirm('Dit boek verwijderen?')) return;
+    const { error } = await client.from('boeken').delete().eq('id', id);
+    if (error){ alert('Verwijderen mislukt: ' + error.message); return; }
+    await refreshCoordinatorData();
+  });
 }
 
 function renderTeBestellen(){
   const lijst = allBooksCache.filter(b => b.status === 'aangevraagd' || !b.status);
-  document.getElementById('te-bestellen-count').textContent = lijst.length + ' wens(en)';
   const container = document.getElementById('lijst-aangevraagd');
-  if (!lijst.length){ container.innerHTML = `<div class="empty-state">Niets te bestellen op dit moment.</div>`; updateBulkButton('bulk-besteld','aangevraagd'); return; }
-  container.innerHTML = lijst.map(b => `
-    <div class="book-row">
-      <div class="row-check">
-        <input type="checkbox" class="sel-aangevraagd" data-id="${b.id}">
-        <div>
-          <div class="titel">${escapeHtml(b.titel)}</div>
-          <div class="meta">${bookMetaLine(b)}</div>
-        </div>
-      </div>
-    </div>
-  `).join('');
-  container.querySelectorAll('.sel-aangevraagd').forEach(cb => cb.addEventListener('change', () => updateBulkButton('bulk-besteld','aangevraagd')));
-  updateBulkButton('bulk-besteld','aangevraagd');
+  if (!lijst.length){
+    container.innerHTML = `<div class="empty-state">Niets te bestellen op dit moment.</div>`;
+  } else {
+    container.innerHTML = lijst.map(b => editableRowHtml(b, 'sel-aangevraagd')).join('');
+    container.querySelectorAll('.book-row').forEach(wireEditableRow);
+    container.querySelectorAll('.sel-aangevraagd').forEach(cb => cb.addEventListener('change', () => updateBulkInfo('aangevraagd')));
+  }
+  updateBulkInfo('aangevraagd');
 }
 
 function renderOnderweg(){
   const lijst = allBooksCache.filter(b => b.status === 'besteld');
-  document.getElementById('onderweg-count').textContent = lijst.length + ' onderweg';
   const container = document.getElementById('lijst-besteld');
-  if (!lijst.length){ container.innerHTML = `<div class="empty-state">Niets onderweg op dit moment.</div>`; updateBulkButton('bulk-binnen','besteld'); return; }
+  if (!lijst.length){
+    container.innerHTML = `<div class="empty-state">Niets onderweg op dit moment.</div>`;
+  } else {
+    container.innerHTML = lijst.map(b => editableRowHtml(b, 'sel-besteld')).join('');
+    container.querySelectorAll('.book-row').forEach(wireEditableRow);
+    container.querySelectorAll('.sel-besteld').forEach(cb => cb.addEventListener('change', () => updateBulkInfo('besteld')));
+  }
+  updateBulkInfo('besteld');
+}
+
+function renderAfgewezen(){
+  const lijst = allBooksCache.filter(b => b.status === 'afgewezen');
+  const container = document.getElementById('lijst-afgewezen');
+  if (!lijst.length){
+    container.innerHTML = `<div class="empty-state">Geen afgewezen boeken.</div>`;
+    return;
+  }
   container.innerHTML = lijst.map(b => `
-    <div class="book-row">
-      <div class="row-check">
-        <input type="checkbox" class="sel-besteld" data-id="${b.id}">
-        <div>
-          <div class="titel">${escapeHtml(b.titel)}</div>
-          <div class="meta">${bookMetaLine(b)}</div>
+    <div class="book-row" style="grid-template-columns:1fr auto;">
+      <div>
+        <div style="font-weight:600; font-size:14px;">${escapeHtml(b.titel)}</div>
+        <div class="row-meta">
+          <span class="tag">${escapeHtml(b.categorie || '')}${themaVan(b) ? ' · ' + escapeHtml(themaVan(b)) : ''}</span>
+          ${b.naam_aanvrager ? 'aangevraagd door ' + escapeHtml(b.naam_aanvrager) : ''}
         </div>
+      </div>
+      <div class="row-actions">
+        <button class="tiny restore" data-restore="${b.id}">Terug naar Te bestellen</button>
+        <button class="link" data-delete="${b.id}">Verwijderen</button>
       </div>
     </div>
   `).join('');
-  container.querySelectorAll('.sel-besteld').forEach(cb => cb.addEventListener('change', () => updateBulkButton('bulk-binnen','besteld')));
-  updateBulkButton('bulk-binnen','besteld');
+  container.querySelectorAll('[data-restore]').forEach(btn => btn.addEventListener('click', async () => {
+    await dbUpdate(btn.dataset.restore, { status: 'aangevraagd', besteld_op: null });
+    await refreshCoordinatorData();
+  }));
+  container.querySelectorAll('[data-delete]').forEach(btn => btn.addEventListener('click', async () => {
+    if (!confirm('Dit boek verwijderen?')) return;
+    const { error } = await client.from('boeken').delete().eq('id', btn.dataset.delete);
+    if (error){ alert('Verwijderen mislukt: ' + error.message); return; }
+    await refreshCoordinatorData();
+  }));
 }
 
-function updateBulkButton(buttonId, groep){
+function updateBulkInfo(groep){
   const checkboxClass = groep === 'aangevraagd' ? '.sel-aangevraagd' : '.sel-besteld';
-  const count = document.querySelectorAll(checkboxClass + ':checked').length;
-  document.getElementById(buttonId).disabled = count === 0;
+  const infoId = groep === 'aangevraagd' ? 'te-bestellen-info' : 'onderweg-info';
+  const buttonId = groep === 'aangevraagd' ? 'bulk-besteld' : 'bulk-binnen';
+  const checked = [...document.querySelectorAll(checkboxClass + ':checked')];
+  const total = checked.reduce((sum, cb) => {
+    const b = allBooksCache.find(x => String(x.id) === String(cb.dataset.id));
+    return sum + (b && b.prijs ? b.prijs : 0);
+  }, 0);
+  document.getElementById(infoId).innerHTML = checked.length
+    ? `<strong>${checked.length}</strong> geselecteerd &middot; totaal <strong>${euro(total)}</strong>`
+    : '0 geselecteerd';
+  document.getElementById(buttonId).disabled = checked.length === 0;
 }
 
 document.getElementById('bulk-besteld').addEventListener('click', async () => {
   const ids = [...document.querySelectorAll('.sel-aangevraagd:checked')].map(cb => cb.dataset.id);
   if (!ids.length) return;
-  await client.from('boeken').update({ status: 'besteld', besteld_op: new Date().toISOString() }).in('id', ids);
+  const { error } = await client.from('boeken').update({ status: 'besteld', besteld_op: new Date().toISOString() }).in('id', ids);
+  if (error){ console.error(error); alert('Markeren als besteld is mislukt: ' + error.message); return; }
   await refreshCoordinatorData();
 });
 
 document.getElementById('bulk-binnen').addEventListener('click', async () => {
   const ids = [...document.querySelectorAll('.sel-besteld:checked')].map(cb => cb.dataset.id);
   if (!ids.length) return;
-  await client.from('boeken').update({ status: 'binnen', binnen_op: new Date().toISOString() }).in('id', ids);
+  const { error } = await client.from('boeken').update({ status: 'binnen', binnen_op: new Date().toISOString() }).in('id', ids);
+  if (error){ console.error(error); alert('Markeren als binnengekomen is mislukt: ' + error.message); return; }
   await refreshCoordinatorData();
 });
 
-// ---------- Volledige catalogus ----------
-document.getElementById('catalogus-zoek').addEventListener('input', renderCatalogus);
-document.getElementById('catalogus-status-filter').addEventListener('change', renderCatalogus);
-
-function renderCatalogus(){
-  const q = document.getElementById('catalogus-zoek').value.trim().toLowerCase();
-  const statusFilter = document.getElementById('catalogus-status-filter').value;
-  let lijst = allBooksCache;
-  if (q) lijst = lijst.filter(b => b.titel && b.titel.toLowerCase().includes(q));
-  if (statusFilter) lijst = lijst.filter(b => (b.status || 'aangevraagd') === statusFilter);
-
-  const container = document.getElementById('lijst-catalogus');
-  if (!lijst.length){ container.innerHTML = `<div class="empty-state">Geen boeken gevonden.</div>`; return; }
-
-  container.innerHTML = lijst.map(b => `
-    <div class="book-row">
-      <div>
-        <div class="titel">${escapeHtml(b.titel)}</div>
-        <div class="meta">
-          <span class="tag status-${b.status || 'aangevraagd'}">${escapeHtml(b.status || 'aangevraagd')}</span>
-          ${bookMetaLine(b)}
-        </div>
-        <div style="margin-top:8px;">
-          <input type="text" class="klas-input" placeholder="Klas/kast" value="${escapeHtml(b.klas_of_kast || '')}" data-id="${b.id}">
-        </div>
-      </div>
-      <div class="row-actions">
-        <button class="link danger" data-delete="${b.id}">Verwijderen</button>
-      </div>
-    </div>
-  `).join('');
-
-  container.querySelectorAll('.klas-input').forEach(input => {
-    input.addEventListener('change', async () => {
-      await client.from('boeken').update({ klas_of_kast: input.value.trim() || null }).eq('id', input.dataset.id);
-      await fetchAllBooks();
-    });
-  });
-  container.querySelectorAll('[data-delete]').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      if (!confirm('Dit boek verwijderen?')) return;
-      await client.from('boeken').delete().eq('id', btn.dataset.delete);
-      await refreshCoordinatorData();
-    });
-  });
-}
-
 // ---------- Init ----------
 fetchAllBooks().then(() => {
+  populateZoekThema();
   renderZoekLijst();
   if (coordUnlocked) refreshCoordinatorData();
 });
