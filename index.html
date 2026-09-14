@@ -221,6 +221,23 @@
   .budget-edit input{width:120px;}
   .lock-screen{max-width:320px; margin:60px auto; text-align:center;}
   .lock-screen p{color:var(--ink-soft); font-size:14px; margin-bottom:16px;}
+  .book-details{border-bottom:1px solid var(--line);}
+  .book-details:last-child{border-bottom:none;}
+  .book-details summary{
+    list-style:none;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    padding:12px 4px;
+  }
+  .book-details summary::-webkit-details-marker{display:none;}
+  .book-details summary .summary-left{display:flex; align-items:center; gap:10px; min-width:0;}
+  .book-details summary .summary-titel{font-weight:600; font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .book-details summary .chevron{color:var(--ink-soft); font-size:12px; transition:transform .15s; flex-shrink:0;}
+  .book-details[open] summary .chevron{transform:rotate(90deg);}
+  .book-details-body{padding:4px 4px 18px;}
   .subsection-title{font-size:14px; font-weight:600; color:var(--ink-soft); margin:24px 0 10px;}
   .subsection-title:first-child{margin-top:0;}
 </style>
@@ -814,37 +831,49 @@ function renderAfgewezen(){
 }
 
 function fullRowHtml(b){
+  const statusLabel = b.status || 'aangevraagd';
   return `
-    <div class="book-row" style="grid-template-columns:1fr auto;" data-id="${b.id}">
-      <div class="row-fields">
-        <div class="field-line">
-          <input type="text" class="titel-input" data-field="titel" data-id="${b.id}" value="${escapeHtml(b.titel)}">
-          <input type="number" class="prijs-input" step="0.01" min="0" data-field="prijs" data-id="${b.id}" value="${b.prijs != null ? b.prijs : ''}" placeholder="Prijs">
+    <details class="book-details" data-id="${b.id}">
+      <summary>
+        <span class="summary-left">
+          <span class="summary-titel">${escapeHtml(b.titel)}</span>
+          <span class="tag status-${statusLabel}">${escapeHtml(statusLabel)}</span>
+        </span>
+        <span class="chevron">▶</span>
+      </summary>
+      <div class="book-details-body">
+        <div class="row-fields">
+          <div class="field-line">
+            <input type="text" class="titel-input" data-field="titel" data-id="${b.id}" value="${escapeHtml(b.titel)}" placeholder="Titel">
+            <input type="number" class="prijs-input" step="0.01" min="0" data-field="prijs" data-id="${b.id}" value="${b.prijs != null ? b.prijs : ''}" placeholder="Prijs">
+          </div>
+          <div class="field-line">
+            <input type="text" data-field="isbn" data-id="${b.id}" value="${escapeHtml(b.isbn || '')}" placeholder="ISBN" inputmode="numeric" maxlength="13" style="flex:1 1 160px;">
+            <input type="text" data-field="naam_aanvrager" data-id="${b.id}" value="${escapeHtml(b.naam_aanvrager || '')}" placeholder="Aangevraagd door" style="flex:1 1 160px;">
+          </div>
+          <div class="field-line">
+            <select data-field="categorie" data-id="${b.id}">
+              <option value="Groep" ${b.categorie==='Groep'?'selected':''}>Groep</option>
+              <option value="Jeelo" ${b.categorie==='Jeelo'?'selected':''}>Jeelo</option>
+              <option value="Overig" ${b.categorie==='Overig'?'selected':''}>Overig</option>
+            </select>
+            <select data-field="thema" data-id="${b.id}">${themaSelectHtml(b, b.id)}</select>
+          </div>
+          <div class="field-line">
+            <select data-field="status" data-id="${b.id}">
+              <option value="aangevraagd" ${b.status==='aangevraagd'||!b.status?'selected':''}>Aangevraagd</option>
+              <option value="besteld" ${b.status==='besteld'?'selected':''}>Besteld</option>
+              <option value="binnen" ${b.status==='binnen'?'selected':''}>Binnen</option>
+              <option value="afgewezen" ${b.status==='afgewezen'?'selected':''}>Afgewezen</option>
+            </select>
+          </div>
+          ${b.opmerking ? `<div class="row-meta">${escapeHtml(b.opmerking)}</div>` : ''}
         </div>
-        <div class="field-line">
-          <select data-field="categorie" data-id="${b.id}">
-            <option value="Groep" ${b.categorie==='Groep'?'selected':''}>Groep</option>
-            <option value="Jeelo" ${b.categorie==='Jeelo'?'selected':''}>Jeelo</option>
-            <option value="Overig" ${b.categorie==='Overig'?'selected':''}>Overig</option>
-          </select>
-          <select data-field="thema" data-id="${b.id}">${themaSelectHtml(b, b.id)}</select>
-          <select data-field="status" data-id="${b.id}">
-            <option value="aangevraagd" ${b.status==='aangevraagd'||!b.status?'selected':''}>Aangevraagd</option>
-            <option value="besteld" ${b.status==='besteld'?'selected':''}>Besteld</option>
-            <option value="binnen" ${b.status==='binnen'?'selected':''}>Binnen</option>
-            <option value="afgewezen" ${b.status==='afgewezen'?'selected':''}>Afgewezen</option>
-          </select>
-        </div>
-        <div class="row-meta">
-          ${b.naam_aanvrager ? 'Aangevraagd door ' + escapeHtml(b.naam_aanvrager) : 'Geen naam opgegeven'}
-          ${b.isbn ? ' &middot; ISBN ' + escapeHtml(b.isbn) : ''}
-          ${b.opmerking ? '<br>' + escapeHtml(b.opmerking) : ''}
+        <div class="row-actions" style="align-items:flex-start; margin-top:10px;">
+          <button class="link" data-delete="${b.id}">Verwijderen</button>
         </div>
       </div>
-      <div class="row-actions">
-        <button class="link" data-delete="${b.id}">Verwijderen</button>
-      </div>
-    </div>
+    </details>
   `;
 }
 
@@ -856,6 +885,14 @@ function wireFullRow(row){
   });
   row.querySelector('[data-field="prijs"]').addEventListener('change', async e => {
     await dbUpdate(id, { prijs: e.target.value ? parseFloat(e.target.value) : null });
+    await refreshCoordinatorData();
+  });
+  row.querySelector('[data-field="isbn"]').addEventListener('change', async e => {
+    await dbUpdate(id, { isbn: e.target.value.replace(/\D/g, '').slice(0, 13) || null });
+    await refreshCoordinatorData();
+  });
+  row.querySelector('[data-field="naam_aanvrager"]').addEventListener('change', async e => {
+    await dbUpdate(id, { naam_aanvrager: e.target.value.trim() || null });
     await refreshCoordinatorData();
   });
   row.querySelector('[data-field="categorie"]').addEventListener('change', async e => {
@@ -891,6 +928,7 @@ function wireFullRow(row){
 }
 
 function renderAlleBoeken(){
+  const openIds = new Set([...document.querySelectorAll('#lijst-alle details[open]')].map(d => d.dataset.id));
   const q = document.getElementById('alle-zoek').value.trim().toLowerCase();
   const statusFilter = document.getElementById('alle-status-filter').value;
   let lijst = allBooksCache;
@@ -903,7 +941,10 @@ function renderAlleBoeken(){
     return;
   }
   container.innerHTML = lijst.map(fullRowHtml).join('');
-  container.querySelectorAll('.book-row').forEach(wireFullRow);
+  container.querySelectorAll('.book-details').forEach(row => {
+    wireFullRow(row);
+    if (openIds.has(row.dataset.id)) row.open = true;
+  });
 }
 
 document.getElementById('alle-zoek').addEventListener('input', renderAlleBoeken);
