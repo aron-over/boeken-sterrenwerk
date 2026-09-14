@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Boekenlijst</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{
+    --paper:#F5F6F1;
+    --paper-alt:#ECEAE1;
+    --ink:#1E2A22;
+    --ink-soft:#5B6459;
+    --line:#D6D2C4;
+    --forest:#2F6F4E;
+    --forest-dark:#234F38;
+    --amber:#C97A2B;
+    --amber-soft:#F3E2CC;
+    --white:#FFFFFF;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'IBM Plex Sans', sans-serif;
+    font-size:15px;
+    line-height:1.5;
+  }
+  header.topbar{
+    padding:28px 24px 20px;
+    border-bottom:1px solid var(--line);
+    display:flex;
+    flex-wrap:wrap;
+    align-items:baseline;
+    gap:16px 32px;
+    max-width:1100px;
+    margin:0 auto;
+  }
+  header.topbar h1{
+    font-family:'Fraunces', serif;
+    font-weight:600;
+    font-size:32px;
+    margin:0;
+    color:var(--forest-dark);
+  }
+  .stats{
+    display:flex;
+    gap:24px;
+    flex-wrap:wrap;
+    font-size:14px;
+    color:var(--ink-soft);
+  }
+  .stats strong{
+    color:var(--ink);
+    font-weight:600;
+  }
+  main{
+    max-width:1100px;
+    margin:0 auto;
+    padding:24px;
+    display:grid;
+    grid-template-columns:320px 1fr;
+    gap:32px;
+  }
+  @media (max-width:820px){
+    main{grid-template-columns:1fr;}
+  }
+  section.add-panel{
+    border:1px solid var(--line);
+    border-radius:6px;
+    padding:20px;
+    background:var(--white);
+    align-self:start;
+    position:sticky;
+    top:24px;
+  }
+  @media (max-width:820px){
+    section.add-panel{position:static;}
+  }
+  section.add-panel h2{
+    font-family:'Fraunces', serif;
+    font-size:19px;
+    font-weight:600;
+    margin:0 0 16px;
+  }
+  label{
+    display:block;
+    font-size:13px;
+    color:var(--ink-soft);
+    margin:14px 0 4px;
+  }
+  label:first-of-type{margin-top:0;}
+  input[type=text], input[type=number], select, textarea{
+    width:100%;
+    padding:8px 10px;
+    border:1px solid var(--line);
+    border-radius:4px;
+    font-family:inherit;
+    font-size:14px;
+    background:var(--paper);
+    color:var(--ink);
+  }
+  textarea{resize:vertical; min-height:50px;}
+  input:focus, select:focus, textarea:focus{
+    outline:2px solid var(--forest);
+    outline-offset:1px;
+  }
+  .checkbox-row{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    margin-top:16px;
+  }
+  .checkbox-row input{width:auto;}
+  .checkbox-row label{margin:0; font-size:14px; color:var(--ink);}
+  button{
+    font-family:inherit;
+    cursor:pointer;
+  }
+  button.primary{
+    margin-top:18px;
+    width:100%;
+    background:var(--forest);
+    color:var(--white);
+    border:none;
+    padding:11px;
+    border-radius:4px;
+    font-size:14px;
+    font-weight:600;
+  }
+  button.primary:hover{background:var(--forest-dark);}
+  #form-msg{
+    margin-top:10px;
+    font-size:13px;
+  }
+  .list-controls{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    margin-bottom:16px;
+  }
+  .list-controls input, .list-controls select{
+    width:auto;
+    flex:1 1 160px;
+  }
+  .book-row{
+    border-bottom:1px solid var(--line);
+    padding:14px 4px;
+    display:grid;
+    grid-template-columns:1fr auto;
+    gap:12px;
+    align-items:start;
+  }
+  .book-row .titel{
+    font-weight:600;
+    font-size:15px;
+  }
+  .book-row .meta{
+    font-size:13px;
+    color:var(--ink-soft);
+    margin-top:3px;
+  }
+  .tag{
+    display:inline-block;
+    font-size:12px;
+    padding:2px 8px;
+    border-radius:3px;
+    background:var(--paper-alt);
+    color:var(--ink-soft);
+    margin-right:6px;
+  }
+  .tag.besteld{
+    background:var(--amber-soft);
+    color:#8A5218;
+  }
+  .row-actions{
+    display:flex;
+    flex-direction:column;
+    align-items:flex-end;
+    gap:6px;
+  }
+  .row-actions .toggle-row{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    font-size:13px;
+    white-space:nowrap;
+  }
+  .row-actions button.delete{
+    background:none;
+    border:none;
+    color:var(--ink-soft);
+    font-size:13px;
+    text-decoration:underline;
+    padding:0;
+  }
+  .row-actions button.delete:hover{color:#B3432B;}
+  .empty-state{
+    padding:40px 4px;
+    text-align:center;
+    color:var(--ink-soft);
+  }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <h1>Boekenlijst</h1>
+  <div class="stats" id="stats">Bezig met laden…</div>
+</header>
+
+<main>
+  <section class="add-panel">
+    <h2>Boek toevoegen</h2>
+    <form id="book-form">
+      <label for="titel">Titel</label>
+      <input type="text" id="titel" required>
+
+      <label for="isbn">Artikelnummer (ISBN)</label>
+      <input type="text" id="isbn">
+
+      <label for="prijs">Prijs (€)</label>
+      <input type="number" id="prijs" step="0.01" min="0">
+
+      <label for="categorie">Voor een groep, Jeelo of overig thema?</label>
+      <select id="categorie">
+        <option value="Groep">Groep</option>
+        <option value="Jeelo">Jeelo</option>
+        <option value="Overig">Overige thema's</option>
+      </select>
+
+      <div id="groep-veld">
+        <label for="groep">Voor welke groep?</label>
+        <select id="groep"></select>
+      </div>
+
+      <div id="jeelo-veld" style="display:none">
+        <label for="jeelo_thema">Voor welk Jeelo thema?</label>
+        <select id="jeelo_thema"></select>
+      </div>
+
+      <div id="overig-veld" style="display:none">
+        <label for="overig_thema">Voor welk overig thema?</label>
+        <select id="overig_thema"></select>
+      </div>
+
+      <label for="klas_of_kast">Klas of kast</label>
+      <input type="text" id="klas_of_kast" placeholder="bv. Klas 4B of Kast 2">
+
+      <label for="aantal">Aantal exemplaren</label>
+      <input type="number" id="aantal" min="1" value="1">
+
+      <div class="checkbox-row">
+        <input type="checkbox" id="besteld">
+        <label for="besteld">Al besteld</label>
+      </div>
+
+      <label for="opmerking">Opmerking</label>
+      <textarea id="opmerking"></textarea>
+
+      <button type="submit" class="primary">Boek toevoegen</button>
+      <div id="form-msg"></div>
+    </form>
+  </section>
+
+  <section class="list-panel">
+    <div class="list-controls">
+      <input type="text" id="search" placeholder="Zoek op titel…">
+      <select id="filter-categorie">
+        <option value="">Alle categorieën</option>
+        <option value="Groep">Groep</option>
+        <option value="Jeelo">Jeelo</option>
+        <option value="Overig">Overige thema's</option>
+      </select>
+      <select id="filter-besteld">
+        <option value="">Alles</option>
+        <option value="ja">Al besteld</option>
+        <option value="nee">Nog niet besteld</option>
+      </select>
+    </div>
+    <div id="book-list">Bezig met laden…</div>
+  </section>
+</main>
+
+<script>
+const SUPABASE_URL = 'https://ggdosqodohmvxselzxtv.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdnZG9zcW9kb2htdnhzZWx6eHR2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk0MDE1MjksImV4cCI6MjEwNDk3NzUyOX0.ypQXHhp6emH_o84eWwHNtumd2Q7oa2bIut46bvVQ8s0';
+const client = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+const GROEPEN = ['Kleuters','Groep 3','Groep 4','Groep 5','Groep 6','Groep 7','Groep 8'];
+const JEELO_THEMAS = ['Omgaan met elkaar','Maken van je eigen product','Leren voor later','Zorgen voor dieren','Beleven van onze planeet','Veilig in het verkeer','Zorgen voor jezelf en anderen','Omgaan met geld','Leren van personen van vroeger','Inrichten van je eigen omgeving','Omgaan met natuur','Veilig helpen'];
+const OVERIGE_THEMAS = ['Lessen taal','Gedichten','Sprookjes (verhalen, legenden, mythen)','Bekende personen','Engelse boeken','Andere talen','Geschiedenis','Oorlog','Aardrijkskunde','Burgerschap','Relaties en Seksualiteit','Gedrag','Kunst','Digitale geletterdheid','Hoogbegaafdheid','Voorleesboeken'];
+
+function fillSelect(id, options){
+  const el = document.getElementById(id);
+  el.innerHTML = options.map(o => `<option value="${o}">${o}</option>`).join('');
+}
+fillSelect('groep', GROEPEN);
+fillSelect('jeelo_thema', JEELO_THEMAS);
+fillSelect('overig_thema', OVERIGE_THEMAS);
+
+const categorieSelect = document.getElementById('categorie');
+categorieSelect.addEventListener('change', updateCategorieVelden);
+function updateCategorieVelden(){
+  const val = categorieSelect.value;
+  document.getElementById('groep-veld').style.display = val === 'Groep' ? '' : 'none';
+  document.getElementById('jeelo-veld').style.display = val === 'Jeelo' ? '' : 'none';
+  document.getElementById('overig-veld').style.display = val === 'Overig' ? '' : 'none';
+}
+updateCategorieVelden();
+
+let allBooks = [];
+
+async function fetchBooks(){
+  const { data, error } = await client.from('boeken').select('*').order('titel', { ascending: true });
+  if (error){
+    document.getElementById('book-list').innerHTML = `<div class="empty-state">Kan de lijst niet laden: ${error.message}</div>`;
+    return;
+  }
+  allBooks = data;
+  renderStats();
+  renderList();
+}
+
+function renderStats(){
+  const totaalTitels = allBooks.length;
+  const totaalExemplaren = allBooks.reduce((sum, b) => sum + (b.aantal || 0), 0);
+  const nogBestellen = allBooks.filter(b => !b.besteld).length;
+  document.getElementById('stats').innerHTML =
+    `<span><strong>${totaalTitels}</strong> titels</span>` +
+    `<span><strong>${totaalExemplaren}</strong> exemplaren</span>` +
+    `<span><strong>${nogBestellen}</strong> nog te bestellen</span>`;
+}
+
+function renderList(){
+  const zoek = document.getElementById('search').value.trim().toLowerCase();
+  const filterCategorie = document.getElementById('filter-categorie').value;
+  const filterBesteld = document.getElementById('filter-besteld').value;
+
+  let lijst = allBooks.filter(b => {
+    if (zoek && !b.titel.toLowerCase().includes(zoek)) return false;
+    if (filterCategorie && b.categorie !== filterCategorie) return false;
+    if (filterBesteld === 'ja' && !b.besteld) return false;
+    if (filterBesteld === 'nee' && b.besteld) return false;
+    return true;
+  });
+
+  const container = document.getElementById('book-list');
+  if (lijst.length === 0){
+    container.innerHTML = `<div class="empty-state">Geen boeken gevonden.</div>`;
+    return;
+  }
+
+  container.innerHTML = lijst.map(b => {
+    const themaLabel = b.categorie === 'Groep' ? b.groep
+      : b.categorie === 'Jeelo' ? b.jeelo_thema
+      : b.overig_thema;
+    const prijsLabel = b.prijs != null ? `€${Number(b.prijs).toFixed(2)}` : '';
+    return `
+      <div class="book-row" data-id="${b.id}">
+        <div>
+          <div class="titel">${escapeHtml(b.titel)}</div>
+          <div class="meta">
+            <span class="tag">${escapeHtml(b.categorie || '')}${themaLabel ? ' · ' + escapeHtml(themaLabel) : ''}</span>
+            ${b.klas_of_kast ? `<span class="tag">${escapeHtml(b.klas_of_kast)}</span>` : ''}
+            ${b.besteld ? `<span class="tag besteld">Besteld</span>` : ''}
+            ${b.aantal ? ` &middot; ${b.aantal}x` : ''}${prijsLabel ? ` &middot; ${prijsLabel}` : ''}
+          </div>
+          ${b.opmerking ? `<div class="meta">${escapeHtml(b.opmerking)}</div>` : ''}
+        </div>
+        <div class="row-actions">
+          <div class="toggle-row">
+            <input type="checkbox" class="besteld-toggle" ${b.besteld ? 'checked' : ''}>
+            <label>besteld</label>
+          </div>
+          <button class="delete">Verwijderen</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  container.querySelectorAll('.book-row').forEach(row => {
+    const id = row.dataset.id;
+    row.querySelector('.besteld-toggle').addEventListener('change', e => toggleBesteld(id, e.target.checked));
+    row.querySelector('.delete').addEventListener('click', () => deleteBook(id, row));
+  });
+}
+
+function escapeHtml(str){
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+async function toggleBesteld(id, besteld){
+  const { error } = await client.from('boeken').update({ besteld }).eq('id', id);
+  if (!error){
+    const book = allBooks.find(b => b.id == id);
+    if (book) book.besteld = besteld;
+    renderStats();
+  }
+}
+
+async function deleteBook(id, rowEl){
+  if (!confirm('Dit boek verwijderen?')) return;
+  const { error } = await client.from('boeken').delete().eq('id', id);
+  if (!error){
+    allBooks = allBooks.filter(b => b.id != id);
+    renderStats();
+    renderList();
+  }
+}
+
+document.getElementById('search').addEventListener('input', renderList);
+document.getElementById('filter-categorie').addEventListener('change', renderList);
+document.getElementById('filter-besteld').addEventListener('change', renderList);
+
+document.getElementById('book-form').addEventListener('submit', async e => {
+  e.preventDefault();
+  const categorie = categorieSelect.value;
+  const nieuwBoek = {
+    titel: document.getElementById('titel').value.trim(),
+    isbn: document.getElementById('isbn').value.trim() || null,
+    prijs: document.getElementById('prijs').value ? parseFloat(document.getElementById('prijs').value) : null,
+    categorie: categorie,
+    groep: categorie === 'Groep' ? document.getElementById('groep').value : null,
+    jeelo_thema: categorie === 'Jeelo' ? document.getElementById('jeelo_thema').value : null,
+    overig_thema: categorie === 'Overig' ? document.getElementById('overig_thema').value : null,
+    klas_of_kast: document.getElementById('klas_of_kast').value.trim() || null,
+    aantal: parseInt(document.getElementById('aantal').value, 10) || 1,
+    besteld: document.getElementById('besteld').checked,
+    opmerking: document.getElementById('opmerking').value.trim() || null
+  };
+
+  const msg = document.getElementById('form-msg');
+  const { error } = await client.from('boeken').insert(nieuwBoek);
+  if (error){
+    msg.style.color = '#B3432B';
+    msg.textContent = 'Opslaan mislukt: ' + error.message;
+    return;
+  }
+  msg.style.color = 'var(--forest)';
+  msg.textContent = 'Boek toegevoegd.';
+  document.getElementById('book-form').reset();
+  updateCategorieVelden();
+  setTimeout(() => msg.textContent = '', 2500);
+  fetchBooks();
+});
+
+fetchBooks();
+</script>
+
+</body>
+</html>
