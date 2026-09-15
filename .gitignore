@@ -1,0 +1,6 @@
+.env
+.env.local
+*.log
+*.csv
+zoek_isbns.ps1
+isbn_zoek_progress.json

@@ -250,6 +250,7 @@
   <div class="topbar-inner" style="display:flex; align-items:center; gap:12px;">
     <img src="https://11qwhetsterrenwerk-live-e440c3dc752b468-78a827d.divio-media.com/filer_public/e3/66/e36619fc-2ab6-4c1c-bc07-65325143d0b2/het_sterrenwerk_liggend.png" alt="Het Sterrenwerk" style="height:34px; width:auto;">
     <h1>Boeken Sterrenwerk</h1>
+    <span id="test-badge" style="display:none; background:var(--gold-soft); color:var(--gold-dark); font-size:11px; font-weight:700; padding:3px 8px; border-radius:999px; border:1px solid var(--gold); letter-spacing:0.5px; text-transform:uppercase;">Testomgeving</span>
   </div>
   <nav class="tabs">
     <button data-tab="aanvraag" class="active">Aanvraag indienen</button>
@@ -391,9 +392,26 @@
 </main>
 
 <script>
-const SUPABASE_URL = 'https://ggdosqodohmvxselzxtv.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdnZG9zcW9kb2htdnhzZWx6eHR2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk0MDE1MjksImV4cCI6MjEwNDk3NzUyOX0.ypQXHhp6emH_o84eWwHNtumd2Q7oa2bIut46bvVQ8s0';
+// Omgeving detecteren: lokaal (localhost/127.0.0.1) gebruikt de testdatabase, elders productie
+const IS_LOCAL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+
+// Productie-database (GitHub Pages)
+const PROD_URL = 'https://ggdosqodohmvxselzxtv.supabase.co';
+const PROD_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdnZG9zcW9kb2htdnhzZWx6eHR2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk0MDE1MjksImV4cCI6MjEwNDk3NzUyOX0.ypQXHhp6emH_o84eWwHNtumd2Q7oa2bIut46bvVQ8s0';
+
+// Test-database (lokaal)
+const TEST_URL = 'https://avhssvksvuebmhufmrzq.supabase.co';
+const TEST_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF2aHNzdmtzdnVlYm1odWZtcnpxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk0Nzc5ODAsImV4cCI6MjEwNTA1Mzk4MH0.jme6g6w5QDbPF4H07fhFQctOuN7EfnLAmic9n4Sj3yQ';
+
+const SUPABASE_URL = IS_LOCAL ? TEST_URL : PROD_URL;
+const SUPABASE_ANON_KEY = IS_LOCAL ? TEST_KEY : PROD_KEY;
 const client = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+if (IS_LOCAL) {
+  const badge = document.getElementById('test-badge');
+  if (badge) badge.style.display = 'inline-block';
+  console.info('%c[Boeken Sterrenwerk] Actief op TESTDATABASE (avhssvksvuebmhufmrzq)', 'color: #A9821E; font-weight: bold;');
+}
 
 // Pas dit wachtwoord aan naar iets van jezelf:
 const COORD_PASSWORD = 'sterrenwerk2026';
