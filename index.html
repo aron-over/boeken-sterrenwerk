@@ -168,7 +168,8 @@
   .result-card .titel{font-weight:600; font-size:15px;}
   .result-card .meta{font-size:13px; color:var(--ink-soft); margin-top:4px;}
   .boekentip-list{margin-top:10px; padding-top:10px; border-top:1px solid var(--line);}
-  .boekentip-item{font-size:13px; color:var(--ink); margin-bottom:4px;}
+  .boekentip-item{font-size:13px; color:var(--ink); margin-bottom:4px; display:flex; justify-content:space-between; align-items:center; gap:8px;}
+  .boekentip-item .link{flex-shrink:0;}
   .boekentip-add{display:flex; gap:8px; margin-top:10px;}
   .boekentip-add input{flex:1; padding:7px 10px; font-size:13px;}
   .tag{
@@ -320,7 +321,7 @@
   <section class="tab-panel" id="tab-zoeken">
     <div class="card">
       <h2>Wat staat er al?</h2>
-      <input type="text" id="zoek-input" placeholder="Zoek op titel of ISBN…" style="margin-bottom:14px;">
+      <input type="text" id="zoek-input" placeholder="Zoek op titel, ISBN of boekentip…" style="margin-bottom:14px;">
       <div class="filter-pills" id="zoek-cat-pills">
         <button class="pill active" data-cat="">Alles</button>
         <button class="pill" data-cat="Groep">Groep</button>
@@ -616,7 +617,7 @@ function renderZoekLijst(){
   const q = document.getElementById('zoek-input').value.trim().toLowerCase();
 
   let lijst = allBooksCache.filter(b => b.status === 'binnen');
-  if (q) lijst = lijst.filter(b => (b.titel && b.titel.toLowerCase().includes(q)) || (b.isbn && b.isbn.toLowerCase().includes(q)));
+  if (q) lijst = lijst.filter(b => (b.titel && b.titel.toLowerCase().includes(q)) || (b.isbn && b.isbn.toLowerCase().includes(q)) || (b.boekentip && b.boekentip.toLowerCase().includes(q)));
   if (zoekCategorie) lijst = lijst.filter(b => b.categorie === zoekCategorie);
   if (zoekThema) lijst = lijst.filter(b => themaVan(b) === zoekThema);
 
@@ -631,8 +632,9 @@ function renderZoekLijst(){
     <div class="result-card cat-${escapeHtml(b.categorie || '')}" data-id="${b.id}">
       <div class="titel">${escapeHtml(b.titel)}</div>
       <div class="meta">${b.auteur ? escapeHtml(b.auteur) + ' · ' : ''}${escapeHtml(b.categorie || '')}${themaVan(b) ? ' · ' + escapeHtml(themaVan(b)) : ''}</div>
-      ${b.boekentip ? `<div class="boekentip-list">${escapeHtml(b.boekentip).split('\n').filter(Boolean).map(t => `<div class="boekentip-item">${t}</div>`).join('')}</div>` : ''}
-      <div class="boekentip-add">
+      ${b.boekentip ? `<div class="boekentip-list">${escapeHtml(b.boekentip).split('\n').filter(Boolean).map(t => `<div class="boekentip-item"><span>${t}</span></div>`).join('')}</div>` : ''}
+      <button class="tiny boekentip-toggle">+ Boekentip toevoegen</button>
+      <div class="boekentip-add" style="display:none">
         <input type="text" class="boekentip-input" placeholder="Boekentip toevoegen (lesidee bij dit boek)">
         <button class="tiny">Toevoegen</button>
       </div>
@@ -640,8 +642,15 @@ function renderZoekLijst(){
   `).join('');
   container.querySelectorAll('.result-card').forEach(card => {
     const id = card.dataset.id;
+    const toggleBtn = card.querySelector('.boekentip-toggle');
+    const addWrap = card.querySelector('.boekentip-add');
     const input = card.querySelector('.boekentip-input');
     const btn = card.querySelector('.boekentip-add button');
+    toggleBtn.addEventListener('click', () => {
+      toggleBtn.style.display = 'none';
+      addWrap.style.display = 'flex';
+      input.focus();
+    });
     const submitTip = async () => {
       const tekst = input.value.trim();
       if (!tekst) return;
@@ -916,6 +925,17 @@ function fullRowHtml(b){
           </div>
           ${b.opmerking ? `<div class="row-meta">${escapeHtml(b.opmerking)}</div>` : ''}
         </div>
+        ${b.boekentip ? `
+        <div class="boekentip-list">
+          <div class="subsection-title" style="margin:0 0 6px;">Boekentips</div>
+          ${escapeHtml(b.boekentip).split('\n').filter(Boolean).map((t, i) => `
+            <div class="boekentip-item">
+              <span>${t}</span>
+              <button class="link" data-tip-delete="${i}">Verwijderen</button>
+            </div>
+          `).join('')}
+        </div>
+        ` : ''}
         <div class="row-actions" style="align-items:flex-start; margin-top:10px;">
           <button class="link" data-delete="${b.id}">Verwijderen</button>
         </div>
@@ -976,6 +996,13 @@ function wireFullRow(row){
     if (error){ alert('Verwijderen mislukt: ' + error.message); return; }
     await refreshCoordinatorData();
   });
+  row.querySelectorAll('[data-tip-delete]').forEach(btn => btn.addEventListener('click', async () => {
+    const book = allBooksCache.find(x => String(x.id) === String(id));
+    const tips = (book.boekentip || '').split('\n').filter(Boolean);
+    tips.splice(parseInt(btn.dataset.tipDelete, 10), 1);
+    await dbUpdate(id, { boekentip: tips.length ? tips.join('\n') : null });
+    await refreshCoordinatorData();
+  }));
 }
 
 function renderAlleBoeken(){
