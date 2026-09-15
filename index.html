@@ -186,6 +186,7 @@
   .tag.status-besteld{background:#E4E9F7; color:#3652A3;}
   .tag.status-binnen{background:var(--green-soft); color:var(--green);}
   .tag.status-afgewezen{background:var(--red-soft); color:var(--red);}
+  .tag.tag-prijs{background:var(--bg); border:1px solid var(--line); color:var(--ink); font-weight:600;}
   .book-row{
     border-bottom:1px solid var(--line);
     padding:14px 4px;
@@ -197,13 +198,58 @@
   .book-row:last-child{border-bottom:none;}
   .book-row input[type=checkbox]{margin-top:8px; width:auto;}
   .row-fields{display:flex; flex-direction:column; gap:6px;}
-  .row-fields .field-line{display:flex; gap:8px; flex-wrap:wrap;}
+  .row-fields .field-line{display:flex; gap:8px; flex-wrap:wrap; align-items:center;}
   .row-fields input[type=text], .row-fields input[type=number]{
     padding:6px 9px;
     font-size:13px;
   }
   .row-fields .titel-input{font-weight:600; font-size:14px; flex:1 1 220px;}
-  .row-fields .prijs-input{width:90px; flex:0 0 90px;}
+  .prijs-input-wrap{
+    display:inline-flex;
+    align-items:center;
+    background:var(--bg);
+    border:1px solid var(--line);
+    border-radius:8px;
+    box-sizing:border-box;
+    width:110px;
+    flex:0 0 110px;
+    transition:border-color .15s, outline .15s;
+  }
+  .prijs-input-wrap:focus-within{
+    outline:2px solid var(--gold);
+    outline-offset:1px;
+    border-color:var(--gold);
+  }
+  .prijs-input-wrap .currency-prefix{
+    padding-left:9px;
+    font-size:13px;
+    font-weight:600;
+    color:var(--ink-soft);
+    user-select:none;
+  }
+  .prijs-input-wrap .prijs-input{
+    border:none !important;
+    outline:none !important;
+    background:transparent !important;
+    padding:6px 8px 6px 4px !important;
+    width:100% !important;
+    min-width:0 !important;
+    font-size:13px;
+    color:var(--ink);
+  }
+  #book-form .prijs-input-wrap{
+    width:100%;
+    max-width:200px;
+    flex:none;
+  }
+  #book-form .prijs-input-wrap .currency-prefix{
+    padding-left:12px;
+    font-size:14px;
+  }
+  #book-form .prijs-input-wrap .prijs-input{
+    padding:10px 12px 10px 6px !important;
+    font-size:14px;
+  }
   .row-fields select{width:auto; flex:1 1 140px; padding:6px 9px; font-size:13px;}
   .row-meta{font-size:12px; color:var(--ink-soft); margin-top:2px;}
   .row-actions{display:flex; flex-direction:column; align-items:flex-end; gap:6px;}
@@ -214,6 +260,35 @@
     margin-bottom:10px;
     flex-wrap:wrap;
     gap:10px;
+  }
+  .bulk-left{
+    display:flex;
+    align-items:center;
+    gap:14px;
+    flex-wrap:wrap;
+  }
+  .bulk-select-all{
+    display:inline-flex !important;
+    align-items:center;
+    gap:6px;
+    cursor:pointer;
+    font-size:13px;
+    font-weight:500;
+    color:var(--ink);
+    user-select:none;
+    margin:0 !important;
+  }
+  .bulk-select-all input[type=checkbox]{
+    cursor:pointer;
+    margin:0 !important;
+    width:auto;
+  }
+  .bulk-select-all input[type=checkbox]:disabled{
+    cursor:not-allowed;
+  }
+  .bulk-select-all:has(input:disabled){
+    opacity:0.45;
+    cursor:not-allowed;
   }
   .bulk-info{font-size:13px; color:var(--ink-soft);}
   .bulk-info strong{color:var(--ink);}
@@ -247,10 +322,12 @@
 <body>
 
 <header class="topbar">
-  <div class="topbar-inner" style="display:flex; align-items:center; gap:12px;">
+  <div class="topbar-inner" style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
     <img src="https://11qwhetsterrenwerk-live-e440c3dc752b468-78a827d.divio-media.com/filer_public/e3/66/e36619fc-2ab6-4c1c-bc07-65325143d0b2/het_sterrenwerk_liggend.png" alt="Het Sterrenwerk" style="height:34px; width:auto;">
     <h1>Boeken Sterrenwerk</h1>
-    <span id="test-badge" style="display:none; background:var(--gold-soft); color:var(--gold-dark); font-size:11px; font-weight:700; padding:3px 8px; border-radius:999px; border:1px solid var(--gold); letter-spacing:0.5px; text-transform:uppercase;">Testomgeving</span>
+    <span id="test-badge" style="display:none; background:var(--gold-soft); color:var(--gold-dark); font-size:11px; font-weight:700; padding:3px 8px; border-radius:999px; border:1px solid var(--gold); letter-spacing:0.5px; text-transform:uppercase;">Testomgeving (sandbox)</span>
+    <button id="test-reset-btn" type="button" style="display:none; font-family:'Space Grotesk',sans-serif; font-size:11px; font-weight:600; padding:3px 10px; border-radius:999px; border:1px solid var(--line); background:var(--surface); color:var(--ink); cursor:pointer;">🔄 Reset data</button>
+    <span id="test-reset-info" style="font-size:11px; color:var(--green); font-weight:600;"></span>
   </div>
   <nav class="tabs">
     <button data-tab="aanvraag" class="active">Aanvraag indienen</button>
@@ -405,12 +482,129 @@ const TEST_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
 
 const SUPABASE_URL = IS_LOCAL ? TEST_URL : PROD_URL;
 const SUPABASE_ANON_KEY = IS_LOCAL ? TEST_KEY : PROD_KEY;
-const client = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const realClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-if (IS_LOCAL) {
+let allBooksCache = [];
+let pristineBaselineData = null;
+let initialBaselineLoaded = false;
+
+function resetTestData(){
+  if (!pristineBaselineData) return;
+  allBooksCache = JSON.parse(JSON.stringify(pristineBaselineData));
+  const activeBtn = document.querySelector('nav.tabs button.active');
+  const activeTab = activeBtn ? activeBtn.dataset.tab : 'aanvraag';
+  if (activeTab === 'zoeken') renderZoekLijst();
+  if (activeTab === 'coordinator' && coordUnlocked) refreshCoordinatorData();
+  const infoEl = document.getElementById('test-reset-info');
+  if (infoEl){
+    infoEl.textContent = 'Data hersteld!';
+    setTimeout(() => { infoEl.textContent = ''; }, 2500);
+  }
+}
+
+// In de testomgeving vangen we alle mutaties in-memory op zodat Supabase nooit gewijzigd wordt:
+const client = (!IS_LOCAL) ? realClient : {
+  from(table){
+    if (table !== 'boeken'){
+      return realClient.from(table);
+    }
+    return {
+      select(columns = '*'){
+        const executeSelect = async (orderCol = 'titel', ascending = true) => {
+          if (!initialBaselineLoaded){
+            const res = await realClient.from('boeken').select(columns).order(orderCol, { ascending });
+            if (!res.error && res.data){
+              pristineBaselineData = JSON.parse(JSON.stringify(res.data));
+              allBooksCache = JSON.parse(JSON.stringify(res.data));
+              initialBaselineLoaded = true;
+            }
+            return res;
+          }
+          const sorted = [...allBooksCache].sort((a, b) => {
+            const va = a[orderCol] || '';
+            const vb = b[orderCol] || '';
+            return ascending ? String(va).localeCompare(String(vb)) : String(vb).localeCompare(String(va));
+          });
+          return { data: sorted, error: null };
+        };
+        return {
+          order(col = 'titel', { ascending = true } = {}){
+            return executeSelect(col, ascending);
+          },
+          then(resolve, reject){
+            return executeSelect().then(resolve, reject);
+          }
+        };
+      },
+      insert(rows){
+        return (async () => {
+          const arr = Array.isArray(rows) ? rows : [rows];
+          arr.forEach(row => {
+            const copy = Object.assign({}, row);
+            if (!copy.id){
+              copy.id = (typeof crypto !== 'undefined' && crypto.randomUUID)
+                ? crypto.randomUUID()
+                : 'test_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7);
+            }
+            allBooksCache.push(copy);
+          });
+          allBooksCache.sort((a, b) => (a.titel || '').localeCompare(b.titel || ''));
+          return { data: arr, error: null };
+        })();
+      },
+      update(fields){
+        return {
+          eq(col, val){
+            return (async () => {
+              if (col === 'id'){
+                const book = allBooksCache.find(b => String(b.id) === String(val));
+                if (book) Object.assign(book, fields);
+                return { data: book ? [book] : [], error: null };
+              }
+              allBooksCache.forEach(b => {
+                if (String(b[col]) === String(val)) Object.assign(b, fields);
+              });
+              return { data: [], error: null };
+            })();
+          },
+          in(col, vals){
+            return (async () => {
+              const strVals = vals.map(String);
+              const updated = [];
+              allBooksCache.forEach(b => {
+                if (strVals.includes(String(b[col]))){
+                  Object.assign(b, fields);
+                  updated.push(b);
+                }
+              });
+              return { data: updated, error: null };
+            })();
+          }
+        };
+      },
+      delete(){
+        return {
+          eq(col, val){
+            return (async () => {
+              allBooksCache = allBooksCache.filter(b => String(b[col]) !== String(val));
+              return { data: null, error: null };
+            })();
+          }
+        };
+      }
+    };
+  }
+};
+
+if (IS_LOCAL){
   const badge = document.getElementById('test-badge');
   if (badge) badge.style.display = 'inline-block';
-  console.info('%c[Boeken Sterrenwerk] Actief op TESTDATABASE (avhssvksvuebmhufmrzq)', 'color: #A9821E; font-weight: bold;');
+  const resetBtn = document.getElementById('test-reset-btn');
+  if (resetBtn){
+    resetBtn.style.display = 'inline-block';
+    resetBtn.addEventListener('click', resetTestData);
+  }
+  console.info('%c[Boeken Sterrenwerk] Actief in TESTOMGEVING (in-memory sandbox: mutaties worden niet opgeslagen in Supabase)', 'color: #A9821E; font-weight: bold;');
 }
 
 // Pas dit wachtwoord aan naar iets van jezelf:
@@ -488,11 +682,18 @@ document.getElementById('overig_thema').addEventListener('change', e => {
 });
 
 // ---------- Dubbele-aanvraag check ----------
-let allBooksCache = [];
-
-async function fetchAllBooks(){
+async function fetchAllBooks(forceReload = false){
+  if (IS_LOCAL && initialBaselineLoaded && !forceReload){
+    return true;
+  }
   const { data, error } = await client.from('boeken').select('*').order('titel', { ascending: true });
-  if (!error) allBooksCache = data;
+  if (!error && data){
+    allBooksCache = data;
+    if (IS_LOCAL && !pristineBaselineData){
+      pristineBaselineData = JSON.parse(JSON.stringify(data));
+      initialBaselineLoaded = true;
+    }
+  }
   return !error;
 }
 
