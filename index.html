@@ -636,7 +636,8 @@ function renderZoekLijst(){
       <button class="tiny boekentip-toggle">+ Boekentip toevoegen</button>
       <div class="boekentip-add" style="display:none">
         <input type="text" class="boekentip-input" placeholder="Boekentip toevoegen (lesidee bij dit boek)">
-        <button class="tiny">Toevoegen</button>
+        <button class="tiny boekentip-submit" style="background:var(--ink); color:#fff; border-color:var(--ink);">Toevoegen</button>
+        <button type="button" class="tiny boekentip-cancel">Annuleren</button>
       </div>
     </div>
   `).join('');
@@ -645,12 +646,33 @@ function renderZoekLijst(){
     const toggleBtn = card.querySelector('.boekentip-toggle');
     const addWrap = card.querySelector('.boekentip-add');
     const input = card.querySelector('.boekentip-input');
-    const btn = card.querySelector('.boekentip-add button');
-    toggleBtn.addEventListener('click', () => {
-      toggleBtn.style.display = 'none';
+    const btn = card.querySelector('.boekentip-submit');
+    const cancelBtn = card.querySelector('.boekentip-cancel');
+
+    function sluitTip(){
+      addWrap.style.display = 'none';
+      toggleBtn.textContent = '+ Boekentip toevoegen';
+      input.value = '';
+    }
+
+    function openTip(){
       addWrap.style.display = 'flex';
+      toggleBtn.textContent = '✕ Boekentip sluiten';
       input.focus();
+    }
+
+    toggleBtn.addEventListener('click', () => {
+      if (addWrap.style.display === 'none' || !addWrap.style.display){
+        openTip();
+      } else {
+        sluitTip();
+      }
     });
+
+    if (cancelBtn){
+      cancelBtn.addEventListener('click', sluitTip);
+    }
+
     const submitTip = async () => {
       const tekst = input.value.trim();
       if (!tekst) return;
@@ -662,7 +684,15 @@ function renderZoekLijst(){
       renderZoekLijst();
     };
     btn.addEventListener('click', submitTip);
-    input.addEventListener('keydown', e => { if (e.key === 'Enter'){ e.preventDefault(); submitTip(); } });
+    input.addEventListener('keydown', e => {
+      if (e.key === 'Enter'){
+        e.preventDefault();
+        submitTip();
+      } else if (e.key === 'Escape'){
+        e.preventDefault();
+        sluitTip();
+      }
+    });
   });
 }
 
