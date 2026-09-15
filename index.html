@@ -1336,9 +1336,16 @@ function updateBulkInfo(groep){
     const b = allBooksCache.find(x => String(x.id) === String(cb.dataset.id));
     return sum + (b ? parsePrijs(b.prijs) : 0);
   }, 0);
-  document.getElementById(infoId).innerHTML = checked.length
-    ? `<strong>${checked.length}</strong> geselecteerd &middot; totaal <strong>${euro(total)}</strong>`
-    : '0 geselecteerd';
+  const infoEl = document.getElementById(infoId);
+  if (infoEl){
+    if (allCbs.length === 0){
+      infoEl.textContent = '0 geselecteerd';
+    } else if (checked.length === 0){
+      infoEl.textContent = `0 van de ${allCbs.length} geselecteerd`;
+    } else {
+      infoEl.innerHTML = `<strong>${checked.length}</strong> van de <strong>${allCbs.length}</strong> geselecteerd &middot; totaal <strong>${euro(total)}</strong>`;
+    }
+  }
   document.getElementById(buttonId).disabled = checked.length === 0;
 }
 
