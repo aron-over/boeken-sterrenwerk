@@ -664,6 +664,9 @@ if (coordUnlocked){
   document.getElementById('coord-content').style.display = '';
 }
 
+document.getElementById('coord-password').addEventListener('keydown', e => {
+  if (e.key === 'Enter'){ e.preventDefault(); document.getElementById('coord-unlock').click(); }
+});
 document.getElementById('coord-unlock').addEventListener('click', () => {
   const val = document.getElementById('coord-password').value;
   if (val === COORD_PASSWORD){
