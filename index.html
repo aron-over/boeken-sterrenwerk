@@ -167,6 +167,10 @@
   .result-card.cat-Overig{border-left-color:var(--ink);}
   .result-card .titel{font-weight:600; font-size:15px;}
   .result-card .meta{font-size:13px; color:var(--ink-soft); margin-top:4px;}
+  .boekentip-list{margin-top:10px; padding-top:10px; border-top:1px solid var(--line);}
+  .boekentip-item{font-size:13px; color:var(--ink); margin-bottom:4px;}
+  .boekentip-add{display:flex; gap:8px; margin-top:10px;}
+  .boekentip-add input{flex:1; padding:7px 10px; font-size:13px;}
   .tag{
     display:inline-block;
     font-size:12px;
@@ -624,11 +628,33 @@ function renderZoekLijst(){
     return;
   }
   container.innerHTML = lijst.map(b => `
-    <div class="result-card cat-${escapeHtml(b.categorie || '')}">
+    <div class="result-card cat-${escapeHtml(b.categorie || '')}" data-id="${b.id}">
       <div class="titel">${escapeHtml(b.titel)}</div>
       <div class="meta">${b.auteur ? escapeHtml(b.auteur) + ' · ' : ''}${escapeHtml(b.categorie || '')}${themaVan(b) ? ' · ' + escapeHtml(themaVan(b)) : ''}</div>
+      ${b.boekentip ? `<div class="boekentip-list">${escapeHtml(b.boekentip).split('\n').filter(Boolean).map(t => `<div class="boekentip-item">${t}</div>`).join('')}</div>` : ''}
+      <div class="boekentip-add">
+        <input type="text" class="boekentip-input" placeholder="Boekentip toevoegen (lesidee bij dit boek)">
+        <button class="tiny">Toevoegen</button>
+      </div>
     </div>
   `).join('');
+  container.querySelectorAll('.result-card').forEach(card => {
+    const id = card.dataset.id;
+    const input = card.querySelector('.boekentip-input');
+    const btn = card.querySelector('.boekentip-add button');
+    const submitTip = async () => {
+      const tekst = input.value.trim();
+      if (!tekst) return;
+      const boek = allBooksCache.find(x => String(x.id) === String(id));
+      const bestaand = boek && boek.boekentip ? boek.boekentip + '\n' : '';
+      const { error } = await client.from('boeken').update({ boekentip: bestaand + '- ' + tekst }).eq('id', id);
+      if (error){ alert('Opslaan mislukt: ' + error.message); return; }
+      await fetchAllBooks();
+      renderZoekLijst();
+    };
+    btn.addEventListener('click', submitTip);
+    input.addEventListener('keydown', e => { if (e.key === 'Enter'){ e.preventDefault(); submitTip(); } });
+  });
 }
 
 // ---------- Tab 3: Coördinator ----------
