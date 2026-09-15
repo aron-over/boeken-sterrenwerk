@@ -1137,6 +1137,7 @@ function renderAfgewezen(){
         <div style="font-weight:600; font-size:14px;">${escapeHtml(b.titel)}</div>
         <div class="row-meta">
           <span class="tag">${escapeHtml(b.categorie || '')}${themaVan(b) ? ' · ' + escapeHtml(themaVan(b)) : ''}</span>
+          ${b.prijs != null && b.prijs !== '' ? `<span class="tag tag-prijs">${euro(b.prijs)}</span>` : ''}
           ${b.naam_aanvrager ? 'aangevraagd door ' + escapeHtml(b.naam_aanvrager) : ''}
         </div>
       </div>
@@ -1166,6 +1167,7 @@ function fullRowHtml(b){
         <span class="summary-left">
           <span class="summary-titel">${escapeHtml(b.titel)}</span>
           <span class="tag status-${statusLabel}">${escapeHtml(statusLabel)}</span>
+          ${b.prijs != null && b.prijs !== '' ? `<span class="tag tag-prijs">${euro(b.prijs)}</span>` : ''}
         </span>
         <span class="chevron">▶</span>
       </summary>
@@ -1173,7 +1175,10 @@ function fullRowHtml(b){
         <div class="row-fields">
           <div class="field-line">
             <input type="text" class="titel-input" data-field="titel" data-id="${b.id}" value="${escapeHtml(b.titel)}" placeholder="Titel">
-            <input type="number" class="prijs-input" step="0.01" min="0" data-field="prijs" data-id="${b.id}" value="${b.prijs != null ? b.prijs : ''}" placeholder="Prijs">
+            <div class="prijs-input-wrap">
+              <span class="currency-prefix">€</span>
+              <input type="text" inputmode="decimal" class="prijs-input" data-field="prijs" data-id="${b.id}" value="${b.prijs != null && b.prijs !== '' ? formatBedrag(b.prijs) : ''}" placeholder="0,00">
+            </div>
           </div>
           <div class="field-line">
             <input type="text" data-field="auteur" data-id="${b.id}" value="${escapeHtml(b.auteur || '')}" placeholder="Auteur" style="flex:1 1 200px;">
@@ -1229,10 +1234,18 @@ function wireFullRow(row){
     await dbUpdate(id, { auteur: e.target.value.trim() || null });
     await refreshCoordinatorData();
   });
-  row.querySelector('[data-field="prijs"]').addEventListener('change', async e => {
-    await dbUpdate(id, { prijs: e.target.value ? parsePrijs(e.target.value) : null });
-    await refreshCoordinatorData();
-  });
+  const fullPrijsInp = row.querySelector('[data-field="prijs"]');
+  if (fullPrijsInp){
+    fullPrijsInp.addEventListener('blur', e => {
+      const val = e.target.value.trim();
+      if (val !== '') e.target.value = formatBedrag(val);
+    });
+    fullPrijsInp.addEventListener('change', async e => {
+      const val = e.target.value.trim();
+      await dbUpdate(id, { prijs: val ? parsePrijs(val) : null });
+      await refreshCoordinatorData();
+    });
+  }
   row.querySelector('[data-field="isbn"]').addEventListener('change', async e => {
     await dbUpdate(id, { isbn: e.target.value.replace(/\D/g, '').slice(0, 13) || null });
     await refreshCoordinatorData();
