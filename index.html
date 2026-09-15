@@ -219,12 +219,8 @@
   .bulk-info strong{color:var(--ink);}
   .empty-state{padding:36px 4px; text-align:center; color:var(--ink-soft); font-size:14px;}
   .budget-box{margin-bottom:16px;}
-  .budget-numbers{display:flex; justify-content:space-between; font-size:13px; color:var(--ink-soft); margin-bottom:6px;}
-  .budget-numbers strong{color:var(--ink); font-size:15px;}
-  .budget-bar{height:10px; background:var(--bg); border-radius:999px; overflow:hidden; border:1px solid var(--line);}
-  .budget-bar-fill{height:100%; background:var(--gold);}
-  .budget-edit{display:flex; gap:8px; margin-top:12px; align-items:center;}
-  .budget-edit input{width:120px;}
+  .budget-numbers{display:flex; justify-content:space-between; align-items:center; font-size:14px; color:var(--ink-soft);}
+  .budget-numbers strong{color:var(--ink); font-size:18px;}
   .lock-screen{max-width:320px; margin:60px auto; text-align:center;}
   .lock-screen p{color:var(--ink-soft); font-size:14px; margin-bottom:16px;}
   .book-details{border-bottom:1px solid var(--line);}
@@ -346,15 +342,9 @@
 
     <div id="coord-content" style="display:none">
       <div class="card budget-box">
-        <h2>Budget dit kalenderjaar</h2>
+        <h2>Uitgaven dit kalenderjaar</h2>
         <div class="budget-numbers">
-          <span>Uitgegeven: <strong id="budget-uitgegeven">–</strong></span>
-          <span>Budget: <strong id="budget-totaal">–</strong></span>
-        </div>
-        <div class="budget-bar"><div class="budget-bar-fill" id="budget-fill" style="width:0%"></div></div>
-        <div class="budget-edit">
-          <input type="number" id="budget-input" step="1" min="0" placeholder="Jaarbudget instellen">
-          <button class="secondary" id="budget-save">Opslaan</button>
+          <span>Totaal besteld en binnen: <strong id="budget-uitgegeven">–</strong></span>
         </div>
       </div>
 
@@ -427,7 +417,14 @@ function escapeHtml(str){
   div.textContent = str == null ? '' : str;
   return div.innerHTML;
 }
-function euro(n){ return '€' + Number(n || 0).toFixed(2); }
+function parsePrijs(val){
+  if (val == null || val === '') return 0;
+  if (typeof val === 'number') return isNaN(val) ? 0 : val;
+  const cleaned = String(val).replace(/[^0-9.,-]/g, '').replace(',', '.');
+  const num = parseFloat(cleaned);
+  return isNaN(num) ? 0 : num;
+}
+function euro(n){ return '€' + parsePrijs(n).toFixed(2); }
 
 function themaVan(b){
   if (b.categorie === 'Groep') return b.groep;
@@ -543,7 +540,7 @@ document.getElementById('book-form').addEventListener('submit', async e => {
     titel: document.getElementById('titel').value.trim(),
     auteur: document.getElementById('auteur').value.trim() || null,
     isbn: isbnWaarde,
-    prijs: document.getElementById('prijs').value ? parseFloat(document.getElementById('prijs').value) : null,
+    prijs: document.getElementById('prijs').value ? parsePrijs(document.getElementById('prijs').value) : null,
     categorie: categorie,
     groep: categorie === 'Groep' ? document.getElementById('groep').value : null,
     jeelo_thema: categorie === 'Jeelo' ? document.getElementById('jeelo_thema').value : null,
@@ -719,15 +716,8 @@ document.getElementById('coord-unlock').addEventListener('click', () => {
   }
 });
 
-let jaarbudgetInstelling = null;
-
-async function fetchInstellingen(){
-  const { data, error } = await client.from('instellingen').select('*').limit(1);
-  if (!error && data && data.length) jaarbudgetInstelling = data[0];
-}
-
 async function refreshCoordinatorData(){
-  await Promise.all([fetchAllBooks(), fetchInstellingen()]);
+  await fetchAllBooks();
   renderBudget();
   renderTeBestellen();
   renderOnderweg();
@@ -739,26 +729,10 @@ function renderBudget(){
   const jaar = new Date().getFullYear();
   const uitgegeven = allBooksCache
     .filter(b => (b.status === 'besteld' || b.status === 'binnen') && b.besteld_op && new Date(b.besteld_op).getFullYear() === jaar)
-    .reduce((sum, b) => sum + (b.prijs || 0), 0);
-  const budget = jaarbudgetInstelling ? (jaarbudgetInstelling.jaarbudget || 0) : 0;
-  document.getElementById('budget-uitgegeven').textContent = euro(uitgegeven);
-  document.getElementById('budget-totaal').textContent = budget ? euro(budget) : 'nog niet ingesteld';
-  document.getElementById('budget-fill').style.width = budget ? Math.min(100, (uitgegeven / budget) * 100) + '%' : '0%';
-  document.getElementById('budget-input').value = budget || '';
+    .reduce((sum, b) => sum + parsePrijs(b.prijs), 0);
+  const el = document.getElementById('budget-uitgegeven');
+  if (el) el.textContent = euro(uitgegeven);
 }
-
-document.getElementById('budget-save').addEventListener('click', async () => {
-  const waarde = parseFloat(document.getElementById('budget-input').value) || 0;
-  if (jaarbudgetInstelling && jaarbudgetInstelling.id != null){
-    const { error } = await client.from('instellingen').update({ jaarbudget: waarde }).eq('id', jaarbudgetInstelling.id);
-    if (error){ alert('Opslaan mislukt: ' + error.message); return; }
-  } else {
-    const { error } = await client.from('instellingen').insert({ jaarbudget: waarde });
-    if (error){ alert('Opslaan mislukt: ' + error.message); return; }
-  }
-  await fetchInstellingen();
-  renderBudget();
-});
 
 // ---- Herbruikbare categorie/thema-select voor editable rijen ----
 function themaSelectHtml(b, idPrefix){
@@ -822,7 +796,7 @@ function wireEditableRow(row){
     await refreshCoordinatorData();
   });
   row.querySelector('[data-field="prijs"]').addEventListener('change', async e => {
-    await dbUpdate(id, { prijs: e.target.value ? parseFloat(e.target.value) : null });
+    await dbUpdate(id, { prijs: e.target.value ? parsePrijs(e.target.value) : null });
     await refreshCoordinatorData();
   });
   row.querySelector('[data-field="categorie"]').addEventListener('change', async e => {
@@ -985,7 +959,7 @@ function wireFullRow(row){
     await refreshCoordinatorData();
   });
   row.querySelector('[data-field="prijs"]').addEventListener('change', async e => {
-    await dbUpdate(id, { prijs: e.target.value ? parseFloat(e.target.value) : null });
+    await dbUpdate(id, { prijs: e.target.value ? parsePrijs(e.target.value) : null });
     await refreshCoordinatorData();
   });
   row.querySelector('[data-field="isbn"]').addEventListener('change', async e => {
@@ -1065,7 +1039,7 @@ function updateBulkInfo(groep){
   const checked = [...document.querySelectorAll(checkboxClass + ':checked')];
   const total = checked.reduce((sum, cb) => {
     const b = allBooksCache.find(x => String(x.id) === String(cb.dataset.id));
-    return sum + (b && b.prijs ? b.prijs : 0);
+    return sum + (b ? parsePrijs(b.prijs) : 0);
   }, 0);
   document.getElementById(infoId).innerHTML = checked.length
     ? `<strong>${checked.length}</strong> geselecteerd &middot; totaal <strong>${euro(total)}</strong>`
