@@ -359,7 +359,10 @@
         <div id="isbn-match" class="match-list" style="display:none"></div>
 
         <label for="prijs">Prijs (€)</label>
-        <input type="number" id="prijs" step="0.01" min="0">
+        <div class="prijs-input-wrap">
+          <span class="currency-prefix">€</span>
+          <input type="text" inputmode="decimal" id="prijs" class="prijs-input" placeholder="0,00" autocomplete="off">
+        </div>
 
         <label for="categorie">Voor een groep, Jeelo of overig thema?</label>
         <select id="categorie">
@@ -429,7 +432,13 @@
       <div class="card">
         <div class="subsection-title">Te bestellen</div>
         <div class="bulk-bar">
-          <span class="bulk-info" id="te-bestellen-info">0 geselecteerd</span>
+          <div class="bulk-left">
+            <label class="bulk-select-all" for="sel-all-aangevraagd">
+              <input type="checkbox" id="sel-all-aangevraagd">
+              <span>Alles selecteren</span>
+            </label>
+            <span class="bulk-info" id="te-bestellen-info">0 geselecteerd</span>
+          </div>
           <button class="secondary" id="bulk-besteld" disabled>Markeer geselecteerd als besteld</button>
         </div>
         <div id="lijst-aangevraagd"></div>
@@ -438,7 +447,13 @@
       <div class="card">
         <div class="subsection-title">Onderweg (besteld, nog niet binnen)</div>
         <div class="bulk-bar">
-          <span class="bulk-info" id="onderweg-info">0 geselecteerd</span>
+          <div class="bulk-left">
+            <label class="bulk-select-all" for="sel-all-besteld">
+              <input type="checkbox" id="sel-all-besteld">
+              <span>Alles selecteren</span>
+            </label>
+            <span class="bulk-info" id="onderweg-info">0 geselecteerd</span>
+          </div>
           <button class="secondary" id="bulk-binnen" disabled>Markeer geselecteerd als binnengekomen</button>
         </div>
         <div id="lijst-besteld"></div>
@@ -632,11 +647,31 @@ function escapeHtml(str){
 function parsePrijs(val){
   if (val == null || val === '') return 0;
   if (typeof val === 'number') return isNaN(val) ? 0 : val;
-  const cleaned = String(val).replace(/[^0-9.,-]/g, '').replace(',', '.');
-  const num = parseFloat(cleaned);
+  let str = String(val).replace(/[^0-9.,-]/g, '').trim();
+  if (!str) return 0;
+  const lastDot = str.lastIndexOf('.');
+  const lastComma = str.lastIndexOf(',');
+  if (lastDot !== -1 && lastComma !== -1){
+    if (lastComma > lastDot){
+      str = str.replace(/\./g, '').replace(',', '.');
+    } else {
+      str = str.replace(/,/g, '');
+    }
+  } else if (lastComma !== -1){
+    str = str.replace(',', '.');
+  }
+  const num = parseFloat(str);
   return isNaN(num) ? 0 : num;
 }
-function euro(n){ return '€' + parsePrijs(n).toFixed(2); }
+
+function formatBedrag(n){
+  const num = parsePrijs(n);
+  return num.toLocaleString('nl-NL', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function euro(n){
+  return '€ ' + formatBedrag(n);
+}
 
 function themaVan(b){
   if (b.categorie === 'Groep') return b.groep;
@@ -785,6 +820,11 @@ document.getElementById('book-form').addEventListener('submit', async e => {
   showMatches('isbn-match', []);
   setTimeout(() => msg.textContent = '', 3000);
   await fetchAllBooks();
+});
+
+document.getElementById('prijs').addEventListener('blur', e => {
+  const val = e.target.value.trim();
+  if (val !== '') e.target.value = formatBedrag(val);
 });
 
 // ---------- Tab 2: Boeken zoeken ----------
@@ -971,13 +1011,17 @@ function themaSelectHtml(b, idPrefix){
 }
 
 function editableRowHtml(b, checkboxClass){
+  const prijsVal = b.prijs != null && b.prijs !== '' ? formatBedrag(b.prijs) : '';
   return `
     <div class="book-row" data-id="${b.id}">
       <input type="checkbox" class="${checkboxClass}" data-id="${b.id}">
       <div class="row-fields">
         <div class="field-line">
           <input type="text" class="titel-input" data-field="titel" data-id="${b.id}" value="${escapeHtml(b.titel)}">
-          <input type="number" class="prijs-input" step="0.01" min="0" data-field="prijs" data-id="${b.id}" value="${b.prijs != null ? b.prijs : ''}" placeholder="Prijs">
+          <div class="prijs-input-wrap">
+            <span class="currency-prefix">€</span>
+            <input type="text" inputmode="decimal" class="prijs-input" data-field="prijs" data-id="${b.id}" value="${prijsVal}" placeholder="0,00">
+          </div>
         </div>
         <div class="field-line">
           <input type="text" data-field="auteur" data-id="${b.id}" value="${escapeHtml(b.auteur || '')}" placeholder="Auteur" style="flex:1 1 200px;">
@@ -1014,10 +1058,18 @@ function wireEditableRow(row){
     await dbUpdate(id, { auteur: e.target.value.trim() || null });
     await refreshCoordinatorData();
   });
-  row.querySelector('[data-field="prijs"]').addEventListener('change', async e => {
-    await dbUpdate(id, { prijs: e.target.value ? parsePrijs(e.target.value) : null });
-    await refreshCoordinatorData();
-  });
+  const prijsInp = row.querySelector('[data-field="prijs"]');
+  if (prijsInp){
+    prijsInp.addEventListener('blur', e => {
+      const val = e.target.value.trim();
+      if (val !== '') e.target.value = formatBedrag(val);
+    });
+    prijsInp.addEventListener('change', async e => {
+      const val = e.target.value.trim();
+      await dbUpdate(id, { prijs: val ? parsePrijs(val) : null });
+      await refreshCoordinatorData();
+    });
+  }
   row.querySelector('[data-field="categorie"]').addEventListener('change', async e => {
     await dbUpdate(id, { categorie: e.target.value, groep: null, jeelo_thema: null, overig_thema: null });
     await refreshCoordinatorData();
@@ -1255,7 +1307,18 @@ function updateBulkInfo(groep){
   const checkboxClass = groep === 'aangevraagd' ? '.sel-aangevraagd' : '.sel-besteld';
   const infoId = groep === 'aangevraagd' ? 'te-bestellen-info' : 'onderweg-info';
   const buttonId = groep === 'aangevraagd' ? 'bulk-besteld' : 'bulk-binnen';
-  const checked = [...document.querySelectorAll(checkboxClass + ':checked')];
+  const allCheckboxId = groep === 'aangevraagd' ? 'sel-all-aangevraagd' : 'sel-all-besteld';
+
+  const allCbs = [...document.querySelectorAll(checkboxClass)];
+  const checked = allCbs.filter(cb => cb.checked);
+
+  const masterCb = document.getElementById(allCheckboxId);
+  if (masterCb){
+    masterCb.disabled = allCbs.length === 0;
+    masterCb.checked = allCbs.length > 0 && checked.length === allCbs.length;
+    masterCb.indeterminate = checked.length > 0 && checked.length < allCbs.length;
+  }
+
   const total = checked.reduce((sum, cb) => {
     const b = allBooksCache.find(x => String(x.id) === String(cb.dataset.id));
     return sum + (b ? parsePrijs(b.prijs) : 0);
@@ -1265,6 +1328,16 @@ function updateBulkInfo(groep){
     : '0 geselecteerd';
   document.getElementById(buttonId).disabled = checked.length === 0;
 }
+
+document.getElementById('sel-all-aangevraagd')?.addEventListener('change', e => {
+  document.querySelectorAll('.sel-aangevraagd').forEach(cb => { cb.checked = e.target.checked; });
+  updateBulkInfo('aangevraagd');
+});
+
+document.getElementById('sel-all-besteld')?.addEventListener('change', e => {
+  document.querySelectorAll('.sel-besteld').forEach(cb => { cb.checked = e.target.checked; });
+  updateBulkInfo('besteld');
+});
 
 document.getElementById('bulk-besteld').addEventListener('click', async () => {
   const ids = [...document.querySelectorAll('.sel-aangevraagd:checked')].map(cb => cb.dataset.id);
