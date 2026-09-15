@@ -1137,7 +1137,6 @@ function renderAfgewezen(){
         <div style="font-weight:600; font-size:14px;">${escapeHtml(b.titel)}</div>
         <div class="row-meta">
           <span class="tag">${escapeHtml(b.categorie || '')}${themaVan(b) ? ' · ' + escapeHtml(themaVan(b)) : ''}</span>
-          ${b.prijs != null && b.prijs !== '' ? `<span class="tag tag-prijs">${euro(b.prijs)}</span>` : ''}
           ${b.naam_aanvrager ? 'aangevraagd door ' + escapeHtml(b.naam_aanvrager) : ''}
         </div>
       </div>
@@ -1167,7 +1166,6 @@ function fullRowHtml(b){
         <span class="summary-left">
           <span class="summary-titel">${escapeHtml(b.titel)}</span>
           <span class="tag status-${statusLabel}">${escapeHtml(statusLabel)}</span>
-          ${b.prijs != null && b.prijs !== '' ? `<span class="tag tag-prijs">${euro(b.prijs)}</span>` : ''}
         </span>
         <span class="chevron">▶</span>
       </summary>
