@@ -271,6 +271,9 @@
         <input type="text" id="titel" required autocomplete="off">
         <div id="titel-match" class="match-list" style="display:none"></div>
 
+        <label for="auteur">Auteur (optioneel)</label>
+        <input type="text" id="auteur" autocomplete="off">
+
         <label for="isbn">Artikelnummer (ISBN, 13 cijfers)</label>
         <input type="text" id="isbn" required inputmode="numeric" maxlength="13" placeholder="bijv. 9789043919678" autocomplete="off">
         <div id="isbn-error" style="display:none; color:var(--red); font-size:13px; margin-top:4px;">ISBN moet uit precies 13 cijfers bestaan.</div>
@@ -533,6 +536,7 @@ document.getElementById('book-form').addEventListener('submit', async e => {
   const nieuwBoek = {
     naam_aanvrager: document.getElementById('naam_aanvrager').value.trim(),
     titel: document.getElementById('titel').value.trim(),
+    auteur: document.getElementById('auteur').value.trim() || null,
     isbn: isbnWaarde,
     prijs: document.getElementById('prijs').value ? parseFloat(document.getElementById('prijs').value) : null,
     categorie: categorie,
@@ -622,7 +626,7 @@ function renderZoekLijst(){
   container.innerHTML = lijst.map(b => `
     <div class="result-card cat-${escapeHtml(b.categorie || '')}">
       <div class="titel">${escapeHtml(b.titel)}</div>
-      <div class="meta">${escapeHtml(b.categorie || '')}${themaVan(b) ? ' · ' + escapeHtml(themaVan(b)) : ''}</div>
+      <div class="meta">${b.auteur ? escapeHtml(b.auteur) + ' · ' : ''}${escapeHtml(b.categorie || '')}${themaVan(b) ? ' · ' + escapeHtml(themaVan(b)) : ''}</div>
     </div>
   `).join('');
 }
@@ -715,6 +719,9 @@ function editableRowHtml(b, checkboxClass){
           <input type="number" class="prijs-input" step="0.01" min="0" data-field="prijs" data-id="${b.id}" value="${b.prijs != null ? b.prijs : ''}" placeholder="Prijs">
         </div>
         <div class="field-line">
+          <input type="text" data-field="auteur" data-id="${b.id}" value="${escapeHtml(b.auteur || '')}" placeholder="Auteur" style="flex:1 1 200px;">
+        </div>
+        <div class="field-line">
           <select data-field="categorie" data-id="${b.id}">
             <option value="Groep" ${b.categorie==='Groep'?'selected':''}>Groep</option>
             <option value="Jeelo" ${b.categorie==='Jeelo'?'selected':''}>Jeelo</option>
@@ -740,6 +747,10 @@ function wireEditableRow(row){
   const id = row.dataset.id;
   row.querySelector('[data-field="titel"]').addEventListener('change', async e => {
     await dbUpdate(id, { titel: e.target.value.trim() });
+    await refreshCoordinatorData();
+  });
+  row.querySelector('[data-field="auteur"]').addEventListener('change', async e => {
+    await dbUpdate(id, { auteur: e.target.value.trim() || null });
     await refreshCoordinatorData();
   });
   row.querySelector('[data-field="prijs"]').addEventListener('change', async e => {
@@ -852,6 +863,9 @@ function fullRowHtml(b){
             <input type="number" class="prijs-input" step="0.01" min="0" data-field="prijs" data-id="${b.id}" value="${b.prijs != null ? b.prijs : ''}" placeholder="Prijs">
           </div>
           <div class="field-line">
+            <input type="text" data-field="auteur" data-id="${b.id}" value="${escapeHtml(b.auteur || '')}" placeholder="Auteur" style="flex:1 1 200px;">
+          </div>
+          <div class="field-line">
             <input type="text" data-field="isbn" data-id="${b.id}" value="${escapeHtml(b.isbn || '')}" placeholder="ISBN" inputmode="numeric" maxlength="13" style="flex:1 1 160px;">
             <input type="text" data-field="naam_aanvrager" data-id="${b.id}" value="${escapeHtml(b.naam_aanvrager || '')}" placeholder="Aangevraagd door" style="flex:1 1 160px;">
           </div>
@@ -885,6 +899,10 @@ function wireFullRow(row){
   const id = row.dataset.id;
   row.querySelector('[data-field="titel"]').addEventListener('change', async e => {
     await dbUpdate(id, { titel: e.target.value.trim() });
+    await refreshCoordinatorData();
+  });
+  row.querySelector('[data-field="auteur"]').addEventListener('change', async e => {
+    await dbUpdate(id, { auteur: e.target.value.trim() || null });
     await refreshCoordinatorData();
   });
   row.querySelector('[data-field="prijs"]').addEventListener('change', async e => {
