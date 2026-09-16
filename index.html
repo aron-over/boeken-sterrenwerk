@@ -140,6 +140,8 @@
     font-size:13px;
   }
   .match-list .match-item{padding:4px 0;}
+  .match-list .match-item-link{cursor:pointer; text-decoration:underline; text-underline-offset:2px;}
+  .match-list .match-item-link:hover{color:var(--ink);}
   .search-row{display:flex; gap:10px; margin-bottom:16px; flex-wrap:wrap;}
   .search-row input, .search-row select{flex:1 1 150px; width:auto;}
   .filter-pills{display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px;}
@@ -473,7 +475,6 @@
             <option value="aangevraagd">Aangevraagd</option>
             <option value="besteld">Besteld</option>
             <option value="binnen">Binnen</option>
-            <option value="afgewezen">Afgewezen</option>
           </select>
         </div>
         <div id="lijst-alle"></div>
@@ -742,8 +743,18 @@ function showMatches(containerId, matches){
   if (!matches.length){ el.style.display = 'none'; el.innerHTML = ''; return; }
   el.style.display = '';
   el.innerHTML = 'Lijkt al op de lijst te staan:<br>' + matches.slice(0,4).map(b =>
-    `<div class="match-item">• ${escapeHtml(b.titel)} <span class="tag status-${b.status || 'aangevraagd'}">${escapeHtml(b.status || 'aangevraagd')}</span></div>`
+    `<div class="match-item match-item-link" data-titel="${escapeHtml(b.titel)}">• ${escapeHtml(b.titel)}</div>`
   ).join('');
+  el.querySelectorAll('.match-item-link').forEach(item => {
+    item.addEventListener('click', () => goToZoekenMetTitel(item.dataset.titel));
+  });
+}
+
+function goToZoekenMetTitel(titel){
+  document.querySelector('nav.tabs button[data-tab="zoeken"]').click();
+  const input = document.getElementById('zoek-input');
+  input.value = titel;
+  renderZoekLijst();
 }
 
 const checkTitelMatch = debounce(() => {
@@ -1159,13 +1170,11 @@ function renderAfgewezen(){
 }
 
 function fullRowHtml(b){
-  const statusLabel = b.status || 'aangevraagd';
   return `
     <details class="book-details" data-id="${b.id}">
       <summary>
         <span class="summary-left">
           <span class="summary-titel">${escapeHtml(b.titel)}</span>
-          <span class="tag status-${statusLabel}">${escapeHtml(statusLabel)}</span>
         </span>
         <span class="chevron">▶</span>
       </summary>
@@ -1295,7 +1304,7 @@ function renderAlleBoeken(){
   const openIds = new Set([...document.querySelectorAll('#lijst-alle details[open]')].map(d => d.dataset.id));
   const q = document.getElementById('alle-zoek').value.trim().toLowerCase();
   const statusFilter = document.getElementById('alle-status-filter').value;
-  let lijst = allBooksCache;
+  let lijst = allBooksCache.filter(b => b.status !== 'afgewezen');
   if (q) lijst = lijst.filter(b => b.titel && b.titel.toLowerCase().includes(q));
   if (statusFilter) lijst = lijst.filter(b => (b.status || 'aangevraagd') === statusFilter);
 
