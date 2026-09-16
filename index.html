@@ -186,6 +186,8 @@
   .result-card.cat-Kleuters{border-left-color:var(--red);}
   .result-card .titel{font-weight:600; font-size:15px;}
   .result-card .meta{font-size:13px; color:var(--ink-soft); margin-top:4px;}
+  .result-card .tags-row{margin-top:8px;}
+  .result-card .tag-isbn{background:none; border:1px solid var(--line); color:var(--ink-soft);}
   .boekentip-list{margin-top:10px; padding-top:10px; border-top:1px solid var(--line);}
   .boekentip-item{font-size:13px; color:var(--ink); margin-bottom:4px; display:flex; justify-content:space-between; align-items:center; gap:8px;}
   .boekentip-item .link{flex-shrink:0;}
@@ -738,6 +740,15 @@ function themaVan(b){
   return b[veldVoorCategorie(b.categorie)];
 }
 
+// Bij "Groep" zit de groep al in het thema-veld (bijv. "Groep 4"), dus categorie erbij
+// zetten geeft een verwarrend dubbelop "Groep · Groep 4". Bij de andere categorieën
+// staat de thema-waarde los van de categorienaam, dus die combinatie blijft wel nuttig.
+function themaLabel(b){
+  const thema = themaVan(b);
+  if (b.categorie === 'Groep') return thema || 'Groep';
+  return thema ? (b.categorie || '') + ' · ' + thema : (b.categorie || '');
+}
+
 async function dbUpdate(id, fields){
   const { error } = await client.from('boeken').update(fields).eq('id', id);
   if (error){
@@ -1056,7 +1067,11 @@ function renderZoekLijst(){
   container.innerHTML = lijst.map(b => `
     <div class="result-card cat-${escapeHtml(b.categorie || '')}" data-id="${b.id}">
       <div class="titel">${escapeHtml(b.titel)}</div>
-      <div class="meta">${b.auteur ? escapeHtml(b.auteur) + ' · ' : ''}${escapeHtml(b.categorie || '')}${themaVan(b) ? ' · ' + escapeHtml(themaVan(b)) : ''}</div>
+      ${b.auteur ? `<div class="meta">${escapeHtml(b.auteur)}</div>` : ''}
+      <div class="tags-row">
+        <span class="tag tag-thema">${escapeHtml(themaLabel(b))}</span>
+        ${b.isbn ? `<span class="tag tag-isbn">ISBN ${escapeHtml(b.isbn)}</span>` : ''}
+      </div>
       ${b.boekentip ? `<div class="boekentip-list">${escapeHtml(b.boekentip).split('\n').filter(Boolean).map(t => `<div class="boekentip-item"><span>${t}</span></div>`).join('')}</div>` : ''}
       <button class="tiny boekentip-toggle">+ Boekentip toevoegen</button>
       <div class="boekentip-add" style="display:none">
