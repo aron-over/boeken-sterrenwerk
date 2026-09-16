@@ -167,6 +167,7 @@
   }
   .result-card.cat-Jeelo{border-left-color:var(--green);}
   .result-card.cat-Overig{border-left-color:var(--ink);}
+  .result-card.cat-Kleuters{border-left-color:var(--red);}
   .result-card .titel{font-weight:600; font-size:15px;}
   .result-card .meta{font-size:13px; color:var(--ink-soft); margin-top:4px;}
   .boekentip-list{margin-top:10px; padding-top:10px; border-top:1px solid var(--line);}
@@ -366,9 +367,10 @@
           <input type="text" inputmode="decimal" id="prijs" class="prijs-input" placeholder="0,00" autocomplete="off">
         </div>
 
-        <label for="categorie">Voor een groep, Jeelo of overig thema?</label>
+        <label for="categorie">Voor een groep, Kleuters, Jeelo of overig thema?</label>
         <select id="categorie">
           <option value="Groep">Groep</option>
+          <option value="Kleuters">Kleuters</option>
           <option value="Jeelo">Jeelo</option>
           <option value="Overig">Overige thema's</option>
         </select>
@@ -376,6 +378,11 @@
         <div id="groep-veld">
           <label for="groep">Voor welke groep?</label>
           <select id="groep"></select>
+        </div>
+        <div id="kleuters-veld" style="display:none">
+          <label for="kleuters_thema">Voor welk kleuterthema?</label>
+          <select id="kleuters_thema"></select>
+          <input type="text" id="kleuters_thema_anders" placeholder="Vul het thema in" style="display:none; margin-top:8px;">
         </div>
         <div id="jeelo-veld" style="display:none">
           <label for="jeelo_thema">Voor welk Jeelo thema?</label>
@@ -404,6 +411,7 @@
       <div class="filter-pills" id="zoek-cat-pills">
         <button class="pill active" data-cat="">Alles</button>
         <button class="pill" data-cat="Groep">Groep</button>
+        <button class="pill" data-cat="Kleuters">Kleuters</button>
         <button class="pill" data-cat="Jeelo">Jeelo</button>
         <button class="pill" data-cat="Overig">Overige thema's</button>
       </div>
@@ -626,15 +634,26 @@ if (IS_LOCAL){
 // Pas dit wachtwoord aan naar iets van jezelf:
 const COORD_PASSWORD = 'sterrenwerk2026';
 
-const GROEPEN = ['Kleuters','Groep 3','Groep 4','Groep 5','Groep 6','Groep 7','Groep 8'];
+const GROEPEN = ['Groep 3','Groep 4','Groep 5','Groep 6','Groep 7','Groep 8'];
+const KLEUTERS_THEMAS = ['Baby familie','Beroepen','Bouwen','Verkeer','Lente','Zomer','Herfst','Winter','Seizoenen','Zoekboek','Gezondheid','Sociaal emotioneel','Dieren','Natuur','Koningshuis','Koken en bakken','Rekenen','Sprookjes','Taal','Vakantie','Vriendschap','Kikker','Voorlezen','Boerderij','Ruimte','Kerst','Sinterklaas','Pasen','Emoties'];
 const JEELO_THEMAS = ['Omgaan met elkaar','Maken van je eigen product','Leren voor later','Zorgen voor dieren','Beleven van onze planeet','Veilig in het verkeer','Zorgen voor jezelf en anderen','Omgaan met geld','Leren van personen van vroeger','Inrichten van je eigen omgeving','Omgaan met natuur','Veilig helpen'];
 const OVERIGE_THEMAS = ['Lessen taal','Gedichten',"Sprookjes (verhalen, legenden, mythen)",'Bekende personen','Engelse boeken','Andere talen','Geschiedenis','Oorlog','Aardrijkskunde','Burgerschap','Relaties en Seksualiteit','Gedrag','Kunst','Digitale geletterdheid','Hoogbegaafdheid','Voorleesboeken'];
 const ANDERS = '__anders__';
+
+function veldVoorCategorie(cat){
+  if (cat === 'Groep') return 'groep';
+  if (cat === 'Kleuters') return 'kleuters_thema';
+  if (cat === 'Jeelo') return 'jeelo_thema';
+  return 'overig_thema';
+}
 
 function fillSelect(id, options){
   document.getElementById(id).innerHTML = options.map(o => `<option value="${o}">${o}</option>`).join('');
 }
 fillSelect('groep', GROEPEN);
+document.getElementById('kleuters_thema').innerHTML =
+  KLEUTERS_THEMAS.map(o => `<option value="${o}">${o}</option>`).join('') +
+  `<option value="${ANDERS}">Anders, namelijk…</option>`;
 fillSelect('jeelo_thema', JEELO_THEMAS);
 document.getElementById('overig_thema').innerHTML =
   OVERIGE_THEMAS.map(o => `<option value="${o}">${o}</option>`).join('') +
@@ -675,9 +694,7 @@ function euro(n){
 }
 
 function themaVan(b){
-  if (b.categorie === 'Groep') return b.groep;
-  if (b.categorie === 'Jeelo') return b.jeelo_thema;
-  return b.overig_thema;
+  return b[veldVoorCategorie(b.categorie)];
 }
 
 async function dbUpdate(id, fields){
@@ -708,11 +725,15 @@ categorieSelect.addEventListener('change', updateCategorieVelden);
 function updateCategorieVelden(){
   const val = categorieSelect.value;
   document.getElementById('groep-veld').style.display = val === 'Groep' ? '' : 'none';
+  document.getElementById('kleuters-veld').style.display = val === 'Kleuters' ? '' : 'none';
   document.getElementById('jeelo-veld').style.display = val === 'Jeelo' ? '' : 'none';
   document.getElementById('overig-veld').style.display = val === 'Overig' ? '' : 'none';
 }
 updateCategorieVelden();
 
+document.getElementById('kleuters_thema').addEventListener('change', e => {
+  document.getElementById('kleuters_thema_anders').style.display = e.target.value === ANDERS ? '' : 'none';
+});
 document.getElementById('overig_thema').addEventListener('change', e => {
   document.getElementById('overig_thema_anders').style.display = e.target.value === ANDERS ? '' : 'none';
 });
@@ -800,6 +821,15 @@ document.getElementById('book-form').addEventListener('submit', async e => {
       return;
     }
   }
+  let kleutersWaarde = null;
+  if (categorie === 'Kleuters'){
+    const sel = document.getElementById('kleuters_thema').value;
+    kleutersWaarde = sel === ANDERS ? document.getElementById('kleuters_thema_anders').value.trim() : sel;
+    if (!kleutersWaarde){
+      alert('Vul het kleuterthema in.');
+      return;
+    }
+  }
   const nieuwBoek = {
     naam_aanvrager: document.getElementById('naam_aanvrager').value.trim(),
     titel: document.getElementById('titel').value.trim(),
@@ -810,6 +840,7 @@ document.getElementById('book-form').addEventListener('submit', async e => {
     groep: categorie === 'Groep' ? document.getElementById('groep').value : null,
     jeelo_thema: categorie === 'Jeelo' ? document.getElementById('jeelo_thema').value : null,
     overig_thema: categorie === 'Overig' ? overigWaarde : null,
+    kleuters_thema: categorie === 'Kleuters' ? kleutersWaarde : null,
     klas_of_kast: null,
     aantal: 1,
     status: 'aangevraagd',
@@ -827,6 +858,7 @@ document.getElementById('book-form').addEventListener('submit', async e => {
   document.getElementById('book-form').reset();
   updateCategorieVelden();
   document.getElementById('overig_thema_anders').style.display = 'none';
+  document.getElementById('kleuters_thema_anders').style.display = 'none';
   showMatches('titel-match', []);
   showMatches('isbn-match', []);
   setTimeout(() => msg.textContent = '', 3000);
@@ -861,7 +893,7 @@ function populateZoekThemaPills(){
     container.innerHTML = '';
     return;
   }
-  const veld = zoekCategorie === 'Groep' ? 'groep' : zoekCategorie === 'Jeelo' ? 'jeelo_thema' : 'overig_thema';
+  const veld = veldVoorCategorie(zoekCategorie);
   const waarden = [...new Set(
     allBooksCache.filter(b => b.status === 'binnen' && b.categorie === zoekCategorie && b[veld]).map(b => b[veld])
   )].sort();
@@ -1013,6 +1045,13 @@ function themaSelectHtml(b, idPrefix){
   if (cat === 'Jeelo'){
     return JEELO_THEMAS.map(o => `<option value="${o}" ${o===b.jeelo_thema?'selected':''}>${o}</option>`).join('');
   }
+  if (cat === 'Kleuters'){
+    const current = b.kleuters_thema;
+    const isKnown = KLEUTERS_THEMAS.includes(current);
+    let html = KLEUTERS_THEMAS.map(o => `<option value="${o}" ${o===current?'selected':''}>${o}</option>`).join('');
+    html += `<option value="${ANDERS}" ${(!isKnown && current) ? 'selected' : ''}>${(!isKnown && current) ? escapeHtml(current) + ' (eigen thema)' : 'Anders, namelijk…'}</option>`;
+    return html;
+  }
   // Overig
   const current = b.overig_thema;
   const isKnown = OVERIGE_THEMAS.includes(current);
@@ -1040,6 +1079,7 @@ function editableRowHtml(b, checkboxClass){
         <div class="field-line">
           <select data-field="categorie" data-id="${b.id}">
             <option value="Groep" ${b.categorie==='Groep'?'selected':''}>Groep</option>
+            <option value="Kleuters" ${b.categorie==='Kleuters'?'selected':''}>Kleuters</option>
             <option value="Jeelo" ${b.categorie==='Jeelo'?'selected':''}>Jeelo</option>
             <option value="Overig" ${b.categorie==='Overig'?'selected':''}>Overig</option>
           </select>
@@ -1082,7 +1122,7 @@ function wireEditableRow(row){
     });
   }
   row.querySelector('[data-field="categorie"]').addEventListener('change', async e => {
-    await dbUpdate(id, { categorie: e.target.value, groep: null, jeelo_thema: null, overig_thema: null });
+    await dbUpdate(id, { categorie: e.target.value, groep: null, jeelo_thema: null, overig_thema: null, kleuters_thema: null });
     await refreshCoordinatorData();
   });
   row.querySelector('[data-field="thema"]').addEventListener('change', async e => {
@@ -1092,7 +1132,7 @@ function wireEditableRow(row){
       waarde = prompt('Vul het thema in:', '');
       if (!waarde){ await refreshCoordinatorData(); return; }
     }
-    const veld = book.categorie === 'Groep' ? 'groep' : book.categorie === 'Jeelo' ? 'jeelo_thema' : 'overig_thema';
+    const veld = veldVoorCategorie(book.categorie);
     await dbUpdate(id, { [veld]: waarde });
     await refreshCoordinatorData();
   });
@@ -1197,6 +1237,7 @@ function fullRowHtml(b){
           <div class="field-line">
             <select data-field="categorie" data-id="${b.id}">
               <option value="Groep" ${b.categorie==='Groep'?'selected':''}>Groep</option>
+              <option value="Kleuters" ${b.categorie==='Kleuters'?'selected':''}>Kleuters</option>
               <option value="Jeelo" ${b.categorie==='Jeelo'?'selected':''}>Jeelo</option>
               <option value="Overig" ${b.categorie==='Overig'?'selected':''}>Overig</option>
             </select>
@@ -1262,7 +1303,7 @@ function wireFullRow(row){
     await refreshCoordinatorData();
   });
   row.querySelector('[data-field="categorie"]').addEventListener('change', async e => {
-    await dbUpdate(id, { categorie: e.target.value, groep: null, jeelo_thema: null, overig_thema: null });
+    await dbUpdate(id, { categorie: e.target.value, groep: null, jeelo_thema: null, overig_thema: null, kleuters_thema: null });
     await refreshCoordinatorData();
   });
   row.querySelector('[data-field="thema"]').addEventListener('change', async e => {
@@ -1272,7 +1313,7 @@ function wireFullRow(row){
       waarde = prompt('Vul het thema in:', '');
       if (!waarde){ await refreshCoordinatorData(); return; }
     }
-    const veld = book.categorie === 'Groep' ? 'groep' : book.categorie === 'Jeelo' ? 'jeelo_thema' : 'overig_thema';
+    const veld = veldVoorCategorie(book.categorie);
     await dbUpdate(id, { [veld]: waarde });
     await refreshCoordinatorData();
   });
