@@ -189,6 +189,7 @@
   .result-card .meta{font-size:13px; color:var(--ink-soft); margin-top:4px;}
   .result-card .tags-row{margin-top:8px;}
   .result-card .tag-isbn{background:none; border:1px solid var(--line); color:var(--ink-soft);}
+  .result-card .opmerking-note{margin-top:8px; padding:8px 10px; background:var(--bg); border-radius:8px; font-size:13px; color:var(--ink);}
   .boekentip-list{margin-top:10px; padding-top:10px; border-top:1px solid var(--line);}
   .boekentip-item{font-size:13px; color:var(--ink); margin-bottom:4px; display:flex; justify-content:space-between; align-items:center; gap:8px;}
   .boekentip-item .link{flex-shrink:0;}
@@ -1087,7 +1088,7 @@ function renderZoekLijst(){
   const q = document.getElementById('zoek-input').value.trim().toLowerCase();
 
   let lijst = allBooksCache.filter(b => b.status === 'binnen');
-  if (q) lijst = lijst.filter(b => (b.titel && b.titel.toLowerCase().includes(q)) || (b.isbn && b.isbn.toLowerCase().includes(q)) || (b.boekentip && b.boekentip.toLowerCase().includes(q)));
+  if (q) lijst = lijst.filter(b => (b.titel && b.titel.toLowerCase().includes(q)) || (b.isbn && b.isbn.toLowerCase().includes(q)) || (b.boekentip && b.boekentip.toLowerCase().includes(q)) || (b.opmerking && b.opmerking.toLowerCase().includes(q)));
   if (zoekCategorie) lijst = lijst.filter(b => b.categorie === zoekCategorie);
   if (zoekThema) lijst = lijst.filter(b => themaVan(b) === zoekThema);
 
@@ -1106,6 +1107,7 @@ function renderZoekLijst(){
         <span class="tag tag-thema">${escapeHtml(themaLabel(b))}</span>
         ${b.isbn ? `<span class="tag tag-isbn">ISBN ${escapeHtml(b.isbn)}</span>` : ''}
       </div>
+      ${b.opmerking ? `<div class="opmerking-note">${escapeHtml(b.opmerking)}</div>` : ''}
       ${b.boekentip ? `<div class="boekentip-list">${escapeHtml(b.boekentip).split('\n').filter(Boolean).map(t => `<div class="boekentip-item"><span>${t}</span></div>`).join('')}</div>` : ''}
       <button class="tiny boekentip-toggle">+ Boekentip toevoegen</button>
       <div class="boekentip-add" style="display:none">
