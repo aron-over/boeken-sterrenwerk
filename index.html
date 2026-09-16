@@ -512,6 +512,26 @@ let allBooksCache = [];
 let pristineBaselineData = null;
 let initialBaselineLoaded = false;
 
+// Supabase/PostgREST geeft standaard maximaal 1000 rijen per query terug, ongeacht select('*').
+// Daarom hier altijd in pagina's ophalen en samenvoegen, onafhankelijk van de Max Rows-instelling.
+const FETCH_PAGE_SIZE = 1000;
+async function fetchAllRows(table, orderCol = 'titel', ascending = true){
+  let rows = [];
+  let from = 0;
+  while (true){
+    const { data, error } = await realClient
+      .from(table)
+      .select('*')
+      .order(orderCol, { ascending })
+      .range(from, from + FETCH_PAGE_SIZE - 1);
+    if (error) return { data: null, error };
+    rows = rows.concat(data);
+    if (!data || data.length < FETCH_PAGE_SIZE) break;
+    from += FETCH_PAGE_SIZE;
+  }
+  return { data: rows, error: null };
+}
+
 function resetTestData(){
   if (!pristineBaselineData) return;
   allBooksCache = JSON.parse(JSON.stringify(pristineBaselineData));
@@ -536,7 +556,7 @@ const client = (!IS_LOCAL) ? realClient : {
       select(columns = '*'){
         const executeSelect = async (orderCol = 'titel', ascending = true) => {
           if (!initialBaselineLoaded){
-            const res = await realClient.from('boeken').select(columns).order(orderCol, { ascending });
+            const res = await fetchAllRows('boeken', orderCol, ascending);
             if (!res.error && res.data){
               pristineBaselineData = JSON.parse(JSON.stringify(res.data));
               allBooksCache = JSON.parse(JSON.stringify(res.data));
@@ -743,7 +763,9 @@ async function fetchAllBooks(forceReload = false){
   if (IS_LOCAL && initialBaselineLoaded && !forceReload){
     return true;
   }
-  const { data, error } = await client.from('boeken').select('*').order('titel', { ascending: true });
+  const { data, error } = IS_LOCAL
+    ? await client.from('boeken').select('*').order('titel', { ascending: true })
+    : await fetchAllRows('boeken', 'titel', true);
   if (!error && data){
     allBooksCache = data;
     if (IS_LOCAL && !pristineBaselineData){
