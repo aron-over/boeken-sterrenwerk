@@ -115,6 +115,7 @@
     font-weight:600;
   }
   button.secondary:disabled{opacity:0.4; cursor:not-allowed;}
+  button.secondary.danger{background:var(--red-soft); color:var(--red);}
   button.tiny{
     font-family:'Space Grotesk', sans-serif;
     background:var(--bg);
@@ -499,7 +500,7 @@
       <div class="card">
         <div class="subsection-title">Alle boeken</div>
         <div class="search-row">
-          <input type="text" id="alle-zoek" placeholder="Zoek op titel…">
+          <input type="text" id="alle-zoek" placeholder="Zoek op titel, auteur, ISBN, thema, opmerking…">
           <select id="alle-status-filter">
             <option value="">Alle statussen</option>
             <option value="aangevraagd">Aangevraagd</option>
@@ -507,6 +508,40 @@
             <option value="binnen">Binnen</option>
           </select>
         </div>
+        <div class="filter-pills" id="alle-cat-pills">
+          <button class="pill active" data-cat="">Alle categorieën</button>
+          <button class="pill" data-cat="Groep">Groep</button>
+          <button class="pill" data-cat="Kleuters">Kleuters</button>
+          <button class="pill" data-cat="Jeelo">Jeelo</button>
+          <button class="pill" data-cat="Overig">Overig</button>
+        </div>
+        <div class="filter-pills" id="alle-leeg-pills">
+          <button class="pill" data-leegveld="auteur">Zonder auteur</button>
+          <button class="pill" data-leegveld="isbn">Zonder ISBN</button>
+          <button class="pill" data-leegveld="thema">Zonder thema</button>
+          <button class="pill" data-leegveld="prijs">Zonder prijs</button>
+          <button class="pill" data-leegveld="opmerking">Zonder opmerking</button>
+        </div>
+        <div class="bulk-bar" id="alle-bulk-bar">
+          <div class="bulk-left">
+            <label class="bulk-select-all" for="sel-all-alle">
+              <input type="checkbox" id="sel-all-alle">
+              <span>Alles selecteren</span>
+            </label>
+            <span class="bulk-info" id="alle-bulk-info">0 geselecteerd</span>
+          </div>
+          <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+            <select id="alle-bulk-status">
+              <option value="aangevraagd">Aangevraagd</option>
+              <option value="besteld">Besteld</option>
+              <option value="binnen">Binnen</option>
+              <option value="afgewezen">Afgewezen</option>
+            </select>
+            <button class="secondary" id="alle-bulk-status-apply" disabled>Status wijzigen</button>
+            <button class="secondary danger" id="alle-bulk-delete" disabled>Verwijderen</button>
+          </div>
+        </div>
+        <div class="result-count" id="alle-count"></div>
         <div id="lijst-alle"></div>
       </div>
     </div>
@@ -1354,6 +1389,7 @@ function fullRowHtml(b){
     <details class="book-details" data-id="${b.id}">
       <summary>
         <span class="summary-left">
+          <input type="checkbox" class="sel-alle" data-id="${b.id}">
           <span class="summary-titel">${escapeHtml(b.titel)}</span>
         </span>
         <span class="chevron">▶</span>
@@ -1414,6 +1450,11 @@ function fullRowHtml(b){
 
 function wireFullRow(row){
   const id = row.dataset.id;
+  const selCb = row.querySelector('.sel-alle');
+  if (selCb){
+    selCb.addEventListener('click', e => e.stopPropagation());
+    selCb.addEventListener('change', () => updateAlleBulkInfo());
+  }
   row.querySelector('[data-field="titel"]').addEventListener('change', async e => {
     await dbUpdate(id, { titel: e.target.value.trim() });
     await refreshCoordinatorData();
@@ -1481,17 +1522,38 @@ function wireFullRow(row){
   }));
 }
 
+// ---- Intuïtief zoeken/filteren door "Alle boeken" ----
+let alleCategorieFilter = '';
+const alleLeegVelden = new Set(); // welke velden moeten LEEG zijn, bijv. {'auteur','thema'} voor "Groep zonder auteur"
+
+// Brede vrije-tekstzoekopdracht: titel, auteur, ISBN, thema, aanvrager, opmerking en boekentips.
+function alleZoekTekst(b){
+  return [b.titel, b.auteur, b.isbn, themaVan(b), b.naam_aanvrager, b.opmerking, b.boekentip]
+    .filter(Boolean).join(' ').toLowerCase();
+}
+
+function alleVeldIsLeeg(b, veld){
+  if (veld === 'thema') return !themaVan(b);
+  const val = b[veld];
+  return val === null || val === undefined || String(val).trim() === '';
+}
+
 function renderAlleBoeken(){
   const openIds = new Set([...document.querySelectorAll('#lijst-alle details[open]')].map(d => d.dataset.id));
   const q = document.getElementById('alle-zoek').value.trim().toLowerCase();
   const statusFilter = document.getElementById('alle-status-filter').value;
   let lijst = allBooksCache.filter(b => b.status !== 'afgewezen');
-  if (q) lijst = lijst.filter(b => b.titel && b.titel.toLowerCase().includes(q));
+  if (q) lijst = lijst.filter(b => alleZoekTekst(b).includes(q));
   if (statusFilter) lijst = lijst.filter(b => (b.status || 'aangevraagd') === statusFilter);
+  if (alleCategorieFilter) lijst = lijst.filter(b => b.categorie === alleCategorieFilter);
+  alleLeegVelden.forEach(veld => { lijst = lijst.filter(b => alleVeldIsLeeg(b, veld)); });
+
+  document.getElementById('alle-count').textContent = lijst.length + (lijst.length === 1 ? ' boek' : ' boeken');
 
   const container = document.getElementById('lijst-alle');
   if (!lijst.length){
     container.innerHTML = `<div class="empty-state">Geen boeken gevonden.</div>`;
+    updateAlleBulkInfo();
     return;
   }
   container.innerHTML = lijst.map(fullRowHtml).join('');
@@ -1499,10 +1561,80 @@ function renderAlleBoeken(){
     wireFullRow(row);
     if (openIds.has(row.dataset.id)) row.open = true;
   });
+  updateAlleBulkInfo();
 }
 
 document.getElementById('alle-zoek').addEventListener('input', renderAlleBoeken);
 document.getElementById('alle-status-filter').addEventListener('change', renderAlleBoeken);
+
+document.querySelectorAll('#alle-cat-pills .pill').forEach(btn => {
+  btn.addEventListener('click', () => {
+    alleCategorieFilter = btn.dataset.cat;
+    document.querySelectorAll('#alle-cat-pills .pill').forEach(p => p.classList.toggle('active', p === btn));
+    renderAlleBoeken();
+  });
+});
+
+document.querySelectorAll('#alle-leeg-pills .pill').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const veld = btn.dataset.leegveld;
+    if (alleLeegVelden.has(veld)) alleLeegVelden.delete(veld); else alleLeegVelden.add(veld);
+    btn.classList.toggle('active');
+    renderAlleBoeken();
+  });
+});
+
+function updateAlleBulkInfo(){
+  const allCbs = [...document.querySelectorAll('.sel-alle')];
+  const checked = allCbs.filter(cb => cb.checked);
+
+  const masterCb = document.getElementById('sel-all-alle');
+  if (masterCb){
+    masterCb.disabled = allCbs.length === 0;
+    masterCb.checked = allCbs.length > 0 && checked.length === allCbs.length;
+    masterCb.indeterminate = checked.length > 0 && checked.length < allCbs.length;
+  }
+  const infoEl = document.getElementById('alle-bulk-info');
+  if (infoEl){
+    if (allCbs.length === 0){
+      infoEl.textContent = '0 geselecteerd';
+    } else if (checked.length === 0){
+      infoEl.textContent = `0 van de ${allCbs.length} geselecteerd`;
+    } else {
+      infoEl.innerHTML = `<strong>${checked.length}</strong> van de <strong>${allCbs.length}</strong> geselecteerd`;
+    }
+  }
+  document.getElementById('alle-bulk-status-apply').disabled = checked.length === 0;
+  document.getElementById('alle-bulk-delete').disabled = checked.length === 0;
+}
+
+document.getElementById('sel-all-alle')?.addEventListener('change', e => {
+  document.querySelectorAll('.sel-alle').forEach(cb => { cb.checked = e.target.checked; });
+  updateAlleBulkInfo();
+});
+
+document.getElementById('alle-bulk-status-apply').addEventListener('click', async () => {
+  const ids = [...document.querySelectorAll('.sel-alle:checked')].map(cb => cb.dataset.id);
+  if (!ids.length) return;
+  const nieuweStatus = document.getElementById('alle-bulk-status').value;
+  const updates = { status: nieuweStatus };
+  if (nieuweStatus === 'aangevraagd'){ updates.besteld_op = null; updates.binnen_op = null; }
+  if (nieuweStatus === 'besteld'){ updates.besteld_op = new Date().toISOString(); }
+  if (nieuweStatus === 'binnen'){ updates.binnen_op = new Date().toISOString(); }
+  const { error } = await client.from('boeken').update(updates).in('id', ids);
+  if (error){ alert('Bulk-wijziging mislukt: ' + error.message); return; }
+  await refreshCoordinatorData();
+});
+
+document.getElementById('alle-bulk-delete').addEventListener('click', async () => {
+  const ids = [...document.querySelectorAll('.sel-alle:checked')].map(cb => cb.dataset.id);
+  if (!ids.length) return;
+  if (!confirm(`${ids.length} boek(en) definitief verwijderen?`)) return;
+  const resultaten = await Promise.all(ids.map(id => client.from('boeken').delete().eq('id', id)));
+  const mislukt = resultaten.filter(r => r.error).length;
+  if (mislukt) alert(`Verwijderen van ${mislukt} boek(en) mislukt.`);
+  await refreshCoordinatorData();
+});
 
 function updateBulkInfo(groep){
   const checkboxClass = groep === 'aangevraagd' ? '.sel-aangevraagd' : '.sel-besteld';
