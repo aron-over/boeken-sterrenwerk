@@ -156,6 +156,22 @@
     color:var(--ink-soft);
   }
   .filter-pills .pill.active{background:var(--ink); color:#fff; border-color:var(--ink);}
+  .thema-zoekveld{position:relative;}
+  .thema-suggesties{
+    position:absolute;
+    z-index:5;
+    left:0; right:0;
+    margin-top:4px;
+    max-height:220px;
+    overflow-y:auto;
+    border:1px solid var(--line);
+    border-radius:8px;
+    background:var(--surface);
+    box-shadow:0 4px 14px rgba(20,33,61,0.12);
+  }
+  .thema-suggestie{padding:9px 12px; font-size:14px; cursor:pointer;}
+  .thema-suggestie:hover{background:var(--gold-soft); color:var(--gold-dark);}
+  .thema-suggestie-leeg{padding:9px 12px; font-size:13px; color:var(--ink-soft);}
   .result-count{font-size:13px; color:var(--ink-soft); margin-bottom:10px;}
   .result-card{
     border:1px solid var(--line);
@@ -380,8 +396,12 @@
           <select id="groep"></select>
         </div>
         <div id="kleuters-veld" style="display:none">
-          <label for="kleuters_thema">Voor welk kleuterthema?</label>
-          <select id="kleuters_thema"></select>
+          <label for="kleuters_thema_zoek">Voor welk kleuterthema?</label>
+          <div class="thema-zoekveld">
+            <input type="text" id="kleuters_thema_zoek" placeholder="Typ om een thema te zoeken…" autocomplete="off">
+            <div class="thema-suggesties" id="kleuters_thema_suggesties" style="display:none"></div>
+          </div>
+          <select id="kleuters_thema" style="display:none"></select>
           <input type="text" id="kleuters_thema_anders" placeholder="Vul het thema in" style="display:none; margin-top:8px;">
         </div>
         <div id="jeelo-veld" style="display:none">
@@ -655,7 +675,7 @@ if (IS_LOCAL){
 const COORD_PASSWORD = 'sterrenwerk2026';
 
 const GROEPEN = ['Groep 3','Groep 4','Groep 5','Groep 6','Groep 7','Groep 8'];
-const KLEUTERS_THEMAS = ['Baby familie','Beroepen','Bouwen','Verkeer','Lente','Zomer','Herfst','Winter','Seizoenen','Zoekboek','Gezondheid','Sociaal emotioneel','Dieren','Natuur','Koningshuis','Koken en bakken','Rekenen','Sprookjes','Taal','Vakantie','Vriendschap','Kikker','Voorlezen','Boerderij','Ruimte','Kerst','Sinterklaas','Pasen','Emoties'];
+const KLEUTERS_THEMAS = ['Baby familie','Beroepen','Bouwen','Verkeer','Lente','Zomer','Herfst','Winter','Seizoenen','Zoekboek','Gezondheid','Sociaal emotioneel','Dieren','Natuur','Koningshuis','Koken en bakken','Rekenen','Sprookjes','Taal','Vakantie','Vriendschap','Kikker','Voorlezen','Boerderij','Ruimte','Kerst','Sinterklaas','Pasen','Emoties'].sort((a, b) => a.localeCompare(b, 'nl'));
 const JEELO_THEMAS = ['Omgaan met elkaar','Maken van je eigen product','Leren voor later','Zorgen voor dieren','Beleven van onze planeet','Veilig in het verkeer','Zorgen voor jezelf en anderen','Omgaan met geld','Leren van personen van vroeger','Inrichten van je eigen omgeving','Omgaan met natuur','Veilig helpen'];
 const OVERIGE_THEMAS = ['Lessen taal','Gedichten',"Sprookjes (verhalen, legenden, mythen)",'Bekende personen','Engelse boeken','Andere talen','Geschiedenis','Oorlog','Aardrijkskunde','Burgerschap','Relaties en Seksualiteit','Gedrag','Kunst','Digitale geletterdheid','Hoogbegaafdheid','Voorleesboeken'];
 const ANDERS = '__anders__';
@@ -674,6 +694,7 @@ fillSelect('groep', GROEPEN);
 document.getElementById('kleuters_thema').innerHTML =
   KLEUTERS_THEMAS.map(o => `<option value="${o}">${o}</option>`).join('') +
   `<option value="${ANDERS}">Anders, namelijk…</option>`;
+document.getElementById('kleuters_thema_zoek').value = KLEUTERS_THEMAS[0] || '';
 fillSelect('jeelo_thema', JEELO_THEMAS);
 document.getElementById('overig_thema').innerHTML =
   OVERIGE_THEMAS.map(o => `<option value="${o}">${o}</option>`).join('') +
@@ -757,6 +778,56 @@ document.getElementById('kleuters_thema').addEventListener('change', e => {
 document.getElementById('overig_thema').addEventListener('change', e => {
   document.getElementById('overig_thema_anders').style.display = e.target.value === ANDERS ? '' : 'none';
 });
+
+// ---------- Herbruikbaar zoekveld met suggesties (o.a. voor de vele kleuterthema's) ----------
+function wireThemaZoekveld(inputEl, suggestiesEl, opties, onSelect){
+  function render(filterTekst){
+    const q = filterTekst.trim().toLowerCase();
+    const matches = q ? opties.filter(o => o.label.toLowerCase().includes(q)) : opties;
+    suggestiesEl.innerHTML = matches.length
+      ? matches.map(o => `<div class="thema-suggestie" data-value="${escapeHtml(o.value)}">${escapeHtml(o.label)}</div>`).join('')
+      : `<div class="thema-suggestie-leeg">Geen thema gevonden</div>`;
+    suggestiesEl.style.display = 'block';
+  }
+  inputEl.addEventListener('focus', () => render(inputEl.value));
+  inputEl.addEventListener('input', () => render(inputEl.value));
+  inputEl.addEventListener('blur', () => setTimeout(() => { suggestiesEl.style.display = 'none'; }, 150));
+  inputEl.addEventListener('keydown', e => {
+    if (e.key === 'Escape'){
+      suggestiesEl.style.display = 'none';
+    } else if (e.key === 'Enter'){
+      e.preventDefault();
+      const eerste = suggestiesEl.querySelector('.thema-suggestie');
+      if (eerste){
+        const opt = opties.find(o => o.value === eerste.dataset.value);
+        if (opt) onSelect(opt);
+        suggestiesEl.style.display = 'none';
+      }
+    }
+  });
+  suggestiesEl.addEventListener('mousedown', e => {
+    const item = e.target.closest('.thema-suggestie');
+    if (!item) return;
+    e.preventDefault();
+    const opt = opties.find(o => o.value === item.dataset.value);
+    if (opt) onSelect(opt);
+    suggestiesEl.style.display = 'none';
+  });
+}
+
+const kleutersThemaOpties = KLEUTERS_THEMAS.map(t => ({ value: t, label: t }))
+  .concat([{ value: ANDERS, label: 'Anders, namelijk…' }]);
+wireThemaZoekveld(
+  document.getElementById('kleuters_thema_zoek'),
+  document.getElementById('kleuters_thema_suggesties'),
+  kleutersThemaOpties,
+  opt => {
+    document.getElementById('kleuters_thema_zoek').value = opt.label;
+    const select = document.getElementById('kleuters_thema');
+    select.value = opt.value;
+    select.dispatchEvent(new Event('change'));
+  }
+);
 
 // ---------- Dubbele-aanvraag check ----------
 async function fetchAllBooks(forceReload = false){
@@ -881,6 +952,8 @@ document.getElementById('book-form').addEventListener('submit', async e => {
   updateCategorieVelden();
   document.getElementById('overig_thema_anders').style.display = 'none';
   document.getElementById('kleuters_thema_anders').style.display = 'none';
+  document.getElementById('kleuters_thema_zoek').value = KLEUTERS_THEMAS[0] || '';
+  document.getElementById('kleuters_thema_suggesties').style.display = 'none';
   showMatches('titel-match', []);
   showMatches('isbn-match', []);
   setTimeout(() => msg.textContent = '', 3000);
@@ -918,13 +991,44 @@ function populateZoekThemaPills(){
   const veld = veldVoorCategorie(zoekCategorie);
   const waarden = [...new Set(
     allBooksCache.filter(b => b.status === 'binnen' && b.categorie === zoekCategorie && b[veld]).map(b => b[veld])
-  )].sort();
+  )].sort((a, b) => a.localeCompare(b, 'nl'));
   if (!waarden.length){
     container.style.display = 'none';
     container.innerHTML = '';
     return;
   }
   container.style.display = 'flex';
+
+  // Kleuters heeft zoveel thema's dat een muur aan knoppen onhandig wordt: daar een zoekveld i.p.v. pillen.
+  if (zoekCategorie === 'Kleuters'){
+    if (zoekThema){
+      container.innerHTML = `<button class="pill active" id="zoek-thema-clear" type="button">${escapeHtml(zoekThema)} ✕</button>`;
+      document.getElementById('zoek-thema-clear').addEventListener('click', () => {
+        zoekThema = '';
+        populateZoekThemaPills();
+        renderZoekLijst();
+      });
+      return;
+    }
+    container.innerHTML = `
+      <div class="thema-zoekveld" style="flex:1 1 100%;">
+        <input type="text" id="zoek-thema-zoek" placeholder="Zoek een kleuterthema…" autocomplete="off">
+        <div class="thema-suggesties" id="zoek-thema-suggesties" style="display:none"></div>
+      </div>
+    `;
+    wireThemaZoekveld(
+      document.getElementById('zoek-thema-zoek'),
+      document.getElementById('zoek-thema-suggesties'),
+      waarden.map(w => ({ value: w, label: w })),
+      opt => {
+        zoekThema = opt.value;
+        populateZoekThemaPills();
+        renderZoekLijst();
+      }
+    );
+    return;
+  }
+
   container.innerHTML = `<button class="pill active" data-thema="">Alle thema's</button>` +
     waarden.map(w => `<button class="pill" data-thema="${escapeHtml(w)}">${escapeHtml(w)}</button>`).join('');
   container.querySelectorAll('.pill').forEach(btn => btn.addEventListener('click', () => {
