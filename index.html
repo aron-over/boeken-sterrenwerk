@@ -743,6 +743,12 @@ function escapeHtml(str){
   div.textContent = str == null ? '' : str;
   return div.innerHTML;
 }
+
+// Er is geen back-up van de database, dus verwijderen is definitief: vraag altijd expliciet bevestiging,
+// met de titel erbij zodat je ziet wát je weggooit i.p.v. een generieke "weet je het zeker?"-vraag.
+function bevestigVerwijderen(titel){
+  return confirm(`"${titel || 'dit boek'}" definitief verwijderen?\n\nDit kan NIET ongedaan worden gemaakt (geen back-up).`);
+}
 function parsePrijs(val){
   if (val == null || val === '') return 0;
   if (typeof val === 'number') return isNaN(val) ? 0 : val;
@@ -1326,7 +1332,8 @@ function wireEditableRow(row){
     await refreshCoordinatorData();
   });
   row.querySelector('[data-delete]').addEventListener('click', async () => {
-    if (!confirm('Dit boek verwijderen?')) return;
+    const boek = allBooksCache.find(x => String(x.id) === String(id));
+    if (!bevestigVerwijderen(boek && boek.titel)) return;
     const { error } = await client.from('boeken').delete().eq('id', id);
     if (error){ alert('Verwijderen mislukt: ' + error.message); return; }
     await refreshCoordinatorData();
@@ -1386,7 +1393,8 @@ function renderAfgewezen(){
     await refreshCoordinatorData();
   }));
   container.querySelectorAll('[data-delete]').forEach(btn => btn.addEventListener('click', async () => {
-    if (!confirm('Dit boek verwijderen?')) return;
+    const boek = allBooksCache.find(x => String(x.id) === String(btn.dataset.delete));
+    if (!bevestigVerwijderen(boek && boek.titel)) return;
     const { error } = await client.from('boeken').delete().eq('id', btn.dataset.delete);
     if (error){ alert('Verwijderen mislukt: ' + error.message); return; }
     await refreshCoordinatorData();
@@ -1517,7 +1525,8 @@ function wireFullRow(row){
     await refreshCoordinatorData();
   });
   row.querySelector('[data-delete]').addEventListener('click', async () => {
-    if (!confirm('Dit boek verwijderen?')) return;
+    const boek = allBooksCache.find(x => String(x.id) === String(id));
+    if (!bevestigVerwijderen(boek && boek.titel)) return;
     const { error } = await client.from('boeken').delete().eq('id', id);
     if (error){ alert('Verwijderen mislukt: ' + error.message); return; }
     await refreshCoordinatorData();
@@ -1632,7 +1641,7 @@ document.getElementById('alle-bulk-status-apply').addEventListener('click', asyn
 document.getElementById('alle-bulk-delete').addEventListener('click', async () => {
   const ids = [...document.querySelectorAll('.sel-alle:checked')].map(cb => cb.dataset.id);
   if (!ids.length) return;
-  if (!confirm(`${ids.length} boek(en) definitief verwijderen?`)) return;
+  if (!confirm(`${ids.length} boek(en) definitief verwijderen?\n\nDit kan NIET ongedaan worden gemaakt (geen back-up).`)) return;
   const resultaten = await Promise.all(ids.map(id => client.from('boeken').delete().eq('id', id)));
   const mislukt = resultaten.filter(r => r.error).length;
   if (mislukt) alert(`Verwijderen van ${mislukt} boek(en) mislukt.`);
