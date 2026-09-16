@@ -785,6 +785,13 @@ function themaLabel(b){
   return thema ? (b.categorie || '') + ' · ' + thema : (b.categorie || '');
 }
 
+// Brede vrije-tekstzoekopdracht (gebruikt door zowel "Boeken zoeken" als coördinator "Alle boeken"):
+// titel, auteur, ISBN, thema, aanvrager, opmerking en boekentips.
+function boekZoekTekst(b){
+  return [b.titel, b.auteur, b.isbn, themaVan(b), b.naam_aanvrager, b.opmerking, b.boekentip]
+    .filter(Boolean).join(' ').toLowerCase();
+}
+
 async function dbUpdate(id, fields){
   const { error } = await client.from('boeken').update(fields).eq('id', id);
   if (error){
@@ -1088,7 +1095,7 @@ function renderZoekLijst(){
   const q = document.getElementById('zoek-input').value.trim().toLowerCase();
 
   let lijst = allBooksCache.filter(b => b.status === 'binnen');
-  if (q) lijst = lijst.filter(b => (b.titel && b.titel.toLowerCase().includes(q)) || (b.isbn && b.isbn.toLowerCase().includes(q)) || (b.boekentip && b.boekentip.toLowerCase().includes(q)) || (b.opmerking && b.opmerking.toLowerCase().includes(q)));
+  if (q) lijst = lijst.filter(b => boekZoekTekst(b).includes(q));
   if (zoekCategorie) lijst = lijst.filter(b => b.categorie === zoekCategorie);
   if (zoekThema) lijst = lijst.filter(b => themaVan(b) === zoekThema);
 
@@ -1528,12 +1535,6 @@ function wireFullRow(row){
 let alleCategorieFilter = '';
 const alleLeegVelden = new Set(); // welke velden moeten LEEG zijn, bijv. {'auteur','thema'} voor "Groep zonder auteur"
 
-// Brede vrije-tekstzoekopdracht: titel, auteur, ISBN, thema, aanvrager, opmerking en boekentips.
-function alleZoekTekst(b){
-  return [b.titel, b.auteur, b.isbn, themaVan(b), b.naam_aanvrager, b.opmerking, b.boekentip]
-    .filter(Boolean).join(' ').toLowerCase();
-}
-
 function alleVeldIsLeeg(b, veld){
   if (veld === 'thema') return !themaVan(b);
   const val = b[veld];
@@ -1545,7 +1546,7 @@ function renderAlleBoeken(){
   const q = document.getElementById('alle-zoek').value.trim().toLowerCase();
   const statusFilter = document.getElementById('alle-status-filter').value;
   let lijst = allBooksCache.filter(b => b.status !== 'afgewezen');
-  if (q) lijst = lijst.filter(b => alleZoekTekst(b).includes(q));
+  if (q) lijst = lijst.filter(b => boekZoekTekst(b).includes(q));
   if (statusFilter) lijst = lijst.filter(b => (b.status || 'aangevraagd') === statusFilter);
   if (alleCategorieFilter) lijst = lijst.filter(b => b.categorie === alleCategorieFilter);
   alleLeegVelden.forEach(veld => { lijst = lijst.filter(b => alleVeldIsLeeg(b, veld)); });
