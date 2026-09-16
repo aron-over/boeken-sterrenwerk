@@ -694,9 +694,9 @@ function fillSelect(id, options){
 }
 fillSelect('groep', GROEPEN);
 document.getElementById('kleuters_thema').innerHTML =
+  `<option value="" selected></option>` +
   KLEUTERS_THEMAS.map(o => `<option value="${o}">${o}</option>`).join('') +
   `<option value="${ANDERS}">Anders, namelijk…</option>`;
-document.getElementById('kleuters_thema_zoek').value = KLEUTERS_THEMAS[0] || '';
 fillSelect('jeelo_thema', JEELO_THEMAS);
 document.getElementById('overig_thema').innerHTML =
   OVERIGE_THEMAS.map(o => `<option value="${o}">${o}</option>`).join('') +
@@ -963,7 +963,6 @@ document.getElementById('book-form').addEventListener('submit', async e => {
   updateCategorieVelden();
   document.getElementById('overig_thema_anders').style.display = 'none';
   document.getElementById('kleuters_thema_anders').style.display = 'none';
-  document.getElementById('kleuters_thema_zoek').value = KLEUTERS_THEMAS[0] || '';
   document.getElementById('kleuters_thema_suggesties').style.display = 'none';
   showMatches('titel-match', []);
   showMatches('isbn-match', []);
