@@ -350,15 +350,53 @@
     display:flex;
     align-items:center;
     justify-content:space-between;
-    gap:10px;
-    padding:12px 4px;
+    gap:12px;
+    padding:9px 6px;
+    border-radius:6px;
+    transition:background-color .12s;
   }
+  .book-details summary:hover{background:rgba(20,33,61,0.03);}
   .book-details summary::-webkit-details-marker{display:none;}
-  .book-details summary .summary-left{display:flex; align-items:center; gap:10px; min-width:0;}
-  .book-details summary .summary-titel{font-weight:600; font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .book-details summary .summary-left{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    min-width:0;
+    flex:1;
+  }
+  .book-details summary .summary-left input[type=checkbox]{
+    margin:0 !important;
+    flex-shrink:0;
+  }
+  .book-details summary .summary-text{
+    display:inline;
+    font-size:14px;
+    line-height:1.45;
+    min-width:0;
+  }
+  .book-details summary .summary-titel{
+    font-weight:600;
+    font-size:14px;
+    color:var(--ink);
+    margin-right:6px;
+  }
+  .book-details summary .summary-status{
+    margin:0 6px 0 0;
+    font-size:11px;
+    padding:1px 7px;
+    vertical-align:1px;
+  }
+  .book-details summary .summary-meta{
+    font-size:13px;
+    color:var(--ink-soft);
+    font-weight:400;
+  }
+  .book-details summary .summary-meta .summary-opm{
+    font-style:italic;
+  }
   .book-details summary .chevron{color:var(--ink-soft); font-size:12px; transition:transform .15s; flex-shrink:0;}
   .book-details[open] summary .chevron{transform:rotate(90deg);}
-  .book-details-body{padding:4px 4px 18px;}
+  .book-details-body{padding:8px 6px 18px;}
   .subsection-title{font-size:14px; font-weight:600; color:var(--ink-soft); margin:24px 0 10px;}
   .subsection-title:first-child{margin-top:0;}
 </style>
@@ -1265,22 +1303,34 @@ function renderBudget(){
 function themaSelectHtml(b, idPrefix){
   const cat = b.categorie;
   if (cat === 'Groep'){
-    return GROEPEN.map(o => `<option value="${o}" ${o===b.groep?'selected':''}>${o}</option>`).join('');
+    const current = b.groep;
+    const isLeeg = !current;
+    let html = `<option value="" ${isLeeg ? 'selected' : ''}>(Geen groep)</option>`;
+    html += GROEPEN.map(o => `<option value="${o}" ${o===current?'selected':''}>${o}</option>`).join('');
+    return html;
   }
   if (cat === 'Jeelo'){
-    return JEELO_THEMAS.map(o => `<option value="${o}" ${o===b.jeelo_thema?'selected':''}>${o}</option>`).join('');
+    const current = b.jeelo_thema;
+    const isLeeg = !current;
+    let html = `<option value="" ${isLeeg ? 'selected' : ''}>(Geen thema)</option>`;
+    html += JEELO_THEMAS.map(o => `<option value="${o}" ${o===current?'selected':''}>${o}</option>`).join('');
+    return html;
   }
   if (cat === 'Kleuters'){
     const current = b.kleuters_thema;
     const isKnown = KLEUTERS_THEMAS.includes(current);
-    let html = KLEUTERS_THEMAS.map(o => `<option value="${o}" ${o===current?'selected':''}>${o}</option>`).join('');
+    const isLeeg = !current;
+    let html = `<option value="" ${isLeeg ? 'selected' : ''}>(Geen thema)</option>`;
+    html += KLEUTERS_THEMAS.map(o => `<option value="${o}" ${o===current?'selected':''}>${o}</option>`).join('');
     html += `<option value="${ANDERS}" ${(!isKnown && current) ? 'selected' : ''}>${(!isKnown && current) ? escapeHtml(current) + ' (eigen thema)' : 'Anders, namelijk…'}</option>`;
     return html;
   }
   // Overig
   const current = b.overig_thema;
   const isKnown = OVERIGE_THEMAS.includes(current);
-  let html = OVERIGE_THEMAS.map(o => `<option value="${o}" ${o===current?'selected':''}>${o}</option>`).join('');
+  const isLeeg = !current;
+  let html = `<option value="" ${isLeeg ? 'selected' : ''}>(Geen thema)</option>`;
+  html += OVERIGE_THEMAS.map(o => `<option value="${o}" ${o===current?'selected':''}>${o}</option>`).join('');
   html += `<option value="${ANDERS}" ${(!isKnown && current) ? 'selected' : ''}>${(!isKnown && current) ? escapeHtml(current) + ' (eigen thema)' : 'Anders, namelijk…'}</option>`;
   return html;
 }
@@ -1367,7 +1417,7 @@ function wireEditableRow(row){
       if (!waarde){ await refreshCoordinatorData(); return; }
     }
     const veld = veldVoorCategorie(book.categorie);
-    await dbUpdate(id, { [veld]: waarde });
+    await dbUpdate(id, { [veld]: waarde || null });
     await refreshCoordinatorData();
   });
   const rejectBtn = row.querySelector('[data-reject]');
@@ -1447,13 +1497,33 @@ function renderAfgewezen(){
 }
 
 function fullRowHtml(b){
+  const metaParts = [];
+  if (b.auteur) metaParts.push(escapeHtml(b.auteur));
+  const thema = themaLabel(b);
+  if (thema) metaParts.push(escapeHtml(thema));
+  if (b.prijs != null && b.prijs !== '') metaParts.push(euro(b.prijs));
+  if (b.naam_aanvrager) metaParts.push('door ' + escapeHtml(b.naam_aanvrager));
+  if (b.opmerking){
+    const cleanOpm = b.opmerking.trim();
+    const shortOpm = cleanOpm.length > 50 ? cleanOpm.slice(0, 47) + '…' : cleanOpm;
+    metaParts.push(`<span class="summary-opm" title="${escapeHtml(cleanOpm)}">opm: ${escapeHtml(shortOpm)}</span>`);
+  }
+  if (b.boekentip){
+    const tips = b.boekentip.split('\n').filter(Boolean).length;
+    if (tips) metaParts.push(tips === 1 ? '1 boekentip' : `${tips} boekentips`);
+  }
+
   return `
     <details class="book-details" data-id="${b.id}">
       <summary>
-        <span class="summary-left">
+        <div class="summary-left">
           <input type="checkbox" class="sel-alle" data-id="${b.id}">
-          <span class="summary-titel">${escapeHtml(b.titel)}</span>
-        </span>
+          <div class="summary-text">
+            <span class="summary-titel">${escapeHtml(b.titel)}</span>
+            <span class="tag status-${b.status || 'aangevraagd'} summary-status">${escapeHtml(b.status || 'aangevraagd')}</span>
+            ${metaParts.length ? `<span class="summary-meta">${metaParts.join(' &middot; ')}</span>` : ''}
+          </div>
+        </div>
         <span class="chevron">▶</span>
       </summary>
       <div class="book-details-body">
@@ -1566,7 +1636,7 @@ function wireFullRow(row){
       if (!waarde){ await refreshCoordinatorData(); return; }
     }
     const veld = veldVoorCategorie(book.categorie);
-    await dbUpdate(id, { [veld]: waarde });
+    await dbUpdate(id, { [veld]: waarde || null });
     await refreshCoordinatorData();
   });
   row.querySelector('[data-field="status"]').addEventListener('change', async e => {
