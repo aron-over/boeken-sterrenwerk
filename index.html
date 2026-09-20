@@ -182,9 +182,50 @@
     margin-bottom:8px;
     background:var(--surface);
   }
+  .result-card.cat-Groep{border-left-color:var(--gold);}
   .result-card.cat-Jeelo{border-left-color:var(--green);}
-  .result-card.cat-Overig{border-left-color:var(--ink);}
+  .result-card.cat-Overig{border-left-color:#3652A3;}
   .result-card.cat-Kleuters{border-left-color:var(--red);}
+  /* Categorie labels met kleur in zoeken */
+  .tag.cat-tag{
+    font-weight:600;
+    border:1px solid transparent;
+  }
+  .tag.cat-tag.cat-Kleuters{
+    background:#FDF0EE;
+    color:#B33830;
+    border-color:#F5C6C2;
+  }
+  .tag.cat-tag.cat-Groep{
+    background:#FEF9EB;
+    color:#8F6800;
+    border-color:#F6E29F;
+  }
+  .tag.cat-tag.cat-Jeelo{
+    background:#EDF7F2;
+    color:#236347;
+    border-color:#BFE4D1;
+  }
+  .tag.cat-tag.cat-Overig{
+    background:#EEF2FB;
+    color:#2D4FA8;
+    border-color:#CCD7F5;
+  }
+  .tag.cat-tag.cat-Zonder{
+    background:#F0F1F5;
+    color:#6B7288;
+    border-color:#E3E5EC;
+  }
+  .tag.tag-subthema{
+    background:var(--bg);
+    color:var(--ink);
+    border:1px solid var(--line);
+    font-weight:500;
+  }
+  #zoek-cat-pills .pill[data-cat="Groep"].active{background:var(--gold-dark); border-color:var(--gold-dark); color:#fff;}
+  #zoek-cat-pills .pill[data-cat="Kleuters"].active{background:var(--red); border-color:var(--red); color:#fff;}
+  #zoek-cat-pills .pill[data-cat="Jeelo"].active{background:var(--green); border-color:var(--green); color:#fff;}
+  #zoek-cat-pills .pill[data-cat="Overig"].active{background:#3652A3; border-color:#3652A3; color:#fff;}
   .result-card-main{
     display:flex;
     justify-content:space-between;
@@ -259,8 +300,20 @@
     padding-top:10px;
     border-top:1px solid var(--line);
   }
-  .boekentip-list{margin:0 0 8px;}
-  .boekentip-item{font-size:13px; color:var(--ink); margin-bottom:4px; display:flex; justify-content:space-between; align-items:center; gap:8px;}
+  .boekentip-item{
+    font-size:13px;
+    color:var(--ink);
+    margin-bottom:6px;
+    padding:6px 10px;
+    border-radius:6px;
+    background:var(--bg);
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:10px;
+  }
+  .boekentip-item .tip-text{flex:1; word-break:break-word;}
+  .boekentip-item .tip-actions{display:flex; gap:8px; align-items:center; flex-shrink:0;}
   .boekentip-item .link{flex-shrink:0;}
   .boekentip-add{display:flex; gap:8px; margin-top:8px;}
   .boekentip-add input{flex:1; padding:7px 10px; font-size:13px;}
@@ -304,7 +357,7 @@
     border-radius:8px;
     box-sizing:border-box;
     width:110px;
-    flex:0 0 110px;
+    height:34px;
     transition:border-color .15s, outline .15s;
   }
   .prijs-input-wrap:focus-within{
@@ -325,13 +378,20 @@
     background:transparent !important;
     padding:6px 8px 6px 4px !important;
     width:100% !important;
+    height:100% !important;
     min-width:0 !important;
     font-size:13px;
     color:var(--ink);
   }
+  .row-fields .prijs-input-wrap{
+    width:110px;
+    flex:0 0 110px;
+    height:33px;
+  }
   #book-form .prijs-input-wrap{
     width:100%;
     max-width:200px;
+    height:42px;
     flex:none;
   }
   #book-form .prijs-input-wrap .currency-prefix{
@@ -546,6 +606,20 @@
     font-size:13px;
     border-radius:8px;
   }
+  .edit-field .prijs-input-wrap{
+    width:100%;
+    height:36px;
+    flex:none;
+  }
+  .edit-field .prijs-input-wrap .currency-prefix{
+    padding-left:9px;
+    font-size:13px;
+  }
+  .edit-field .prijs-input-wrap .prijs-input{
+    padding:7px 9px 7px 4px !important;
+    font-size:13px;
+    height:100% !important;
+  }
   .edit-status-banner{
     display:flex;
     justify-content:space-between;
@@ -595,6 +669,28 @@
     flex-wrap:wrap;
     gap:8px;
   }
+  .prop-filter-box{
+    margin-bottom:16px;
+    background:rgba(20,33,61,0.02);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:10px 14px;
+  }
+  .prop-filter-row{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    flex-wrap:wrap;
+  }
+  .prop-label{
+    font-size:11px;
+    font-weight:700;
+    color:var(--ink);
+    min-width:60px;
+    text-transform:uppercase;
+    letter-spacing:0.5px;
+    user-select:none;
+  }
 </style>
 </head>
 <body>
@@ -619,7 +715,7 @@
   <!-- TAB 1: BOEKEN ZOEKEN -->
   <section class="tab-panel active" id="tab-zoeken">
     <div class="card">
-      <h2>Wat staat er al?</h2>
+      <h2>Welke boeken zijn er al?</h2>
       <input type="text" id="zoek-input" placeholder="Zoek op titel, ISBN of boekentip…" style="margin-bottom:14px;">
       <div class="filter-pills" id="zoek-cat-pills">
         <button class="pill active" data-cat="">Alles</button>
@@ -783,18 +879,36 @@
         </div>
 
         <div class="filter-header-row">
-          <div class="filter-section-title" style="margin:0;">Filter op ontbrekende gegevens:</div>
+          <div class="filter-section-title" style="margin:0;">Filter op eigenschappen:</div>
           <button class="btn-reset-filters" id="alle-reset-filters" type="button" style="display:none;">✕ Filters wissen</button>
         </div>
-        <div class="filter-pills" id="alle-leeg-pills">
-          <button class="pill" data-leegfilter="zonder_kleuters_thema">Zonder kleuterthema</button>
-          <button class="pill" data-leegfilter="zonder_overig_thema">Zonder overig thema</button>
-          <button class="pill" data-leegfilter="zonder_groep">Zonder groep</button>
-          <button class="pill" data-leegfilter="zonder_categorie">Zonder categorie</button>
-          <button class="pill" data-leegfilter="zonder_isbn">Zonder ISBN</button>
-          <button class="pill" data-leegfilter="zonder_auteur">Zonder auteur</button>
-          <button class="pill" data-leegfilter="zonder_prijs">Zonder prijs</button>
-          <button class="pill" data-leegfilter="met_opmerking">Met opmerking</button>
+        <div class="prop-filter-box" id="alle-eigenschappen-filters">
+          <div class="prop-filter-row">
+            <span class="prop-label">Zonder:</span>
+            <div class="filter-pills" id="alle-zonder-pills" style="margin-bottom:0;">
+              <button class="pill" data-leegfilter="zonder_kleuters_thema">Zonder kleuterthema</button>
+              <button class="pill" data-leegfilter="zonder_overig_thema">Zonder overig thema</button>
+              <button class="pill" data-leegfilter="zonder_groep">Zonder groep</button>
+              <button class="pill" data-leegfilter="zonder_categorie">Zonder categorie</button>
+              <button class="pill" data-leegfilter="zonder_isbn">Zonder ISBN</button>
+              <button class="pill" data-leegfilter="zonder_auteur">Zonder auteur</button>
+              <button class="pill" data-leegfilter="zonder_prijs">Zonder prijs</button>
+              <button class="pill" data-leegfilter="zonder_opmerking">Zonder opmerking</button>
+            </div>
+          </div>
+          <div class="prop-filter-row" style="margin-top:8px;">
+            <span class="prop-label">Met:</span>
+            <div class="filter-pills" id="alle-met-pills" style="margin-bottom:0;">
+              <button class="pill" data-leegfilter="met_kleuters_thema">Met kleuterthema</button>
+              <button class="pill" data-leegfilter="met_overig_thema">Met overig thema</button>
+              <button class="pill" data-leegfilter="met_groep">Met groep</button>
+              <button class="pill" data-leegfilter="met_categorie">Met categorie</button>
+              <button class="pill" data-leegfilter="met_isbn">Met ISBN</button>
+              <button class="pill" data-leegfilter="met_auteur">Met auteur</button>
+              <button class="pill" data-leegfilter="met_prijs">Met prijs</button>
+              <button class="pill" data-leegfilter="met_opmerking">Met opmerking</button>
+            </div>
+          </div>
         </div>
 
         <div class="bulk-toolbar" id="alle-bulk-bar">
@@ -1403,6 +1517,42 @@ function populateZoekThemaPills(){
   }));
 }
 
+function renderZoekTags(b){
+  let html = '';
+  const cat = b.categorie;
+  if (cat === 'Kleuters'){
+    html += `<span class="tag cat-tag cat-Kleuters">Kleuters</span>`;
+    if (b.kleuters_thema && b.kleuters_thema.trim()){
+      html += `<span class="tag tag-subthema">${escapeHtml(b.kleuters_thema.trim())}</span>`;
+    }
+  } else if (cat === 'Groep'){
+    const grp = (b.groep && b.groep.trim()) ? b.groep.trim() : 'Groep';
+    html += `<span class="tag cat-tag cat-Groep">${escapeHtml(grp)}</span>`;
+  } else if (cat === 'Jeelo'){
+    html += `<span class="tag cat-tag cat-Jeelo">Jeelo</span>`;
+    if (b.jeelo_thema && b.jeelo_thema.trim()){
+      html += `<span class="tag tag-subthema">${escapeHtml(b.jeelo_thema.trim())}</span>`;
+    }
+  } else if (cat === 'Overig'){
+    html += `<span class="tag cat-tag cat-Overig">Overig</span>`;
+    if (b.overig_thema && b.overig_thema.trim()){
+      html += `<span class="tag tag-subthema">${escapeHtml(b.overig_thema.trim())}</span>`;
+    }
+  } else {
+    html += `<span class="tag cat-tag cat-Zonder">Zonder categorie</span>`;
+  }
+
+  if (b.isbn){
+    html += `<span class="tag tag-isbn">ISBN ${escapeHtml(b.isbn)}</span>`;
+  }
+  if (b.opmerking){
+    const clean = b.opmerking.trim();
+    const shortOpm = clean.length > 40 ? clean.slice(0, 37) + '…' : clean;
+    html += `<span class="tag tag-opm" title="${escapeHtml(clean)}">opm: ${escapeHtml(shortOpm)}</span>`;
+  }
+  return html;
+}
+
 function renderZoekLijst(){
   const q = document.getElementById('zoek-input').value.trim().toLowerCase();
 
@@ -1425,13 +1575,6 @@ function renderZoekLijst(){
       ? (tips.length === 1 ? '💡 1 boekentip' : `💡 ${tips.length} boekentips`)
       : '+ Boekentip';
 
-    let opmHtml = '';
-    if (b.opmerking){
-      const clean = b.opmerking.trim();
-      const shortOpm = clean.length > 40 ? clean.slice(0, 37) + '…' : clean;
-      opmHtml = `<span class="tag tag-opm" title="${escapeHtml(clean)}">opm: ${escapeHtml(shortOpm)}</span>`;
-    }
-
     return `
       <div class="result-card cat-${escapeHtml(b.categorie || '')}" data-id="${b.id}">
         <div class="result-card-main">
@@ -1441,9 +1584,7 @@ function renderZoekLijst(){
               ${b.auteur ? `<span class="meta-inline">· ${escapeHtml(b.auteur)}</span>` : ''}
             </div>
             <div class="tags-row">
-              <span class="tag tag-thema">${escapeHtml(themaLabel(b))}</span>
-              ${b.isbn ? `<span class="tag tag-isbn">ISBN ${escapeHtml(b.isbn)}</span>` : ''}
-              ${opmHtml}
+              ${renderZoekTags(b)}
             </div>
           </div>
           <div class="result-card-action">
@@ -1611,8 +1752,19 @@ function updateSummaryHeader(row, b){
   if (titelEl) titelEl.textContent = b.titel;
   const statusEl = row.querySelector('.summary-status');
   if (statusEl){
-    statusEl.className = `tag status-${b.status || 'aangevraagd'} summary-status`;
-    statusEl.textContent = b.status || 'aangevraagd';
+    const s = b.status || 'aangevraagd';
+    if (!s || s === 'binnen'){
+      statusEl.style.display = 'none';
+      statusEl.textContent = '';
+      statusEl.className = 'tag summary-status';
+    } else {
+      statusEl.style.display = '';
+      statusEl.className = `tag status-${s} summary-status`;
+      if (s === 'aangevraagd') statusEl.textContent = 'te bestellen';
+      else if (s === 'besteld') statusEl.textContent = 'onderweg';
+      else if (s === 'afgewezen') statusEl.textContent = 'niet leverbaar';
+      else statusEl.textContent = s;
+    }
   }
   const metaEl = row.querySelector('.summary-meta');
   if (metaEl) metaEl.innerHTML = renderSummaryMeta(b);
@@ -1889,6 +2041,15 @@ function renderAfgewezen(){
   }));
 }
 
+function coordinatorStatusHtml(status){
+  if (!status || status === 'binnen') return '<span class="tag summary-status" style="display:none;"></span>';
+  let label = status;
+  if (status === 'aangevraagd') label = 'te bestellen';
+  else if (status === 'besteld') label = 'onderweg';
+  else if (status === 'afgewezen') label = 'niet leverbaar';
+  return `<span class="tag status-${escapeHtml(status)} summary-status">${escapeHtml(label)}</span>`;
+}
+
 function fullRowHtml(b){
   const prijsVal = b.prijs != null && b.prijs !== '' ? formatBedrag(b.prijs) : '';
   const isCustom = !isBekendThema(b.categorie, b[veldVoorCategorie(b.categorie)]);
@@ -1901,7 +2062,7 @@ function fullRowHtml(b){
           <input type="checkbox" class="sel-alle" data-id="${b.id}">
           <div class="summary-text">
             <span class="summary-titel">${escapeHtml(b.titel)}</span>
-            <span class="tag status-${b.status || 'aangevraagd'} summary-status">${escapeHtml(b.status || 'aangevraagd')}</span>
+            ${coordinatorStatusHtml(b.status || 'aangevraagd')}
             <span class="summary-meta">${renderSummaryMeta(b)}</span>
           </div>
         </div>
@@ -1973,17 +2134,7 @@ function fullRowHtml(b){
           </div>
         </div>
 
-        ${b.boekentip ? `
-        <div class="boekentip-list" style="margin-top:14px;">
-          <div class="subsection-title" style="margin:0 0 6px;">Boekentips</div>
-          ${escapeHtml(b.boekentip).split('\n').filter(Boolean).map((t, i) => `
-            <div class="boekentip-item">
-              <span>${t}</span>
-              <button class="link" data-tip-delete="${i}">Verwijderen</button>
-            </div>
-          `).join('')}
-        </div>
-        ` : ''}
+        <div class="boekentips-container" style="margin-top:14px;"></div>
 
         <div class="row-actions" style="align-items:flex-start; margin-top:14px; padding-top:10px; border-top:1px solid var(--line);">
           <button class="link" data-delete="${b.id}" style="color:var(--red);">Dit boek definitief verwijderen</button>
@@ -1991,6 +2142,130 @@ function fullRowHtml(b){
       </div>
     </details>
   `;
+}
+
+function renderBookTipsUi(row, id, updateField){
+  const container = row.querySelector('.boekentips-container');
+  if (!container) return;
+
+  const book = allBooksCache.find(x => String(x.id) === String(id));
+  if (!book) return;
+
+  const tips = (book.boekentip || '').split('\n').filter(Boolean);
+
+  let html = `<div class="subsection-title" style="margin:0 0 6px;">Boekentips</div>`;
+  if (tips.length > 0){
+    html += `<div class="boekentip-list">`;
+    html += tips.map((t, i) => `
+      <div class="boekentip-item" data-tip-index="${i}">
+        <span class="tip-text">${escapeHtml(t)}</span>
+        <div class="tip-actions">
+          <button type="button" class="link tip-edit-btn" data-tip-edit="${i}">Wijzigen</button>
+          <button type="button" class="link tip-del-btn" data-tip-delete="${i}" style="color:var(--red);">Verwijderen</button>
+        </div>
+      </div>
+    `).join('');
+    html += `</div>`;
+  } else {
+    html += `<div style="font-size:12px; color:var(--ink-soft); margin-bottom:6px; font-style:italic;">Nog geen boekentips voor dit boek.</div>`;
+  }
+
+  html += `
+    <div class="boekentip-add" style="display:flex; gap:8px; margin-top:6px;">
+      <input type="text" class="boekentip-new-input" placeholder="Nieuwe boekentip toevoegen…" style="flex:1; padding:6px 9px; font-size:13px; border-radius:6px; border:1px solid var(--line); background:var(--bg);">
+      <button type="button" class="tiny boekentip-add-btn" style="background:var(--ink); color:#fff; border-color:var(--ink); padding:6px 12px; border-radius:6px; font-weight:600;">+ Toevoegen</button>
+    </div>
+  `;
+
+  container.innerHTML = html;
+
+  // Verwijderen
+  container.querySelectorAll('[data-tip-delete]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const idx = parseInt(btn.dataset.tipDelete, 10);
+      if (!confirm('Weet je zeker dat je deze boekentip wilt verwijderen?')) return;
+      const currentTips = (book.boekentip || '').split('\n').filter(Boolean);
+      currentTips.splice(idx, 1);
+      const val = currentTips.length ? currentTips.join('\n') : null;
+      await updateField('boekentip', val);
+      renderBookTipsUi(row, id, updateField);
+    });
+  });
+
+  // Wijzigen
+  container.querySelectorAll('[data-tip-edit]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const idx = parseInt(btn.dataset.tipEdit, 10);
+      const tipItem = btn.closest('.boekentip-item');
+      if (!tipItem) return;
+
+      const currentTips = (book.boekentip || '').split('\n').filter(Boolean);
+      const oldText = currentTips[idx] || '';
+
+      tipItem.innerHTML = `
+        <div style="display:flex; gap:6px; width:100%; align-items:center;">
+          <input type="text" class="tip-edit-input" value="${escapeHtml(oldText)}" style="flex:1; padding:5px 8px; font-size:13px; border-radius:6px; border:1px solid var(--gold); outline:none; background:var(--surface);">
+          <button type="button" class="tiny tip-save-btn" style="background:var(--ink); color:#fff; border-color:var(--ink); padding:5px 10px; border-radius:6px; font-weight:600;">Opslaan</button>
+          <button type="button" class="link tip-cancel-btn" style="font-size:12px;">Annuleren</button>
+        </div>
+      `;
+
+      const editInput = tipItem.querySelector('.tip-edit-input');
+      const saveBtn = tipItem.querySelector('.tip-save-btn');
+      const cancelBtn = tipItem.querySelector('.tip-cancel-btn');
+
+      editInput.focus();
+      editInput.select();
+
+      async function saveEdit(){
+        const newText = editInput.value.trim();
+        if (!newText){
+          if (!confirm('Boekentip is leeg. Wil je deze boekentip verwijderen?')) return;
+          currentTips.splice(idx, 1);
+        } else {
+          currentTips[idx] = newText;
+        }
+        const val = currentTips.length ? currentTips.join('\n') : null;
+        await updateField('boekentip', val);
+        renderBookTipsUi(row, id, updateField);
+      }
+
+      saveBtn.addEventListener('click', saveEdit);
+      editInput.addEventListener('keydown', e => {
+        if (e.key === 'Enter'){
+          e.preventDefault();
+          saveEdit();
+        } else if (e.key === 'Escape'){
+          renderBookTipsUi(row, id, updateField);
+        }
+      });
+      cancelBtn.addEventListener('click', () => {
+        renderBookTipsUi(row, id, updateField);
+      });
+    });
+  });
+
+  // Nieuwe tip toevoegen
+  const newInp = container.querySelector('.boekentip-new-input');
+  const addBtn = container.querySelector('.boekentip-add-btn');
+
+  async function addNewTip(){
+    const text = newInp.value.trim();
+    if (!text) return;
+    const currentTips = (book.boekentip || '').split('\n').filter(Boolean);
+    currentTips.push(text);
+    const val = currentTips.join('\n');
+    await updateField('boekentip', val);
+    renderBookTipsUi(row, id, updateField);
+  }
+
+  addBtn.addEventListener('click', addNewTip);
+  newInp.addEventListener('keydown', e => {
+    if (e.key === 'Enter'){
+      e.preventDefault();
+      addNewTip();
+    }
+  });
 }
 
 function wireFullRow(row){
@@ -2127,14 +2402,7 @@ function wireFullRow(row){
     await refreshCoordinatorData();
   });
 
-  row.querySelectorAll('[data-tip-delete]').forEach(btn => btn.addEventListener('click', async () => {
-    const book = allBooksCache.find(x => String(x.id) === String(id));
-    const tips = (book.boekentip || '').split('\n').filter(Boolean);
-    tips.splice(parseInt(btn.dataset.tipDelete, 10), 1);
-    await updateField('boekentip', tips.length ? tips.join('\n') : null);
-    const tipItem = btn.closest('.boekentip-item');
-    if (tipItem) tipItem.remove();
-  }));
+  renderBookTipsUi(row, id, updateField);
 }
 
 // ---- Intuïtief zoeken/filteren door "Alle boeken" ----
@@ -2238,27 +2506,58 @@ function renderAlleBoeken(){
     lijst = lijst.filter(b => themaVan(b) === alleSubThemaFilter);
   }
 
-  // 5. Specifieke ontbrekende gegevens filters
+  // 5. Specifieke eigenschappen filters (met en zonder)
   if (alleLeegFilters.has('zonder_kleuters_thema')){
     lijst = lijst.filter(b => b.categorie === 'Kleuters' && (!b.kleuters_thema || b.kleuters_thema.trim() === ''));
   }
+  if (alleLeegFilters.has('met_kleuters_thema')){
+    lijst = lijst.filter(b => b.categorie === 'Kleuters' && b.kleuters_thema && b.kleuters_thema.trim() !== '');
+  }
+
   if (alleLeegFilters.has('zonder_overig_thema')){
     lijst = lijst.filter(b => b.categorie === 'Overig' && (!b.overig_thema || b.overig_thema.trim() === ''));
   }
+  if (alleLeegFilters.has('met_overig_thema')){
+    lijst = lijst.filter(b => b.categorie === 'Overig' && b.overig_thema && b.overig_thema.trim() !== '');
+  }
+
   if (alleLeegFilters.has('zonder_groep')){
     lijst = lijst.filter(b => b.categorie === 'Groep' && (!b.groep || b.groep.trim() === ''));
   }
+  if (alleLeegFilters.has('met_groep')){
+    lijst = lijst.filter(b => b.categorie === 'Groep' && b.groep && b.groep.trim() !== '');
+  }
+
   if (alleLeegFilters.has('zonder_categorie')){
     lijst = lijst.filter(b => !b.categorie || String(b.categorie).trim() === '');
   }
+  if (alleLeegFilters.has('met_categorie')){
+    lijst = lijst.filter(b => b.categorie && String(b.categorie).trim() !== '');
+  }
+
   if (alleLeegFilters.has('zonder_isbn')){
     lijst = lijst.filter(b => !b.isbn || String(b.isbn).trim() === '');
   }
+  if (alleLeegFilters.has('met_isbn')){
+    lijst = lijst.filter(b => b.isbn && String(b.isbn).trim() !== '');
+  }
+
   if (alleLeegFilters.has('zonder_auteur')){
     lijst = lijst.filter(b => !b.auteur || String(b.auteur).trim() === '');
   }
+  if (alleLeegFilters.has('met_auteur')){
+    lijst = lijst.filter(b => b.auteur && String(b.auteur).trim() !== '');
+  }
+
   if (alleLeegFilters.has('zonder_prijs')){
     lijst = lijst.filter(b => b.prijs == null || b.prijs === '' || parsePrijs(b.prijs) === 0);
+  }
+  if (alleLeegFilters.has('met_prijs')){
+    lijst = lijst.filter(b => b.prijs != null && b.prijs !== '' && parsePrijs(b.prijs) > 0);
+  }
+
+  if (alleLeegFilters.has('zonder_opmerking')){
+    lijst = lijst.filter(b => !b.opmerking || String(b.opmerking).trim() === '');
   }
   if (alleLeegFilters.has('met_opmerking')){
     lijst = lijst.filter(b => b.opmerking && String(b.opmerking).trim() !== '');
@@ -2294,16 +2593,40 @@ document.querySelectorAll('#alle-cat-pills .pill').forEach(btn => {
   });
 });
 
-// Ontbrekende gegevens filter-knoppen
-document.querySelectorAll('#alle-leeg-pills .pill[data-leegfilter]').forEach(btn => {
+// Eigenschappen filter-knoppen (Met en Zonder)
+const FILTER_PAIRS = {
+  'zonder_kleuters_thema': 'met_kleuters_thema',
+  'met_kleuters_thema': 'zonder_kleuters_thema',
+  'zonder_overig_thema': 'met_overig_thema',
+  'met_overig_thema': 'zonder_overig_thema',
+  'zonder_groep': 'met_groep',
+  'met_groep': 'zonder_groep',
+  'zonder_categorie': 'met_categorie',
+  'met_categorie': 'zonder_categorie',
+  'zonder_isbn': 'met_isbn',
+  'met_isbn': 'zonder_isbn',
+  'zonder_auteur': 'met_auteur',
+  'met_auteur': 'zonder_auteur',
+  'zonder_prijs': 'met_prijs',
+  'met_prijs': 'zonder_prijs',
+  'zonder_opmerking': 'met_opmerking',
+  'met_opmerking': 'zonder_opmerking'
+};
+
+document.querySelectorAll('#alle-eigenschappen-filters .pill[data-leegfilter]').forEach(btn => {
   btn.addEventListener('click', () => {
     const f = btn.dataset.leegfilter;
+    const opposite = FILTER_PAIRS[f];
     if (alleLeegFilters.has(f)){
       alleLeegFilters.delete(f);
       btn.classList.remove('active');
     } else {
       alleLeegFilters.add(f);
       btn.classList.add('active');
+      if (opposite && alleLeegFilters.has(opposite)){
+        alleLeegFilters.delete(opposite);
+        document.querySelector(`#alle-eigenschappen-filters .pill[data-leegfilter="${opposite}"]`)?.classList.remove('active');
+      }
     }
     renderAlleBoeken();
   });
@@ -2317,7 +2640,7 @@ document.getElementById('alle-reset-filters')?.addEventListener('click', () => {
   alleSubThemaFilter = '';
   alleLeegFilters.clear();
   document.querySelectorAll('#alle-cat-pills .pill').forEach(p => p.classList.toggle('active', p.dataset.cat === ''));
-  document.querySelectorAll('#alle-leeg-pills .pill').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('#alle-eigenschappen-filters .pill').forEach(p => p.classList.remove('active'));
   populateAlleSubThemaPills();
   renderAlleBoeken();
 });
