@@ -468,6 +468,133 @@
   .book-details-body{padding:8px 6px 18px;}
   .subsection-title{font-size:14px; font-weight:600; color:var(--ink-soft); margin:24px 0 10px;}
   .subsection-title:first-child{margin-top:0;}
+
+  /* Bulk Toolbar */
+  .bulk-toolbar{
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:14px 16px;
+    margin-bottom:16px;
+    box-shadow:0 1px 4px rgba(20,33,61,0.03);
+  }
+  .bulk-toolbar-header{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding-bottom:10px;
+    margin-bottom:12px;
+    border-bottom:1px solid var(--line);
+    flex-wrap:wrap;
+    gap:10px;
+  }
+  .bulk-toolbar-content{
+    display:flex;
+    flex-wrap:wrap;
+    gap:14px;
+    align-items:flex-end;
+  }
+  .bulk-control-box{
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+  }
+  .bulk-control-label{
+    font-size:11px;
+    font-weight:600;
+    color:var(--ink-soft);
+    text-transform:uppercase;
+    letter-spacing:0.5px;
+  }
+  .bulk-toolbar select, .bulk-toolbar input[type=text]{
+    padding:7px 10px;
+    font-size:13px;
+    border-radius:8px;
+    background:var(--bg);
+    border:1px solid var(--line);
+    color:var(--ink);
+    font-family:inherit;
+  }
+  .bulk-danger-box{
+    margin-left:auto;
+  }
+
+  /* Edit Grid in Details */
+  .edit-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill, minmax(200px, 1fr));
+    gap:10px 14px;
+    margin-top:10px;
+  }
+  .edit-field{
+    display:flex;
+    flex-direction:column;
+  }
+  .edit-field.full-width{
+    grid-column:1 / -1;
+  }
+  .edit-field label{
+    font-size:11px;
+    font-weight:600;
+    color:var(--ink-soft);
+    margin:0 0 3px 0;
+    text-transform:uppercase;
+    letter-spacing:0.3px;
+  }
+  .edit-field input[type=text], .edit-field select{
+    padding:7px 9px;
+    font-size:13px;
+    border-radius:8px;
+  }
+  .edit-status-banner{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:8px;
+    padding-bottom:6px;
+    border-bottom:1px dashed var(--line);
+  }
+  .save-badge{
+    font-size:12px;
+    font-weight:600;
+    color:var(--green);
+    opacity:0;
+    transition:opacity .2s ease;
+  }
+  .save-badge.visible{
+    opacity:1;
+  }
+  .filter-section-title{
+    font-size:11px;
+    font-weight:600;
+    color:var(--ink-soft);
+    text-transform:uppercase;
+    letter-spacing:0.5px;
+    margin:10px 0 6px;
+  }
+  .btn-reset-filters{
+    font-family:'Space Grotesk', sans-serif;
+    font-size:12px;
+    font-weight:600;
+    padding:5px 12px;
+    border-radius:6px;
+    background:var(--bg);
+    border:1px solid var(--line);
+    color:var(--red);
+    cursor:pointer;
+  }
+  .btn-reset-filters:hover{
+    background:var(--red-soft);
+  }
+  .filter-header-row{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-top:12px;
+    margin-bottom:6px;
+    flex-wrap:wrap;
+    gap:8px;
+  }
 </style>
 </head>
 <body>
@@ -481,16 +608,34 @@
     <span id="test-reset-info" style="font-size:11px; color:var(--green); font-weight:600;"></span>
   </div>
   <nav class="tabs">
-    <button data-tab="aanvraag" class="active">Aanvraag indienen</button>
-    <button data-tab="zoeken">Boeken zoeken</button>
+    <button data-tab="zoeken" class="active">Boeken zoeken</button>
+    <button data-tab="aanvraag">Aanvraag indienen</button>
     <button data-tab="coordinator">Coördinator</button>
   </nav>
 </header>
 
 <main>
 
-  <!-- TAB 1: AANVRAAG INDIENEN -->
-  <section class="tab-panel active" id="tab-aanvraag">
+  <!-- TAB 1: BOEKEN ZOEKEN -->
+  <section class="tab-panel active" id="tab-zoeken">
+    <div class="card">
+      <h2>Wat staat er al?</h2>
+      <input type="text" id="zoek-input" placeholder="Zoek op titel, ISBN of boekentip…" style="margin-bottom:14px;">
+      <div class="filter-pills" id="zoek-cat-pills">
+        <button class="pill active" data-cat="">Alles</button>
+        <button class="pill" data-cat="Groep">Groep</button>
+        <button class="pill" data-cat="Kleuters">Kleuters</button>
+        <button class="pill" data-cat="Jeelo">Jeelo</button>
+        <button class="pill" data-cat="Overig">Overige thema's</button>
+      </div>
+      <div class="filter-pills" id="zoek-thema-pills" style="display:none"></div>
+      <div class="result-count" id="zoek-count"></div>
+      <div id="zoek-list"></div>
+    </div>
+  </section>
+
+  <!-- TAB 2: AANVRAAG INDIENEN -->
+  <section class="tab-panel" id="tab-aanvraag">
     <div class="card">
       <h2>Boek aanvragen</h2>
       <form id="book-form">
@@ -555,24 +700,6 @@
     </div>
   </section>
 
-  <!-- TAB 2: BOEKEN ZOEKEN -->
-  <section class="tab-panel" id="tab-zoeken">
-    <div class="card">
-      <h2>Wat staat er al?</h2>
-      <input type="text" id="zoek-input" placeholder="Zoek op titel, ISBN of boekentip…" style="margin-bottom:14px;">
-      <div class="filter-pills" id="zoek-cat-pills">
-        <button class="pill active" data-cat="">Alles</button>
-        <button class="pill" data-cat="Groep">Groep</button>
-        <button class="pill" data-cat="Kleuters">Kleuters</button>
-        <button class="pill" data-cat="Jeelo">Jeelo</button>
-        <button class="pill" data-cat="Overig">Overige thema's</button>
-      </div>
-      <div class="filter-pills" id="zoek-thema-pills" style="display:none"></div>
-      <div class="result-count" id="zoek-count"></div>
-      <div id="zoek-list"></div>
-    </div>
-  </section>
-
   <!-- TAB 3: COORDINATOR -->
   <section class="tab-panel" id="tab-coordinator">
     <div id="coord-lock" class="lock-screen">
@@ -629,59 +756,96 @@
       <div class="card">
         <div class="subsection-title">Alle boeken</div>
         <div class="search-row">
-          <input type="text" id="alle-zoek" placeholder="Zoek op titel, auteur, ISBN, thema, opmerking…">
+          <input type="text" id="alle-zoek" placeholder="Zoek op titel, auteur, ISBN, thema, opmerking, aanvrager…">
           <select id="alle-status-filter">
-            <option value="">Alle statussen</option>
-            <option value="aangevraagd">Aangevraagd</option>
-            <option value="besteld">Besteld</option>
-            <option value="binnen">Binnen</option>
+            <option value="">Alle actieve boeken (aangevraagd, besteld, binnen)</option>
+            <option value="aangevraagd">Alleen Aangevraagd (te bestellen)</option>
+            <option value="besteld">Alleen Besteld (onderweg)</option>
+            <option value="binnen">Alleen Binnen (op school)</option>
+            <option value="afgewezen">Alleen Niet leverbaar</option>
+            <option value="__alle__">Alles tonen (inclusief niet leverbaar)</option>
           </select>
         </div>
+
+        <div class="filter-section-title">Categorieën:</div>
         <div class="filter-pills" id="alle-cat-pills">
           <button class="pill active" data-cat="">Alle categorieën</button>
-          <button class="pill" data-cat="Groep">Groep</button>
           <button class="pill" data-cat="Kleuters">Kleuters</button>
+          <button class="pill" data-cat="Groep">Groep</button>
           <button class="pill" data-cat="Jeelo">Jeelo</button>
-          <button class="pill" data-cat="Overig">Overig</button>
+          <button class="pill" data-cat="Overig">Overige thema's</button>
+          <button class="pill" data-cat="__zonder_cat__">Zonder categorie</button>
+        </div>
+
+        <div id="alle-sub-thema-container" style="display:none; margin-bottom:10px;">
+          <div class="filter-section-title" id="alle-sub-thema-title">Thema's:</div>
+          <div class="filter-pills" id="alle-sub-thema-pills"></div>
+        </div>
+
+        <div class="filter-header-row">
+          <div class="filter-section-title" style="margin:0;">Filter op ontbrekende gegevens:</div>
+          <button class="btn-reset-filters" id="alle-reset-filters" type="button" style="display:none;">✕ Filters wissen</button>
         </div>
         <div class="filter-pills" id="alle-leeg-pills">
-          <button class="pill" data-leegveld="auteur">Zonder auteur</button>
-          <button class="pill" data-leegveld="isbn">Zonder ISBN</button>
-          <button class="pill" data-leegveld="thema">Zonder thema</button>
-          <button class="pill" data-leegveld="prijs">Zonder prijs</button>
-          <button class="pill" data-leegveld="opmerking">Zonder opmerking</button>
-          <button class="pill" id="alle-filter-met-opmerking">Met opmerking</button>
+          <button class="pill" data-leegfilter="zonder_kleuters_thema">Zonder kleuterthema</button>
+          <button class="pill" data-leegfilter="zonder_overig_thema">Zonder overig thema</button>
+          <button class="pill" data-leegfilter="zonder_groep">Zonder groep</button>
+          <button class="pill" data-leegfilter="zonder_categorie">Zonder categorie</button>
+          <button class="pill" data-leegfilter="zonder_isbn">Zonder ISBN</button>
+          <button class="pill" data-leegfilter="zonder_auteur">Zonder auteur</button>
+          <button class="pill" data-leegfilter="zonder_prijs">Zonder prijs</button>
+          <button class="pill" data-leegfilter="met_opmerking">Met opmerking</button>
         </div>
-        <div class="bulk-bar" id="alle-bulk-bar">
-          <div class="bulk-left">
-            <label class="bulk-select-all" for="sel-all-alle">
-              <input type="checkbox" id="sel-all-alle">
-              <span>Alles selecteren</span>
-            </label>
-            <span class="bulk-info" id="alle-bulk-info">0 geselecteerd</span>
+
+        <div class="bulk-toolbar" id="alle-bulk-bar">
+          <div class="bulk-toolbar-header">
+            <div class="bulk-left">
+              <label class="bulk-select-all" for="sel-all-alle">
+                <input type="checkbox" id="sel-all-alle">
+                <span>Alles selecteren</span>
+              </label>
+              <span class="bulk-info" id="alle-bulk-info">0 geselecteerd</span>
+            </div>
+            <button class="tiny" id="alle-bulk-deselect" type="button" style="display:none;">Selectie wissen</button>
           </div>
-          <div class="bulk-actions">
-            <div class="bulk-action-group">
-              <select id="alle-bulk-status" title="Status">
-                <option value="aangevraagd">Aangevraagd</option>
-                <option value="besteld">Besteld</option>
-                <option value="binnen">Binnen</option>
-                <option value="afgewezen">Afgewezen</option>
-              </select>
-              <button class="secondary" id="alle-bulk-status-apply" disabled>Status wijzigen</button>
+          <div class="bulk-toolbar-content" id="alle-bulk-controls">
+            <div class="bulk-control-box">
+              <span class="bulk-control-label">Status wijzigen</span>
+              <div class="bulk-action-group">
+                <select id="alle-bulk-status" title="Status">
+                  <option value="aangevraagd">Aangevraagd (te bestellen)</option>
+                  <option value="besteld">Besteld (onderweg)</option>
+                  <option value="binnen">Binnen (ontvangen)</option>
+                  <option value="afgewezen">Niet leverbaar</option>
+                </select>
+                <button class="secondary" id="alle-bulk-status-apply" disabled>Toepassen</button>
+              </div>
             </div>
-            <div class="bulk-action-group">
-              <select id="alle-bulk-cat" title="Categorie">
-                <option value="Groep">Groep</option>
-                <option value="Kleuters">Kleuters</option>
-                <option value="Jeelo">Jeelo</option>
-                <option value="Overig">Overig</option>
-              </select>
-              <select id="alle-bulk-thema" title="Thema of groep"></select>
-              <button class="secondary" id="alle-bulk-thema-apply" disabled>Thema/groep wijzigen</button>
+            <div class="bulk-control-box">
+              <span class="bulk-control-label">Categorie &amp; thema toewijzen</span>
+              <div class="bulk-action-group">
+                <select id="alle-bulk-cat" title="Categorie">
+                  <option value="Kleuters">Kleuters</option>
+                  <option value="Groep">Groep</option>
+                  <option value="Jeelo">Jeelo</option>
+                  <option value="Overig">Overige thema's</option>
+                </select>
+                <select id="alle-bulk-thema" title="Thema of groep"></select>
+                <input type="text" id="alle-bulk-thema-anders" placeholder="Eigen thema invullen…" style="display:none; width:170px;">
+                <button class="secondary" id="alle-bulk-thema-apply" disabled>Toepassen</button>
+              </div>
             </div>
-            <button class="secondary" id="alle-bulk-opmerking-delete" disabled>Opmerkingen verwijderen</button>
-            <button class="secondary danger" id="alle-bulk-delete" disabled>Verwijderen</button>
+            <div class="bulk-control-box">
+              <span class="bulk-control-label">Opmerking beheren</span>
+              <div class="bulk-action-group">
+                <input type="text" id="alle-bulk-opmerking-tekst" placeholder="Nieuwe opmerking…" style="width:170px;">
+                <button class="secondary" id="alle-bulk-opmerking-set" disabled title="Stelt deze opmerking in voor de selectie">Instellen</button>
+                <button class="secondary" id="alle-bulk-opmerking-delete" disabled title="Wist alle opmerkingen van de selectie">Wissen</button>
+              </div>
+            </div>
+            <div class="bulk-control-box bulk-danger-box">
+              <button class="secondary danger" id="alle-bulk-delete" disabled>Verwijderen</button>
+            </div>
           </div>
         </div>
         <div class="result-count" id="alle-count"></div>
@@ -736,7 +900,7 @@ function resetTestData(){
   if (!pristineBaselineData) return;
   allBooksCache = JSON.parse(JSON.stringify(pristineBaselineData));
   const activeBtn = document.querySelector('nav.tabs button.active');
-  const activeTab = activeBtn ? activeBtn.dataset.tab : 'aanvraag';
+  const activeTab = activeBtn ? activeBtn.dataset.tab : 'zoeken';
   if (activeTab === 'zoeken') renderZoekLijst();
   if (activeTab === 'coordinator' && coordUnlocked) refreshCoordinatorData();
   const infoEl = document.getElementById('test-reset-info');
@@ -1405,73 +1569,125 @@ function renderBudget(){
   if (el) el.textContent = euro(uitgegeven);
 }
 
-// ---- Herbruikbare categorie/thema-select voor editable rijen ----
+// ---- Herbruikbare helpers en thema-select voor editable rijen ----
+function isBekendThema(cat, val){
+  if (!val) return false;
+  if (cat === 'Groep') return GROEPEN.includes(val);
+  if (cat === 'Jeelo') return JEELO_THEMAS.includes(val);
+  if (cat === 'Kleuters') return KLEUTERS_THEMAS.includes(val);
+  if (cat === 'Overig') return OVERIGE_THEMAS.includes(val);
+  return false;
+}
+
+function showSaveFeedback(badgeEl){
+  if (!badgeEl) return;
+  badgeEl.textContent = '✓ Opgeslagen';
+  badgeEl.classList.add('visible');
+  setTimeout(() => badgeEl.classList.remove('visible'), 2000);
+}
+
+function renderSummaryMeta(b){
+  const metaParts = [];
+  if (b.auteur) metaParts.push(escapeHtml(b.auteur));
+  const thema = themaLabel(b);
+  if (thema) metaParts.push(escapeHtml(thema));
+  if (b.prijs != null && b.prijs !== '') metaParts.push(euro(b.prijs));
+  if (b.naam_aanvrager) metaParts.push('door ' + escapeHtml(b.naam_aanvrager));
+  if (b.isbn) metaParts.push('ISBN ' + escapeHtml(b.isbn));
+  if (b.opmerking){
+    const cleanOpm = b.opmerking.trim();
+    const shortOpm = cleanOpm.length > 40 ? cleanOpm.slice(0, 37) + '…' : cleanOpm;
+    metaParts.push(`<span class="summary-opm" title="${escapeHtml(cleanOpm)}">opm: ${escapeHtml(shortOpm)}</span>`);
+  }
+  if (b.boekentip){
+    const tips = b.boekentip.split('\n').filter(Boolean).length;
+    if (tips) metaParts.push(tips === 1 ? '💡 1 boekentip' : `💡 ${tips} boekentips`);
+  }
+  return metaParts.join(' &middot; ');
+}
+
+function updateSummaryHeader(row, b){
+  const titelEl = row.querySelector('.summary-titel');
+  if (titelEl) titelEl.textContent = b.titel;
+  const statusEl = row.querySelector('.summary-status');
+  if (statusEl){
+    statusEl.className = `tag status-${b.status || 'aangevraagd'} summary-status`;
+    statusEl.textContent = b.status || 'aangevraagd';
+  }
+  const metaEl = row.querySelector('.summary-meta');
+  if (metaEl) metaEl.innerHTML = renderSummaryMeta(b);
+}
+
 function themaSelectHtml(b, idPrefix){
-  const cat = b.categorie;
+  const cat = b ? b.categorie : '';
   if (cat === 'Groep'){
-    const current = b.groep;
+    const current = b ? b.groep : '';
     const isLeeg = !current;
     let html = `<option value="" ${isLeeg ? 'selected' : ''}>(Geen groep)</option>`;
-    html += GROEPEN.map(o => `<option value="${o}" ${o===current?'selected':''}>${o}</option>`).join('');
+    html += GROEPEN.map(o => `<option value="${escapeHtml(o)}" ${o===current?'selected':''}>${escapeHtml(o)}</option>`).join('');
     return html;
   }
   if (cat === 'Jeelo'){
-    const current = b.jeelo_thema;
+    const current = b ? b.jeelo_thema : '';
     const isLeeg = !current;
-    let html = `<option value="" ${isLeeg ? 'selected' : ''}>(Geen thema)</option>`;
-    html += JEELO_THEMAS.map(o => `<option value="${o}" ${o===current?'selected':''}>${o}</option>`).join('');
+    let html = `<option value="" ${isLeeg ? 'selected' : ''}>(Geen Jeelo-thema)</option>`;
+    html += JEELO_THEMAS.map(o => `<option value="${escapeHtml(o)}" ${o===current?'selected':''}>${escapeHtml(o)}</option>`).join('');
     return html;
   }
   if (cat === 'Kleuters'){
-    const current = b.kleuters_thema;
+    const current = b ? b.kleuters_thema : '';
     const isKnown = KLEUTERS_THEMAS.includes(current);
     const isLeeg = !current;
-    let html = `<option value="" ${isLeeg ? 'selected' : ''}>(Geen thema)</option>`;
-    html += KLEUTERS_THEMAS.map(o => `<option value="${o}" ${o===current?'selected':''}>${o}</option>`).join('');
+    let html = `<option value="" ${isLeeg ? 'selected' : ''}>(Geen kleuterthema)</option>`;
+    html += KLEUTERS_THEMAS.map(o => `<option value="${escapeHtml(o)}" ${o===current?'selected':''}>${escapeHtml(o)}</option>`).join('');
     html += `<option value="${ANDERS}" ${(!isKnown && current) ? 'selected' : ''}>${(!isKnown && current) ? escapeHtml(current) + ' (eigen thema)' : 'Anders, namelijk…'}</option>`;
     return html;
   }
-  // Overig
-  const current = b.overig_thema;
-  const isKnown = OVERIGE_THEMAS.includes(current);
-  const isLeeg = !current;
-  let html = `<option value="" ${isLeeg ? 'selected' : ''}>(Geen thema)</option>`;
-  html += OVERIGE_THEMAS.map(o => `<option value="${o}" ${o===current?'selected':''}>${o}</option>`).join('');
-  html += `<option value="${ANDERS}" ${(!isKnown && current) ? 'selected' : ''}>${(!isKnown && current) ? escapeHtml(current) + ' (eigen thema)' : 'Anders, namelijk…'}</option>`;
-  return html;
+  if (cat === 'Overig'){
+    const current = b ? b.overig_thema : '';
+    const isKnown = OVERIGE_THEMAS.includes(current);
+    const isLeeg = !current;
+    let html = `<option value="" ${isLeeg ? 'selected' : ''}>(Geen overig thema)</option>`;
+    html += OVERIGE_THEMAS.map(o => `<option value="${escapeHtml(o)}" ${o===current?'selected':''}>${escapeHtml(o)}</option>`).join('');
+    html += `<option value="${ANDERS}" ${(!isKnown && current) ? 'selected' : ''}>${(!isKnown && current) ? escapeHtml(current) + ' (eigen thema)' : 'Anders, namelijk…'}</option>`;
+    return html;
+  }
+  return `<option value="" selected>(Kies eerst categorie)</option>`;
 }
 
 function editableRowHtml(b, checkboxClass){
   const prijsVal = b.prijs != null && b.prijs !== '' ? formatBedrag(b.prijs) : '';
+  const isCustom = !isBekendThema(b.categorie, b[veldVoorCategorie(b.categorie)]);
+  const customVal = isCustom ? (b[veldVoorCategorie(b.categorie)] || '') : '';
   return `
     <div class="book-row" data-id="${b.id}">
       <input type="checkbox" class="${checkboxClass}" data-id="${b.id}">
       <div class="row-fields">
-        <div class="field-line">
-          <input type="text" class="titel-input" data-field="titel" data-id="${b.id}" value="${escapeHtml(b.titel)}">
+        <div class="field-line" style="justify-content:space-between; align-items:center;">
+          <input type="text" class="titel-input" data-field="titel" data-id="${b.id}" value="${escapeHtml(b.titel)}" placeholder="Titel">
           <div class="prijs-input-wrap">
             <span class="currency-prefix">€</span>
             <input type="text" inputmode="decimal" class="prijs-input" data-field="prijs" data-id="${b.id}" value="${prijsVal}" placeholder="0,00">
           </div>
+          <span class="save-badge"></span>
         </div>
         <div class="field-line">
-          <input type="text" data-field="auteur" data-id="${b.id}" value="${escapeHtml(b.auteur || '')}" placeholder="Auteur" style="flex:1 1 200px;">
+          <input type="text" data-field="auteur" data-id="${b.id}" value="${escapeHtml(b.auteur || '')}" placeholder="Auteur" style="flex:1 1 180px;">
+          <input type="text" data-field="isbn" data-id="${b.id}" value="${escapeHtml(b.isbn || '')}" placeholder="ISBN" inputmode="numeric" maxlength="13" style="flex:0 1 150px;">
+          <input type="text" data-field="naam_aanvrager" data-id="${b.id}" value="${escapeHtml(b.naam_aanvrager || '')}" placeholder="Aangevraagd door" style="flex:1 1 150px;">
         </div>
         <div class="field-line">
           <select data-field="categorie" data-id="${b.id}">
             <option value="Groep" ${b.categorie==='Groep'?'selected':''}>Groep</option>
             <option value="Kleuters" ${b.categorie==='Kleuters'?'selected':''}>Kleuters</option>
             <option value="Jeelo" ${b.categorie==='Jeelo'?'selected':''}>Jeelo</option>
-            <option value="Overig" ${b.categorie==='Overig'?'selected':''}>Overig</option>
+            <option value="Overig" ${b.categorie==='Overig'?'selected':''}>Overige thema's</option>
           </select>
           <select data-field="thema" data-id="${b.id}">${themaSelectHtml(b, b.id)}</select>
+          <input type="text" class="thema-anders-input" data-id="${b.id}" placeholder="Vul eigen thema in…" value="${escapeHtml(customVal)}" style="${isCustom && customVal ? '' : 'display:none;'} width:170px;">
         </div>
         <div class="field-line">
           <input type="text" data-field="opmerking" data-id="${b.id}" value="${escapeHtml(b.opmerking || '')}" placeholder="Opmerking" style="flex:1 1 200px;">
-        </div>
-        <div class="row-meta">
-          ${b.naam_aanvrager ? 'Aangevraagd door ' + escapeHtml(b.naam_aanvrager) : 'Geen naam opgegeven'}
-          ${b.isbn ? ' &middot; ISBN ' + escapeHtml(b.isbn) : ''}
         </div>
       </div>
       <div class="row-actions">
@@ -1484,21 +1700,45 @@ function editableRowHtml(b, checkboxClass){
 
 function wireEditableRow(row){
   const id = row.dataset.id;
-  row.querySelector('[data-field="titel"]').addEventListener('change', async e => {
-    await dbUpdate(id, { titel: e.target.value.trim() });
-    await refreshCoordinatorData();
+  const badge = row.querySelector('.save-badge');
+
+  async function updateField(field, val){
+    const book = allBooksCache.find(b => String(b.id) === String(id));
+    if (!book) return;
+    book[field] = val;
+    await dbUpdate(id, { [field]: val });
+    showSaveFeedback(badge);
+  }
+
+  row.querySelector('[data-field="titel"]').addEventListener('change', e => {
+    updateField('titel', e.target.value.trim());
   });
-  row.querySelector('[data-field="auteur"]').addEventListener('change', async e => {
-    await dbUpdate(id, { auteur: e.target.value.trim() || null });
-    await refreshCoordinatorData();
+
+  row.querySelector('[data-field="auteur"]').addEventListener('change', e => {
+    updateField('auteur', e.target.value.trim() || null);
   });
-  const opmerkingInp = row.querySelector('[data-field="opmerking"]');
-  if (opmerkingInp){
-    opmerkingInp.addEventListener('change', async e => {
-      await dbUpdate(id, { opmerking: e.target.value.trim() || null });
-      await refreshCoordinatorData();
+
+  const isbnInp = row.querySelector('[data-field="isbn"]');
+  if (isbnInp){
+    isbnInp.addEventListener('change', e => {
+      updateField('isbn', e.target.value.replace(/\D/g, '').slice(0, 13) || null);
     });
   }
+
+  const naamInp = row.querySelector('[data-field="naam_aanvrager"]');
+  if (naamInp){
+    naamInp.addEventListener('change', e => {
+      updateField('naam_aanvrager', e.target.value.trim() || null);
+    });
+  }
+
+  const opmerkingInp = row.querySelector('[data-field="opmerking"]');
+  if (opmerkingInp){
+    opmerkingInp.addEventListener('change', e => {
+      updateField('opmerking', e.target.value.trim() || null);
+    });
+  }
+
   const prijsInp = row.querySelector('[data-field="prijs"]');
   if (prijsInp){
     prijsInp.addEventListener('blur', e => {
@@ -1507,30 +1747,77 @@ function wireEditableRow(row){
     });
     prijsInp.addEventListener('change', async e => {
       const val = e.target.value.trim();
-      await dbUpdate(id, { prijs: val ? parsePrijs(val) : null });
-      await refreshCoordinatorData();
+      const numVal = val ? parsePrijs(val) : null;
+      await updateField('prijs', numVal);
+      renderBudget();
+      updateBulkInfo('aangevraagd');
+      updateBulkInfo('besteld');
     });
   }
-  row.querySelector('[data-field="categorie"]').addEventListener('change', async e => {
-    await dbUpdate(id, { categorie: e.target.value, groep: null, jeelo_thema: null, overig_thema: null, kleuters_thema: null });
-    await refreshCoordinatorData();
-  });
-  row.querySelector('[data-field="thema"]').addEventListener('change', async e => {
+
+  const catSelect = row.querySelector('[data-field="categorie"]');
+  const themaSelect = row.querySelector('[data-field="thema"]');
+  const andersInp = row.querySelector('.thema-anders-input');
+
+  catSelect.addEventListener('change', async e => {
+    const newCat = e.target.value;
     const book = allBooksCache.find(b => String(b.id) === String(id));
-    let waarde = e.target.value;
-    if (waarde === ANDERS){
-      waarde = prompt('Vul het thema in:', '');
-      if (!waarde){ await refreshCoordinatorData(); return; }
+    if (!book) return;
+    book.categorie = newCat;
+    book.groep = null;
+    book.jeelo_thema = null;
+    book.overig_thema = null;
+    book.kleuters_thema = null;
+    await dbUpdate(id, { categorie: newCat, groep: null, jeelo_thema: null, overig_thema: null, kleuters_thema: null });
+    themaSelect.innerHTML = themaSelectHtml(book, id);
+    if (andersInp){
+      andersInp.style.display = 'none';
+      andersInp.value = '';
+    }
+    showSaveFeedback(badge);
+  });
+
+  themaSelect.addEventListener('change', async e => {
+    const val = e.target.value;
+    const book = allBooksCache.find(b => String(b.id) === String(id));
+    if (!book) return;
+    if (val === ANDERS){
+      if (andersInp){
+        andersInp.style.display = '';
+        andersInp.focus();
+      }
+      return;
+    }
+    if (andersInp){
+      andersInp.style.display = 'none';
+      andersInp.value = '';
     }
     const veld = veldVoorCategorie(book.categorie);
-    await dbUpdate(id, { [veld]: waarde || null });
-    await refreshCoordinatorData();
+    const updates = { [veld]: val || null };
+    book[veld] = val || null;
+    await dbUpdate(id, updates);
+    showSaveFeedback(badge);
   });
+
+  if (andersInp){
+    andersInp.addEventListener('change', async e => {
+      const val = e.target.value.trim();
+      const book = allBooksCache.find(b => String(b.id) === String(id));
+      if (!book) return;
+      const veld = veldVoorCategorie(book.categorie);
+      const updates = { [veld]: val || null };
+      book[veld] = val || null;
+      await dbUpdate(id, updates);
+      showSaveFeedback(badge);
+    });
+  }
+
   const rejectBtn = row.querySelector('[data-reject]');
   if (rejectBtn) rejectBtn.addEventListener('click', async () => {
     await dbUpdate(id, { status: 'afgewezen' });
     await refreshCoordinatorData();
   });
+
   row.querySelector('[data-delete]').addEventListener('click', async () => {
     const boek = allBooksCache.find(x => String(x.id) === String(id));
     if (!bevestigVerwijderen(boek && boek.titel)) return;
@@ -1603,21 +1890,9 @@ function renderAfgewezen(){
 }
 
 function fullRowHtml(b){
-  const metaParts = [];
-  if (b.auteur) metaParts.push(escapeHtml(b.auteur));
-  const thema = themaLabel(b);
-  if (thema) metaParts.push(escapeHtml(thema));
-  if (b.prijs != null && b.prijs !== '') metaParts.push(euro(b.prijs));
-  if (b.naam_aanvrager) metaParts.push('door ' + escapeHtml(b.naam_aanvrager));
-  if (b.opmerking){
-    const cleanOpm = b.opmerking.trim();
-    const shortOpm = cleanOpm.length > 50 ? cleanOpm.slice(0, 47) + '…' : cleanOpm;
-    metaParts.push(`<span class="summary-opm" title="${escapeHtml(cleanOpm)}">opm: ${escapeHtml(shortOpm)}</span>`);
-  }
-  if (b.boekentip){
-    const tips = b.boekentip.split('\n').filter(Boolean).length;
-    if (tips) metaParts.push(tips === 1 ? '1 boekentip' : `${tips} boekentips`);
-  }
+  const prijsVal = b.prijs != null && b.prijs !== '' ? formatBedrag(b.prijs) : '';
+  const isCustom = !isBekendThema(b.categorie, b[veldVoorCategorie(b.categorie)]);
+  const customVal = isCustom ? (b[veldVoorCategorie(b.categorie)] || '') : '';
 
   return `
     <details class="book-details" data-id="${b.id}">
@@ -1627,50 +1902,79 @@ function fullRowHtml(b){
           <div class="summary-text">
             <span class="summary-titel">${escapeHtml(b.titel)}</span>
             <span class="tag status-${b.status || 'aangevraagd'} summary-status">${escapeHtml(b.status || 'aangevraagd')}</span>
-            ${metaParts.length ? `<span class="summary-meta">${metaParts.join(' &middot; ')}</span>` : ''}
+            <span class="summary-meta">${renderSummaryMeta(b)}</span>
           </div>
         </div>
         <span class="chevron">▶</span>
       </summary>
       <div class="book-details-body">
-        <div class="row-fields">
-          <div class="field-line">
-            <input type="text" class="titel-input" data-field="titel" data-id="${b.id}" value="${escapeHtml(b.titel)}" placeholder="Titel">
+        <div class="edit-status-banner">
+          <span style="font-size:12px; color:var(--ink-soft);">Boek bewerken</span>
+          <span class="save-badge"></span>
+        </div>
+        <div class="edit-grid">
+          <div class="edit-field full-width">
+            <label>Titel</label>
+            <input type="text" class="titel-input" data-field="titel" data-id="${b.id}" value="${escapeHtml(b.titel)}">
+          </div>
+
+          <div class="edit-field">
+            <label>Auteur</label>
+            <input type="text" data-field="auteur" data-id="${b.id}" value="${escapeHtml(b.auteur || '')}" placeholder="Auteur">
+          </div>
+
+          <div class="edit-field">
+            <label>Prijs (€)</label>
             <div class="prijs-input-wrap">
               <span class="currency-prefix">€</span>
-              <input type="text" inputmode="decimal" class="prijs-input" data-field="prijs" data-id="${b.id}" value="${b.prijs != null && b.prijs !== '' ? formatBedrag(b.prijs) : ''}" placeholder="0,00">
+              <input type="text" inputmode="decimal" class="prijs-input" data-field="prijs" data-id="${b.id}" value="${prijsVal}" placeholder="0,00">
             </div>
           </div>
-          <div class="field-line">
-            <input type="text" data-field="auteur" data-id="${b.id}" value="${escapeHtml(b.auteur || '')}" placeholder="Auteur" style="flex:1 1 200px;">
+
+          <div class="edit-field">
+            <label>ISBN (13 cijfers)</label>
+            <input type="text" data-field="isbn" data-id="${b.id}" value="${escapeHtml(b.isbn || '')}" placeholder="bijv. 97890..." inputmode="numeric" maxlength="13">
           </div>
-          <div class="field-line">
-            <input type="text" data-field="isbn" data-id="${b.id}" value="${escapeHtml(b.isbn || '')}" placeholder="ISBN" inputmode="numeric" maxlength="13" style="flex:1 1 160px;">
-            <input type="text" data-field="naam_aanvrager" data-id="${b.id}" value="${escapeHtml(b.naam_aanvrager || '')}" placeholder="Aangevraagd door" style="flex:1 1 160px;">
+
+          <div class="edit-field">
+            <label>Aangevraagd door</label>
+            <input type="text" data-field="naam_aanvrager" data-id="${b.id}" value="${escapeHtml(b.naam_aanvrager || '')}" placeholder="Naam leerkracht">
           </div>
-          <div class="field-line">
+
+          <div class="edit-field">
+            <label>Categorie</label>
             <select data-field="categorie" data-id="${b.id}">
               <option value="Groep" ${b.categorie==='Groep'?'selected':''}>Groep</option>
               <option value="Kleuters" ${b.categorie==='Kleuters'?'selected':''}>Kleuters</option>
               <option value="Jeelo" ${b.categorie==='Jeelo'?'selected':''}>Jeelo</option>
-              <option value="Overig" ${b.categorie==='Overig'?'selected':''}>Overig</option>
+              <option value="Overig" ${b.categorie==='Overig'?'selected':''}>Overige thema's</option>
             </select>
+          </div>
+
+          <div class="edit-field">
+            <label>Thema of groep</label>
             <select data-field="thema" data-id="${b.id}">${themaSelectHtml(b, b.id)}</select>
+            <input type="text" class="thema-anders-input" data-id="${b.id}" placeholder="Vul eigen thema in…" value="${escapeHtml(customVal)}" style="${isCustom && customVal ? '' : 'display:none;'} margin-top:6px;">
           </div>
-          <div class="field-line">
+
+          <div class="edit-field">
+            <label>Status</label>
             <select data-field="status" data-id="${b.id}">
-              <option value="aangevraagd" ${b.status==='aangevraagd'||!b.status?'selected':''}>Aangevraagd</option>
-              <option value="besteld" ${b.status==='besteld'?'selected':''}>Besteld</option>
-              <option value="binnen" ${b.status==='binnen'?'selected':''}>Binnen</option>
-              <option value="afgewezen" ${b.status==='afgewezen'?'selected':''}>Afgewezen</option>
+              <option value="aangevraagd" ${b.status==='aangevraagd'||!b.status?'selected':''}>Aangevraagd (te bestellen)</option>
+              <option value="besteld" ${b.status==='besteld'?'selected':''}>Besteld (onderweg)</option>
+              <option value="binnen" ${b.status==='binnen'?'selected':''}>Binnen (ontvangen)</option>
+              <option value="afgewezen" ${b.status==='afgewezen'?'selected':''}>Niet leverbaar</option>
             </select>
           </div>
-          <div class="field-line">
-            <input type="text" data-field="opmerking" data-id="${b.id}" value="${escapeHtml(b.opmerking || '')}" placeholder="Opmerking" style="flex:1 1 200px;">
+
+          <div class="edit-field full-width">
+            <label>Opmerking</label>
+            <input type="text" data-field="opmerking" data-id="${b.id}" value="${escapeHtml(b.opmerking || '')}" placeholder="Optionele opmerking">
           </div>
         </div>
+
         ${b.boekentip ? `
-        <div class="boekentip-list">
+        <div class="boekentip-list" style="margin-top:14px;">
           <div class="subsection-title" style="margin:0 0 6px;">Boekentips</div>
           ${escapeHtml(b.boekentip).split('\n').filter(Boolean).map((t, i) => `
             <div class="boekentip-item">
@@ -1680,8 +1984,9 @@ function fullRowHtml(b){
           `).join('')}
         </div>
         ` : ''}
-        <div class="row-actions" style="align-items:flex-start; margin-top:10px;">
-          <button class="link" data-delete="${b.id}">Verwijderen</button>
+
+        <div class="row-actions" style="align-items:flex-start; margin-top:14px; padding-top:10px; border-top:1px solid var(--line);">
+          <button class="link" data-delete="${b.id}" style="color:var(--red);">Dit boek definitief verwijderen</button>
         </div>
       </div>
     </details>
@@ -1695,21 +2000,25 @@ function wireFullRow(row){
     selCb.addEventListener('click', e => e.stopPropagation());
     selCb.addEventListener('change', () => updateAlleBulkInfo());
   }
-  row.querySelector('[data-field="titel"]').addEventListener('change', async e => {
-    await dbUpdate(id, { titel: e.target.value.trim() });
-    await refreshCoordinatorData();
-  });
-  row.querySelector('[data-field="auteur"]').addEventListener('change', async e => {
-    await dbUpdate(id, { auteur: e.target.value.trim() || null });
-    await refreshCoordinatorData();
-  });
-  const fullOpmerkingInp = row.querySelector('[data-field="opmerking"]');
-  if (fullOpmerkingInp){
-    fullOpmerkingInp.addEventListener('change', async e => {
-      await dbUpdate(id, { opmerking: e.target.value.trim() || null });
-      await refreshCoordinatorData();
-    });
+  const badge = row.querySelector('.save-badge');
+
+  async function updateField(field, val){
+    const book = allBooksCache.find(b => String(b.id) === String(id));
+    if (!book) return;
+    book[field] = val;
+    await dbUpdate(id, { [field]: val });
+    updateSummaryHeader(row, book);
+    showSaveFeedback(badge);
   }
+
+  row.querySelector('[data-field="titel"]').addEventListener('change', e => {
+    updateField('titel', e.target.value.trim());
+  });
+
+  row.querySelector('[data-field="auteur"]').addEventListener('change', e => {
+    updateField('auteur', e.target.value.trim() || null);
+  });
+
   const fullPrijsInp = row.querySelector('[data-field="prijs"]');
   if (fullPrijsInp){
     fullPrijsInp.addEventListener('blur', e => {
@@ -1718,42 +2027,98 @@ function wireFullRow(row){
     });
     fullPrijsInp.addEventListener('change', async e => {
       const val = e.target.value.trim();
-      await dbUpdate(id, { prijs: val ? parsePrijs(val) : null });
-      await refreshCoordinatorData();
+      const numVal = val ? parsePrijs(val) : null;
+      await updateField('prijs', numVal);
+      renderBudget();
     });
   }
-  row.querySelector('[data-field="isbn"]').addEventListener('change', async e => {
-    await dbUpdate(id, { isbn: e.target.value.replace(/\D/g, '').slice(0, 13) || null });
-    await refreshCoordinatorData();
+
+  row.querySelector('[data-field="isbn"]').addEventListener('change', e => {
+    updateField('isbn', e.target.value.replace(/\D/g, '').slice(0, 13) || null);
   });
-  row.querySelector('[data-field="naam_aanvrager"]').addEventListener('change', async e => {
-    await dbUpdate(id, { naam_aanvrager: e.target.value.trim() || null });
-    await refreshCoordinatorData();
+
+  row.querySelector('[data-field="naam_aanvrager"]').addEventListener('change', e => {
+    updateField('naam_aanvrager', e.target.value.trim() || null);
   });
-  row.querySelector('[data-field="categorie"]').addEventListener('change', async e => {
-    await dbUpdate(id, { categorie: e.target.value, groep: null, jeelo_thema: null, overig_thema: null, kleuters_thema: null });
-    await refreshCoordinatorData();
-  });
-  row.querySelector('[data-field="thema"]').addEventListener('change', async e => {
+
+  const catSelect = row.querySelector('[data-field="categorie"]');
+  const themaSelect = row.querySelector('[data-field="thema"]');
+  const andersInp = row.querySelector('.thema-anders-input');
+
+  catSelect.addEventListener('change', async e => {
+    const newCat = e.target.value;
     const book = allBooksCache.find(b => String(b.id) === String(id));
-    let waarde = e.target.value;
-    if (waarde === ANDERS){
-      waarde = prompt('Vul het thema in:', '');
-      if (!waarde){ await refreshCoordinatorData(); return; }
+    if (!book) return;
+    book.categorie = newCat;
+    book.groep = null;
+    book.jeelo_thema = null;
+    book.overig_thema = null;
+    book.kleuters_thema = null;
+    await dbUpdate(id, { categorie: newCat, groep: null, jeelo_thema: null, overig_thema: null, kleuters_thema: null });
+    themaSelect.innerHTML = themaSelectHtml(book, id);
+    if (andersInp){
+      andersInp.style.display = 'none';
+      andersInp.value = '';
+    }
+    updateSummaryHeader(row, book);
+    showSaveFeedback(badge);
+  });
+
+  themaSelect.addEventListener('change', async e => {
+    const val = e.target.value;
+    const book = allBooksCache.find(b => String(b.id) === String(id));
+    if (!book) return;
+    if (val === ANDERS){
+      if (andersInp){
+        andersInp.style.display = '';
+        andersInp.focus();
+      }
+      return;
+    }
+    if (andersInp){
+      andersInp.style.display = 'none';
+      andersInp.value = '';
     }
     const veld = veldVoorCategorie(book.categorie);
-    await dbUpdate(id, { [veld]: waarde || null });
-    await refreshCoordinatorData();
+    const updates = { [veld]: val || null };
+    book[veld] = val || null;
+    await dbUpdate(id, updates);
+    updateSummaryHeader(row, book);
+    showSaveFeedback(badge);
   });
+
+  if (andersInp){
+    andersInp.addEventListener('change', async e => {
+      const val = e.target.value.trim();
+      const book = allBooksCache.find(b => String(b.id) === String(id));
+      if (!book) return;
+      const veld = veldVoorCategorie(book.categorie);
+      const updates = { [veld]: val || null };
+      book[veld] = val || null;
+      await dbUpdate(id, updates);
+      updateSummaryHeader(row, book);
+      showSaveFeedback(badge);
+    });
+  }
+
   row.querySelector('[data-field="status"]').addEventListener('change', async e => {
     const nieuweStatus = e.target.value;
     const updates = { status: nieuweStatus };
     if (nieuweStatus === 'aangevraagd'){ updates.besteld_op = null; updates.binnen_op = null; }
     if (nieuweStatus === 'besteld'){ updates.besteld_op = new Date().toISOString(); }
     if (nieuweStatus === 'binnen'){ updates.binnen_op = new Date().toISOString(); }
+    const book = allBooksCache.find(b => String(b.id) === String(id));
+    if (book) Object.assign(book, updates);
     await dbUpdate(id, updates);
-    await refreshCoordinatorData();
+    updateSummaryHeader(row, book);
+    showSaveFeedback(badge);
+    renderBudget();
   });
+
+  row.querySelector('[data-field="opmerking"]').addEventListener('change', e => {
+    updateField('opmerking', e.target.value.trim() || null);
+  });
+
   row.querySelector('[data-delete]').addEventListener('click', async () => {
     const boek = allBooksCache.find(x => String(x.id) === String(id));
     if (!bevestigVerwijderen(boek && boek.titel)) return;
@@ -1761,42 +2126,149 @@ function wireFullRow(row){
     if (error){ alert('Verwijderen mislukt: ' + error.message); return; }
     await refreshCoordinatorData();
   });
+
   row.querySelectorAll('[data-tip-delete]').forEach(btn => btn.addEventListener('click', async () => {
     const book = allBooksCache.find(x => String(x.id) === String(id));
     const tips = (book.boekentip || '').split('\n').filter(Boolean);
     tips.splice(parseInt(btn.dataset.tipDelete, 10), 1);
-    await dbUpdate(id, { boekentip: tips.length ? tips.join('\n') : null });
-    await refreshCoordinatorData();
+    await updateField('boekentip', tips.length ? tips.join('\n') : null);
+    const tipItem = btn.closest('.boekentip-item');
+    if (tipItem) tipItem.remove();
   }));
 }
 
 // ---- Intuïtief zoeken/filteren door "Alle boeken" ----
-let alleCategorieFilter = '';
-const alleLeegVelden = new Set(); // welke velden moeten LEEG zijn, bijv. {'auteur','thema'} voor "Groep zonder auteur"
-let alleFilterMetOpmerking = false;
+let alleCategorieFilter = ''; // '', 'Kleuters', 'Groep', 'Jeelo', 'Overig', '__zonder_cat__'
+let alleSubThemaFilter = ''; // specifiek thema of ''
+const alleLeegFilters = new Set(); // set van actieve ontbrekende gegevens filters
 
-function alleVeldIsLeeg(b, veld){
-  if (veld === 'thema') return !themaVan(b);
-  const val = b[veld];
-  return val === null || val === undefined || String(val).trim() === '';
+function populateAlleSubThemaPills(){
+  const container = document.getElementById('alle-sub-thema-container');
+  const pillsEl = document.getElementById('alle-sub-thema-pills');
+  const titleEl = document.getElementById('alle-sub-thema-title');
+  if (!container || !pillsEl) return;
+
+  if (!alleCategorieFilter || alleCategorieFilter === '__zonder_cat__'){
+    container.style.display = 'none';
+    pillsEl.innerHTML = '';
+    alleSubThemaFilter = '';
+    return;
+  }
+
+  container.style.display = '';
+  if (alleCategorieFilter === 'Kleuters'){
+    titleEl.textContent = "Thema's binnen Kleuters:";
+    const waarden = [...new Set(allBooksCache.filter(b => b.categorie === 'Kleuters' && b.kleuters_thema).map(b => b.kleuters_thema))].sort((a,b) => a.localeCompare(b,'nl'));
+    let html = `<button class="pill ${alleSubThemaFilter===''?'active':''}" data-subthema="">Alle kleuterthema's</button>`;
+    html += waarden.map(w => `<button class="pill ${alleSubThemaFilter===w?'active':''}" data-subthema="${escapeHtml(w)}">${escapeHtml(w)}</button>`).join('');
+    pillsEl.innerHTML = html;
+  } else if (alleCategorieFilter === 'Overig'){
+    titleEl.textContent = "Thema's binnen Overige thema's:";
+    const waarden = [...new Set(allBooksCache.filter(b => b.categorie === 'Overig' && b.overig_thema).map(b => b.overig_thema))].sort((a,b) => a.localeCompare(b,'nl'));
+    let html = `<button class="pill ${alleSubThemaFilter===''?'active':''}" data-subthema="">Alle overige thema's</button>`;
+    html += waarden.map(w => `<button class="pill ${alleSubThemaFilter===w?'active':''}" data-subthema="${escapeHtml(w)}">${escapeHtml(w)}</button>`).join('');
+    pillsEl.innerHTML = html;
+  } else if (alleCategorieFilter === 'Groep'){
+    titleEl.textContent = "Groepen:";
+    let html = `<button class="pill ${alleSubThemaFilter===''?'active':''}" data-subthema="">Alle groepen</button>`;
+    html += GROEPEN.map(g => `<button class="pill ${alleSubThemaFilter===g?'active':''}" data-subthema="${escapeHtml(g)}">${escapeHtml(g)}</button>`).join('');
+    pillsEl.innerHTML = html;
+  } else if (alleCategorieFilter === 'Jeelo'){
+    titleEl.textContent = "Jeelo projecten:";
+    let html = `<button class="pill ${alleSubThemaFilter===''?'active':''}" data-subthema="">Alle Jeelo thema's</button>`;
+    html += JEELO_THEMAS.map(j => `<button class="pill ${alleSubThemaFilter===j?'active':''}" data-subthema="${escapeHtml(j)}">${escapeHtml(j)}</button>`).join('');
+    pillsEl.innerHTML = html;
+  }
+
+  pillsEl.querySelectorAll('.pill').forEach(p => {
+    p.addEventListener('click', () => {
+      alleSubThemaFilter = p.dataset.subthema || '';
+      pillsEl.querySelectorAll('.pill').forEach(btn => btn.classList.toggle('active', btn === p));
+      renderAlleBoeken();
+    });
+  });
+}
+
+function updateResetButtonVisibility(q, statusFilter){
+  const resetBtn = document.getElementById('alle-reset-filters');
+  if (!resetBtn) return;
+  const hasFilter = Boolean(
+    q ||
+    statusFilter !== '' ||
+    alleCategorieFilter !== '' ||
+    alleSubThemaFilter !== '' ||
+    alleLeegFilters.size > 0
+  );
+  resetBtn.style.display = hasFilter ? 'inline-block' : 'none';
 }
 
 function renderAlleBoeken(){
   const openIds = new Set([...document.querySelectorAll('#lijst-alle details[open]')].map(d => d.dataset.id));
-  const q = document.getElementById('alle-zoek').value.trim().toLowerCase();
+  const q = (document.getElementById('alle-zoek').value || '').trim().toLowerCase();
   const statusFilter = document.getElementById('alle-status-filter').value;
-  let lijst = allBooksCache.filter(b => b.status !== 'afgewezen');
-  if (q) lijst = lijst.filter(b => boekZoekTekst(b).includes(q));
-  if (statusFilter) lijst = lijst.filter(b => (b.status || 'aangevraagd') === statusFilter);
-  if (alleCategorieFilter) lijst = lijst.filter(b => b.categorie === alleCategorieFilter);
-  alleLeegVelden.forEach(veld => { lijst = lijst.filter(b => alleVeldIsLeeg(b, veld)); });
-  if (alleFilterMetOpmerking) lijst = lijst.filter(b => b.opmerking && String(b.opmerking).trim() !== '');
 
-  document.getElementById('alle-count').textContent = lijst.length + (lijst.length === 1 ? ' boek' : ' boeken');
+  updateResetButtonVisibility(q, statusFilter);
+
+  let lijst = [...allBooksCache];
+
+  // 1. Text zoekopdracht
+  if (q){
+    lijst = lijst.filter(b => boekZoekTekst(b).includes(q));
+  }
+
+  // 2. Status filter
+  if (statusFilter === ''){
+    // Standaard: alles behalve afgewezen (niet leverbaar)
+    lijst = lijst.filter(b => (b.status || 'aangevraagd') !== 'afgewezen');
+  } else if (statusFilter === '__alle__'){
+    // Alles tonen inclusief afgewezen
+  } else {
+    lijst = lijst.filter(b => (b.status || 'aangevraagd') === statusFilter);
+  }
+
+  // 3. Categorie filter
+  if (alleCategorieFilter === '__zonder_cat__'){
+    lijst = lijst.filter(b => !b.categorie || String(b.categorie).trim() === '');
+  } else if (alleCategorieFilter){
+    lijst = lijst.filter(b => b.categorie === alleCategorieFilter);
+  }
+
+  // 4. Sub-thema filter
+  if (alleSubThemaFilter){
+    lijst = lijst.filter(b => themaVan(b) === alleSubThemaFilter);
+  }
+
+  // 5. Specifieke ontbrekende gegevens filters
+  if (alleLeegFilters.has('zonder_kleuters_thema')){
+    lijst = lijst.filter(b => b.categorie === 'Kleuters' && (!b.kleuters_thema || b.kleuters_thema.trim() === ''));
+  }
+  if (alleLeegFilters.has('zonder_overig_thema')){
+    lijst = lijst.filter(b => b.categorie === 'Overig' && (!b.overig_thema || b.overig_thema.trim() === ''));
+  }
+  if (alleLeegFilters.has('zonder_groep')){
+    lijst = lijst.filter(b => b.categorie === 'Groep' && (!b.groep || b.groep.trim() === ''));
+  }
+  if (alleLeegFilters.has('zonder_categorie')){
+    lijst = lijst.filter(b => !b.categorie || String(b.categorie).trim() === '');
+  }
+  if (alleLeegFilters.has('zonder_isbn')){
+    lijst = lijst.filter(b => !b.isbn || String(b.isbn).trim() === '');
+  }
+  if (alleLeegFilters.has('zonder_auteur')){
+    lijst = lijst.filter(b => !b.auteur || String(b.auteur).trim() === '');
+  }
+  if (alleLeegFilters.has('zonder_prijs')){
+    lijst = lijst.filter(b => b.prijs == null || b.prijs === '' || parsePrijs(b.prijs) === 0);
+  }
+  if (alleLeegFilters.has('met_opmerking')){
+    lijst = lijst.filter(b => b.opmerking && String(b.opmerking).trim() !== '');
+  }
+
+  document.getElementById('alle-count').textContent = lijst.length + (lijst.length === 1 ? ' boek gevonden' : ' boeken gevonden');
 
   const container = document.getElementById('lijst-alle');
   if (!lijst.length){
-    container.innerHTML = `<div class="empty-state">Geen boeken gevonden.</div>`;
+    container.innerHTML = `<div class="empty-state">Geen boeken gevonden met de huidige filters.</div>`;
     updateAlleBulkInfo();
     return;
   }
@@ -1811,37 +2283,46 @@ function renderAlleBoeken(){
 document.getElementById('alle-zoek').addEventListener('input', renderAlleBoeken);
 document.getElementById('alle-status-filter').addEventListener('change', renderAlleBoeken);
 
+// Categorie-knoppen
 document.querySelectorAll('#alle-cat-pills .pill').forEach(btn => {
   btn.addEventListener('click', () => {
-    alleCategorieFilter = btn.dataset.cat;
+    alleCategorieFilter = btn.dataset.cat || '';
     document.querySelectorAll('#alle-cat-pills .pill').forEach(p => p.classList.toggle('active', p === btn));
+    alleSubThemaFilter = '';
+    populateAlleSubThemaPills();
     renderAlleBoeken();
   });
 });
 
-document.querySelectorAll('#alle-leeg-pills .pill[data-leegveld]').forEach(btn => {
+// Ontbrekende gegevens filter-knoppen
+document.querySelectorAll('#alle-leeg-pills .pill[data-leegfilter]').forEach(btn => {
   btn.addEventListener('click', () => {
-    const veld = btn.dataset.leegveld;
-    if (alleLeegVelden.has(veld)) alleLeegVelden.delete(veld); else alleLeegVelden.add(veld);
-    btn.classList.toggle('active');
-    if (veld === 'opmerking' && alleLeegVelden.has('opmerking') && alleFilterMetOpmerking){
-      alleFilterMetOpmerking = false;
-      document.getElementById('alle-filter-met-opmerking')?.classList.remove('active');
+    const f = btn.dataset.leegfilter;
+    if (alleLeegFilters.has(f)){
+      alleLeegFilters.delete(f);
+      btn.classList.remove('active');
+    } else {
+      alleLeegFilters.add(f);
+      btn.classList.add('active');
     }
     renderAlleBoeken();
   });
 });
 
-document.getElementById('alle-filter-met-opmerking')?.addEventListener('click', e => {
-  alleFilterMetOpmerking = !alleFilterMetOpmerking;
-  e.target.classList.toggle('active', alleFilterMetOpmerking);
-  if (alleFilterMetOpmerking && alleLeegVelden.has('opmerking')){
-    alleLeegVelden.delete('opmerking');
-    document.querySelector('#alle-leeg-pills [data-leegveld="opmerking"]')?.classList.remove('active');
-  }
+// Reset alle filters knop
+document.getElementById('alle-reset-filters')?.addEventListener('click', () => {
+  document.getElementById('alle-zoek').value = '';
+  document.getElementById('alle-status-filter').value = '';
+  alleCategorieFilter = '';
+  alleSubThemaFilter = '';
+  alleLeegFilters.clear();
+  document.querySelectorAll('#alle-cat-pills .pill').forEach(p => p.classList.toggle('active', p.dataset.cat === ''));
+  document.querySelectorAll('#alle-leeg-pills .pill').forEach(p => p.classList.remove('active'));
+  populateAlleSubThemaPills();
   renderAlleBoeken();
 });
 
+// ---- Bulk werkbalk en acties ----
 function updateAlleBulkInfo(){
   const allCbs = [...document.querySelectorAll('.sel-alle')];
   const checked = allCbs.filter(cb => cb.checked);
@@ -1862,14 +2343,23 @@ function updateAlleBulkInfo(){
       infoEl.innerHTML = `<strong>${checked.length}</strong> van de <strong>${allCbs.length}</strong> geselecteerd`;
     }
   }
+
+  const deselectBtn = document.getElementById('alle-bulk-deselect');
+  if (deselectBtn){
+    deselectBtn.style.display = checked.length > 0 ? 'inline-block' : 'none';
+  }
+
+  const hasSel = checked.length > 0;
   const statusBtn = document.getElementById('alle-bulk-status-apply');
-  if (statusBtn) statusBtn.disabled = checked.length === 0;
+  if (statusBtn) statusBtn.disabled = !hasSel;
   const themaBtn = document.getElementById('alle-bulk-thema-apply');
-  if (themaBtn) themaBtn.disabled = checked.length === 0;
-  const opmerkingBtn = document.getElementById('alle-bulk-opmerking-delete');
-  if (opmerkingBtn) opmerkingBtn.disabled = checked.length === 0;
+  if (themaBtn) themaBtn.disabled = !hasSel;
+  const opmSetBtn = document.getElementById('alle-bulk-opmerking-set');
+  if (opmSetBtn) opmSetBtn.disabled = !hasSel;
+  const opmDelBtn = document.getElementById('alle-bulk-opmerking-delete');
+  if (opmDelBtn) opmDelBtn.disabled = !hasSel;
   const deleteBtn = document.getElementById('alle-bulk-delete');
-  if (deleteBtn) deleteBtn.disabled = checked.length === 0;
+  if (deleteBtn) deleteBtn.disabled = !hasSel;
 }
 
 function populateBulkThemaSelect(cat, themaEl){
@@ -1877,20 +2367,20 @@ function populateBulkThemaSelect(cat, themaEl){
   if (cat === 'Groep'){
     html = `<option value="" disabled selected>Kies groep…</option>`
       + `<option value="__leeg__">(Geen groep)</option>`
-      + GROEPEN.map(o => `<option value="${o}">${o}</option>`).join('');
+      + GROEPEN.map(o => `<option value="${escapeHtml(o)}">${escapeHtml(o)}</option>`).join('');
   } else if (cat === 'Jeelo'){
     html = `<option value="" disabled selected>Kies thema…</option>`
-      + `<option value="__leeg__">(Geen thema)</option>`
-      + JEELO_THEMAS.map(o => `<option value="${o}">${o}</option>`).join('');
+      + `<option value="__leeg__">(Geen Jeelo-thema)</option>`
+      + JEELO_THEMAS.map(o => `<option value="${escapeHtml(o)}">${escapeHtml(o)}</option>`).join('');
   } else if (cat === 'Kleuters'){
-    html = `<option value="" disabled selected>Kies thema…</option>`
-      + `<option value="__leeg__">(Geen thema)</option>`
-      + KLEUTERS_THEMAS.map(o => `<option value="${o}">${o}</option>`).join('')
+    html = `<option value="" disabled selected>Kies kleuterthema…</option>`
+      + `<option value="__leeg__">(Geen kleuterthema)</option>`
+      + KLEUTERS_THEMAS.map(o => `<option value="${escapeHtml(o)}">${escapeHtml(o)}</option>`).join('')
       + `<option value="${ANDERS}">Anders, namelijk…</option>`;
   } else {
-    html = `<option value="" disabled selected>Kies thema…</option>`
-      + `<option value="__leeg__">(Geen thema)</option>`
-      + OVERIGE_THEMAS.map(o => `<option value="${o}">${o}</option>`).join('')
+    html = `<option value="" disabled selected>Kies overig thema…</option>`
+      + `<option value="__leeg__">(Geen overig thema)</option>`
+      + OVERIGE_THEMAS.map(o => `<option value="${escapeHtml(o)}">${escapeHtml(o)}</option>`).join('')
       + `<option value="${ANDERS}">Anders, namelijk…</option>`;
   }
   themaEl.innerHTML = html;
@@ -1899,10 +2389,18 @@ function populateBulkThemaSelect(cat, themaEl){
 function initAlleBulkThema(){
   const catEl = document.getElementById('alle-bulk-cat');
   const themaEl = document.getElementById('alle-bulk-thema');
+  const andersEl = document.getElementById('alle-bulk-thema-anders');
   if (!catEl || !themaEl) return;
   populateBulkThemaSelect(catEl.value, themaEl);
   catEl.addEventListener('change', () => {
     populateBulkThemaSelect(catEl.value, themaEl);
+    if (andersEl) andersEl.style.display = 'none';
+  });
+  themaEl.addEventListener('change', () => {
+    if (andersEl){
+      andersEl.style.display = themaEl.value === ANDERS ? 'inline-block' : 'none';
+      if (themaEl.value === ANDERS) andersEl.focus();
+    }
   });
 }
 initAlleBulkThema();
@@ -1912,7 +2410,15 @@ document.getElementById('sel-all-alle')?.addEventListener('change', e => {
   updateAlleBulkInfo();
 });
 
-document.getElementById('alle-bulk-status-apply').addEventListener('click', async () => {
+document.getElementById('alle-bulk-deselect')?.addEventListener('click', () => {
+  document.querySelectorAll('.sel-alle').forEach(cb => { cb.checked = false; });
+  const masterCb = document.getElementById('sel-all-alle');
+  if (masterCb) masterCb.checked = false;
+  updateAlleBulkInfo();
+});
+
+// Bulk Status Apply
+document.getElementById('alle-bulk-status-apply')?.addEventListener('click', async () => {
   const ids = [...document.querySelectorAll('.sel-alle:checked')].map(cb => cb.dataset.id);
   if (!ids.length) return;
   const nieuweStatus = document.getElementById('alle-bulk-status').value;
@@ -1920,11 +2426,16 @@ document.getElementById('alle-bulk-status-apply').addEventListener('click', asyn
   if (nieuweStatus === 'aangevraagd'){ updates.besteld_op = null; updates.binnen_op = null; }
   if (nieuweStatus === 'besteld'){ updates.besteld_op = new Date().toISOString(); }
   if (nieuweStatus === 'binnen'){ updates.binnen_op = new Date().toISOString(); }
+
   const { error } = await client.from('boeken').update(updates).in('id', ids);
-  if (error){ alert('Bulk-wijziging mislukt: ' + error.message); return; }
+  if (error){ alert('Bulk-wijziging status mislukt: ' + error.message); return; }
+  allBooksCache.forEach(b => {
+    if (ids.includes(String(b.id))) Object.assign(b, updates);
+  });
   await refreshCoordinatorData();
 });
 
+// Bulk Categorie & Thema Apply
 document.getElementById('alle-bulk-thema-apply')?.addEventListener('click', async () => {
   const ids = [...document.querySelectorAll('.sel-alle:checked')].map(cb => cb.dataset.id);
   if (!ids.length) return;
@@ -1938,14 +2449,15 @@ document.getElementById('alle-bulk-thema-apply')?.addEventListener('click', asyn
   if (rawThema === '__leeg__'){
     thema = null;
   } else if (rawThema === ANDERS){
-    thema = prompt('Vul het thema in voor de geselecteerde boeken:', '');
-    if (thema === null) return;
-    thema = thema.trim();
+    const andersInp = document.getElementById('alle-bulk-thema-anders');
+    thema = (andersInp ? andersInp.value : '').trim();
     if (!thema){
-      alert('Geen thema ingevuld.');
+      alert('Vul het eigen thema in het invoerveld in.');
+      if (andersInp) andersInp.focus();
       return;
     }
   }
+
   const veld = veldVoorCategorie(cat);
   const updates = {
     categorie: cat,
@@ -1955,31 +2467,57 @@ document.getElementById('alle-bulk-thema-apply')?.addEventListener('click', asyn
     kleuters_thema: null
   };
   updates[veld] = thema;
+
   const { error } = await client.from('boeken').update(updates).in('id', ids);
-  if (error){ alert('Bulk-wijziging mislukt: ' + error.message); return; }
+  if (error){ alert('Bulk-wijziging categorie/thema mislukt: ' + error.message); return; }
+  allBooksCache.forEach(b => {
+    if (ids.includes(String(b.id))) Object.assign(b, updates);
+  });
   await refreshCoordinatorData();
 });
 
+// Bulk Opmerking Instellen
+document.getElementById('alle-bulk-opmerking-set')?.addEventListener('click', async () => {
+  const ids = [...document.querySelectorAll('.sel-alle:checked')].map(cb => cb.dataset.id);
+  if (!ids.length) return;
+  const txt = document.getElementById('alle-bulk-opmerking-tekst').value.trim();
+  if (!txt){
+    if (!confirm('Er is geen tekst ingevuld. Wil je de opmerking van alle geselecteerde boeken leegmaken?')) return;
+  }
+  const updates = { opmerking: txt || null };
+  const { error } = await client.from('boeken').update(updates).in('id', ids);
+  if (error){ alert('Instellen van opmerking mislukt: ' + error.message); return; }
+  allBooksCache.forEach(b => {
+    if (ids.includes(String(b.id))) Object.assign(b, updates);
+  });
+  document.getElementById('alle-bulk-opmerking-tekst').value = '';
+  await refreshCoordinatorData();
+});
+
+// Bulk Opmerking Wissen
 document.getElementById('alle-bulk-opmerking-delete')?.addEventListener('click', async () => {
   const ids = [...document.querySelectorAll('.sel-alle:checked')].map(cb => cb.dataset.id);
   if (!ids.length) return;
-  const geselecteerdeBoeken = allBooksCache.filter(b => ids.includes(String(b.id)));
-  const metOpmerking = geselecteerdeBoeken.filter(b => b.opmerking && String(b.opmerking).trim() !== '');
+  const metOpmerking = allBooksCache.filter(b => ids.includes(String(b.id)) && b.opmerking && String(b.opmerking).trim() !== '');
   if (!metOpmerking.length){
     alert('Geen van de geselecteerde boeken heeft een opmerking.');
     return;
   }
   const vraag = metOpmerking.length === 1
-    ? 'Weet je zeker dat je de opmerking van 1 geselecteerd boek wilt verwijderen?'
-    : `Weet je zeker dat je de opmerking van ${metOpmerking.length} geselecteerde boeken wilt verwijderen?`;
+    ? 'Weet je zeker dat je de opmerking van 1 geselecteerd boek wilt wissen?'
+    : `Weet je zeker dat je de opmerking van ${metOpmerking.length} geselecteerde boeken wilt wissen?`;
   if (!confirm(vraag)) return;
   const idsToClear = metOpmerking.map(b => b.id);
   const { error } = await client.from('boeken').update({ opmerking: null }).in('id', idsToClear);
-  if (error){ alert('Verwijderen van opmerkingen mislukt: ' + error.message); return; }
+  if (error){ alert('Wissen van opmerkingen mislukt: ' + error.message); return; }
+  allBooksCache.forEach(b => {
+    if (idsToClear.includes(b.id)) b.opmerking = null;
+  });
   await refreshCoordinatorData();
 });
 
-document.getElementById('alle-bulk-delete').addEventListener('click', async () => {
+// Bulk Verwijderen
+document.getElementById('alle-bulk-delete')?.addEventListener('click', async () => {
   const ids = [...document.querySelectorAll('.sel-alle:checked')].map(cb => cb.dataset.id);
   if (!ids.length) return;
   if (!confirm(`${ids.length} boek(en) definitief verwijderen?\n\nDit kan NIET ongedaan worden gemaakt (geen back-up).`)) return;
@@ -2019,7 +2557,8 @@ function updateBulkInfo(groep){
       infoEl.innerHTML = `<strong>${checked.length}</strong> van de <strong>${allCbs.length}</strong> geselecteerd &middot; totaal <strong>${euro(total)}</strong>`;
     }
   }
-  document.getElementById(buttonId).disabled = checked.length === 0;
+  const btn = document.getElementById(buttonId);
+  if (btn) btn.disabled = checked.length === 0;
 }
 
 document.getElementById('sel-all-aangevraagd')?.addEventListener('change', e => {
@@ -2032,7 +2571,7 @@ document.getElementById('sel-all-besteld')?.addEventListener('change', e => {
   updateBulkInfo('besteld');
 });
 
-document.getElementById('bulk-besteld').addEventListener('click', async () => {
+document.getElementById('bulk-besteld')?.addEventListener('click', async () => {
   const ids = [...document.querySelectorAll('.sel-aangevraagd:checked')].map(cb => cb.dataset.id);
   if (!ids.length) return;
   const { error } = await client.from('boeken').update({ status: 'besteld', besteld_op: new Date().toISOString() }).in('id', ids);
@@ -2040,7 +2579,7 @@ document.getElementById('bulk-besteld').addEventListener('click', async () => {
   await refreshCoordinatorData();
 });
 
-document.getElementById('bulk-binnen').addEventListener('click', async () => {
+document.getElementById('bulk-binnen')?.addEventListener('click', async () => {
   const ids = [...document.querySelectorAll('.sel-besteld:checked')].map(cb => cb.dataset.id);
   if (!ids.length) return;
   const { error } = await client.from('boeken').update({ status: 'binnen', binnen_op: new Date().toISOString() }).in('id', ids);
