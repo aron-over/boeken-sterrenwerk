@@ -341,6 +341,16 @@ function serializeBoekentips(tips){
   return JSON.stringify(tips);
 }
 
+function formatBoekentipBtnLabel(count){
+  if (!count || count <= 0) return '+ Boekentip';
+  return count === 1 ? '💡 1 boekentip' : `💡 ${count} boekentips`;
+}
+
+function formatBoekentipBtnTitle(count){
+  if (!count || count <= 0) return 'Boekentip toevoegen';
+  return count === 1 ? '1 boekentip bekijken' : `${count} boekentips bekijken`;
+}
+
 function boekentipZoekTekst(raw){
   if (!raw) return '';
   const tips = parseBoekentips(raw);
@@ -480,7 +490,7 @@ function showModalEditor(isEdit = false){
   if (heading) heading.textContent = isEdit ? '✏️ Boekentip bewerken' : '💡 Boekentip toevoegen';
 
   const saveBtn = document.getElementById('modal-save-tip-btn');
-  if (saveBtn) saveBtn.textContent = isEdit ? 'Wijziging opslaan' : 'Tip opslaan';
+  if (saveBtn) saveBtn.textContent = isEdit ? 'Wijziging opslaan' : 'Boekentip opslaan';
 
   const authorInp = document.getElementById('modal-tip-author');
   const editor = document.getElementById('modal-rich-editor');
@@ -539,7 +549,7 @@ function resetModalEditor(){
   if (heading) heading.textContent = '💡 Boekentip toevoegen';
 
   const saveBtn = document.getElementById('modal-save-tip-btn');
-  if (saveBtn) saveBtn.textContent = 'Tip opslaan';
+  if (saveBtn) saveBtn.textContent = 'Boekentip opslaan';
 }
 
 function renderModalTipsList(bookId, openTargetTipId = null){
@@ -565,7 +575,7 @@ function renderModalTipsList(bookId, openTargetTipId = null){
     container.innerHTML = `
       <div class="modal-no-tips">
         Nog geen boekentips of lesideeën voor dit boek.<br>
-        Klik hieronder om als eerste een lestip of lesvoorbereiding toe te voegen!
+        Klik hieronder om als eerste een boekentip of lesidee toe te voegen!
       </div>
     `;
     return;
@@ -577,7 +587,7 @@ function renderModalTipsList(bookId, openTargetTipId = null){
 
   container.innerHTML = tips.map((tip, idx) => {
     const datum = formatTipDatum(tip.created_at);
-    const authorLabel = tip.author ? ('Tip van: ' + escapeHtml(tip.author)) : 'Boekentip';
+    const authorLabel = tip.author ? ('Boekentip van: ' + escapeHtml(tip.author)) : 'Boekentip';
     const snippet = getTipSnippet(tip.html);
 
     let isOpen = false;
@@ -670,20 +680,17 @@ function renderModalTipsList(bookId, openTargetTipId = null){
 }
 
 function syncTipTriggersOutsideModal(bookId, tipCount){
-  const zoekCard = document.querySelector(`.result-card[data-id="${bookId}"]`);
-  if (zoekCard){
-    const toggleBtn = zoekCard.querySelector('.boekentip-toggle');
-    if (toggleBtn){
-      toggleBtn.dataset.tipsCount = tipCount;
-      if (tipCount > 0){
-        toggleBtn.classList.add('has-tips');
-        toggleBtn.textContent = tipCount === 1 ? '💡 1 boekentip' : `💡 ${tipCount} boekentips`;
-      } else {
-        toggleBtn.classList.remove('has-tips');
-        toggleBtn.textContent = '+ Boekentip';
-      }
+  const buttons = document.querySelectorAll(`[data-id="${bookId}"] .boekentip-toggle`);
+  buttons.forEach(toggleBtn => {
+    toggleBtn.dataset.tipsCount = tipCount;
+    toggleBtn.textContent = formatBoekentipBtnLabel(tipCount);
+    toggleBtn.title = formatBoekentipBtnTitle(tipCount);
+    if (tipCount > 0){
+      toggleBtn.classList.add('has-tips');
+    } else {
+      toggleBtn.classList.remove('has-tips');
     }
-  }
+  });
 
   const coordRow = document.querySelector(`.alle-row[data-id="${bookId}"]`);
   if (coordRow){
@@ -862,7 +869,7 @@ function initBoekentipModal(){
 
     const ok = await dbUpdate(activeModalBookId, { boekentip: serialized });
     saveBtn.disabled = false;
-    saveBtn.textContent = 'Tip opslaan';
+    saveBtn.textContent = 'Boekentip opslaan';
 
     if (ok){
       book.boekentip = serialized;
@@ -902,6 +909,21 @@ document.querySelectorAll('nav.tabs button').forEach(btn => {
     if (btn.dataset.tab === 'coordinator' && coordUnlocked) refreshCoordinatorData(true);
   });
 });
+
+// Houd de hoogte van de sticky topbar bij voor een meescrollende tabelheader
+function updateTopbarHeightVar(){
+  const topbar = document.querySelector('header.topbar');
+  if (topbar){
+    const h = topbar.offsetHeight;
+    if (h > 0){
+      document.documentElement.style.setProperty('--topbar-height', h + 'px');
+    }
+  }
+}
+window.addEventListener('resize', updateTopbarHeightVar);
+window.addEventListener('orientationchange', updateTopbarHeightVar);
+window.addEventListener('load', updateTopbarHeightVar);
+updateTopbarHeightVar();
 
 // ---------- Categorie-velden in aanvraagformulier ----------
 const categorieSelect = document.getElementById('categorie');
@@ -1366,14 +1388,14 @@ document.getElementById('prijs')?.addEventListener('blur', e => {
 // ---------- Tab 2: Boeken zoeken & Weergaveschakelaar (Cards / List / Table) ----------
 let zoekCategorie = '';
 let zoekThema = '';
-let catalogViewMode = localStorage.getItem('catalogus_weergave') || 'cards'; // 'cards' | 'list' | 'table'
+let catalogViewMode = localStorage.getItem('catalogus_weergave_v2') || 'table'; // 'table' | 'cards' | 'list'
 
 // Weergave schakelaar knoppen
 document.querySelectorAll('.view-toggle-btn').forEach(btn => {
   btn.classList.toggle('active', btn.dataset.view === catalogViewMode);
   btn.addEventListener('click', () => {
     catalogViewMode = btn.dataset.view;
-    localStorage.setItem('catalogus_weergave', catalogViewMode);
+    localStorage.setItem('catalogus_weergave_v2', catalogViewMode);
     document.querySelectorAll('.view-toggle-btn').forEach(b => b.classList.toggle('active', b === btn));
     renderZoekLijst(true);
   });
@@ -1548,9 +1570,8 @@ function renderZoekLijst(resetCount = true){
         ${zichtbaar.map(b => {
           const tips = parseBoekentips(b.boekentip);
           const hasTips = tips.length > 0;
-          const tipLabel = hasTips
-            ? (tips.length === 1 ? '💡 1 tip' : `💡 ${tips.length} tips`)
-            : '+ Tip';
+          const tipLabel = formatBoekentipBtnLabel(tips.length);
+          const tipTitle = formatBoekentipBtnTitle(tips.length);
 
           return `
             <div class="book-card" data-id="${b.id}">
@@ -1563,8 +1584,8 @@ function renderZoekLijst(resetCount = true){
                 <div class="book-card-tags">
                   ${renderZoekTags(b)}
                 </div>
-                <div style="margin-top:10px;">
-                  <button type="button" class="btn btn-secondary btn-sm boekentip-toggle ${hasTips ? 'has-tips' : ''}" data-id="${b.id}" data-tips-count="${tips.length}">
+                <div class="book-card-action">
+                  <button type="button" class="btn btn-secondary btn-sm boekentip-toggle ${hasTips ? 'has-tips' : ''}" data-id="${b.id}" data-tips-count="${tips.length}" title="${tipTitle}">
                     ${tipLabel}
                   </button>
                 </div>
@@ -1593,9 +1614,8 @@ function renderZoekLijst(resetCount = true){
             ${zichtbaar.map(b => {
               const tips = parseBoekentips(b.boekentip);
               const hasTips = tips.length > 0;
-              const tipLabel = hasTips
-                ? (tips.length === 1 ? '💡 1 boekentip' : `💡 ${tips.length} boekentips`)
-                : '+ Boekentip';
+              const tipLabel = formatBoekentipBtnLabel(tips.length);
+              const tipTitle = formatBoekentipBtnTitle(tips.length);
 
               return `
                 <tr data-id="${b.id}">
@@ -1606,7 +1626,7 @@ function renderZoekLijst(resetCount = true){
                   <td>${renderZoekTags(b)}</td>
                   <td style="font-size:13px; font-family:monospace; color:var(--ink-soft);">${escapeHtml(b.isbn || '—')}</td>
                   <td>
-                    <button type="button" class="btn btn-secondary btn-sm boekentip-toggle ${hasTips ? 'has-tips' : ''}" data-id="${b.id}" data-tips-count="${tips.length}">
+                    <button type="button" class="btn btn-secondary btn-sm boekentip-toggle ${hasTips ? 'has-tips' : ''}" data-id="${b.id}" data-tips-count="${tips.length}" title="${tipTitle}">
                       ${tipLabel}
                     </button>
                   </td>
@@ -1626,9 +1646,8 @@ function renderZoekLijst(resetCount = true){
         ${zichtbaar.map(b => {
           const tips = parseBoekentips(b.boekentip);
           const hasTips = tips.length > 0;
-          const tipLabel = hasTips
-            ? (tips.length === 1 ? '💡 1 boekentip' : `💡 ${tips.length} boekentips`)
-            : '+ Boekentip';
+          const tipLabel = formatBoekentipBtnLabel(tips.length);
+          const tipTitle = formatBoekentipBtnTitle(tips.length);
 
           return `
             <div class="result-card cat-${escapeHtml(b.categorie || '')}" data-id="${b.id}">
@@ -1643,7 +1662,7 @@ function renderZoekLijst(resetCount = true){
                   </div>
                 </div>
                 <div class="result-card-action">
-                  <button type="button" class="btn btn-secondary btn-sm boekentip-toggle ${hasTips ? 'has-tips' : ''}" data-id="${b.id}" data-tips-count="${tips.length}">
+                  <button type="button" class="btn btn-secondary btn-sm boekentip-toggle ${hasTips ? 'has-tips' : ''}" data-id="${b.id}" data-tips-count="${tips.length}" title="${tipTitle}">
                     ${tipLabel}
                   </button>
                 </div>
