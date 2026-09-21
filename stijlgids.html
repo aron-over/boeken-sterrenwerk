@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Stijlgids & Design System — Boeken Sterrenwerk</title>
+<link rel="icon" href="https://11qwhetsterrenwerk-live-e440c3dc752b468-78a827d.divio-media.com/filer_public/e3/66/e36619fc-2ab6-4c1c-bc07-65325143d0b2/het_sterrenwerk_liggend.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<style>
+  /* Specifieke layout stijlen voor de stijlgids presentatie */
+  .sg-header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--line);
+    padding: 32px 20px;
+    margin-bottom: 32px;
+  }
+  .sg-header-inner {
+    max-width: 960px;
+    margin: 0 auto;
+  }
+  .sg-badge {
+    display: inline-block;
+    background: var(--gold-soft);
+    color: var(--gold-dark);
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 4px 10px;
+    border-radius: var(--radius-pill);
+    border: 1px solid var(--gold);
+    margin-bottom: 10px;
+  }
+  .sg-nav {
+    display: flex;
+    gap: 8px;
+    margin-top: 20px;
+    flex-wrap: wrap;
+  }
+  .sg-nav a {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+    color: var(--ink-soft);
+    background: var(--bg);
+    padding: 6px 14px;
+    border-radius: var(--radius-pill);
+    border: 1px solid var(--line);
+    transition: all 0.12s ease;
+  }
+  .sg-nav a:hover {
+    background: var(--ink);
+    color: #fff;
+    border-color: var(--ink);
+  }
+  .sg-section {
+    margin-bottom: 40px;
+    scroll-margin-top: 90px;
+  }
+  .sg-section-title {
+    font-size: 20px;
+    border-bottom: 2px solid var(--line);
+    padding-bottom: 8px;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .sg-rule-box {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-left: 4px solid var(--gold);
+    border-radius: var(--radius-md);
+    padding: 14px 18px;
+    margin: 16px 0;
+    font-size: 14px;
+  }
+  .sg-rule-box strong {
+    color: var(--gold-dark);
+    display: block;
+    margin-bottom: 4px;
+    font-family: 'Space Grotesk', sans-serif;
+  }
+  .sg-grid-colors {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 16px;
+    margin-top: 14px;
+  }
+  .sg-color-swatch {
+    border-radius: var(--radius-md);
+    border: 1px solid var(--line);
+    overflow: hidden;
+    background: var(--surface);
+    box-shadow: var(--shadow-sm);
+  }
+  .sg-color-preview {
+    height: 70px;
+  }
+  .sg-color-info {
+    padding: 10px 12px;
+  }
+  .sg-color-name {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--ink);
+  }
+  .sg-color-hex {
+    font-size: 12px;
+    font-family: monospace;
+    color: var(--ink-soft);
+  }
+  .sg-color-meta {
+    font-size: 11px;
+    color: var(--ink-soft);
+    margin-top: 4px;
+  }
+  .sg-row-demo {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    flex-wrap: wrap;
+    padding: 16px 0;
+    border-bottom: 1px dashed var(--line-soft);
+  }
+  .sg-row-demo:last-child {
+    border-bottom: none;
+  }
+  .sg-row-label {
+    width: 140px;
+    flex-shrink: 0;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink-soft);
+  }
+  .sg-code-snippet {
+    background: #14213D;
+    color: #E3E5EC;
+    padding: 10px 14px;
+    border-radius: var(--radius-md);
+    font-family: Consolas, monospace;
+    font-size: 12px;
+    overflow-x: auto;
+    margin-top: 8px;
+  }
+  .sg-code-snippet span.tag { background: none; color: #D4A72C; padding: 0; margin: 0; font-family: inherit; font-size: inherit; }
+  .sg-code-snippet span.attr { color: #8FBAFF; }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<header class="sg-header">
+  <div class="sg-header-inner">
+    <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:16px;">
+      <div>
+        <span class="sg-badge">Stijlgids &amp; Componentenbieb</span>
+        <h1>Boeken Sterrenwerk Design System</h1>
+        <p style="color:var(--ink-soft); font-size:15px; margin-top:6px; max-width:640px;">
+          De centrale standaard voor basisschool Het Sterrenwerk. Gebaseerd op de nuchtere, toegankelijke principes van het <strong>NL Design System</strong> voor Onderwijs: WCAG 2.1 AA conform, taalniveau B1 en rustige interacties.
+        </p>
+      </div>
+      <div>
+        <a href="index.html" class="btn btn-primary" style="min-height:38px;">
+          ← Terug naar de Catalogus
+        </a>
+      </div>
+    </div>
+
+    <!-- Snelle navigatie -->
+    <nav class="sg-nav">
+      <a href="#huisregels">5 Huisregels</a>
+      <a href="#kleuren">Kleurenpalet</a>
+      <a href="#typografie">Typografie</a>
+      <a href="#knoppen">Knoppensysteem</a>
+      <a href="#formulieren">Formulieren</a>
+      <a href="#badges">Badges &amp; Tags</a>
+      <a href="#meldingen">Meldingen &amp; Banners</a>
+      <a href="#weergaven">Catalogus Weergaven</a>
+    </nav>
+  </div>
+</header>
+
+<main style="max-width:960px; margin:0 auto; padding:0 20px 80px;">
+
+  <!-- 1. DE 5 HUISREGELS -->
+  <section class="sg-section" id="huisregels">
+    <h2 class="sg-section-title">1. De 5 Huisregels voor de Site</h2>
+    <div class="card">
+      <div class="sg-rule-box">
+        <strong>Regel 1: Maximaal één primaire knop per scherm / formulier</strong>
+        Elk formulier heeft één duidelijke hoofdactie (bijv. "Boek aanvragen" of "Ontgrendel"). Dit is een <code>.btn-primary</code> (nachtblauw). Alle andere knoppen zijn secundair of neutraal.
+      </div>
+      <div class="sg-rule-box">
+        <strong>Regel 2: Destructieve acties zijn rood en vragen bevestiging</strong>
+        Knopacties zoals "Afwijzen" of "Verwijderen" gebruiken altijd <code>.btn-danger</code> (zacht rood met donkerrode tekst). Ze vragen altijd een bevestiging via dialoogvenster.
+      </div>
+      <div class="sg-rule-box">
+        <strong>Regel 3: Vaste touch-hoogte (44px) en duidelijke focus-ring</strong>
+        Conform WCAG AA toegankelijkheid hebben alle klikbare elementen een minimale touch-hoogte van minstens 40–44px voor tablets/digiborden. Bij toetsenbord-navigatie (Tab) toont elk element een heldere gouden focus-ring (<code>3px solid var(--gold)</code>).
+      </div>
+      <div class="sg-rule-box">
+        <strong>Regel 4: Eenduidige categorie-kleuren</strong>
+        De 4 schoolcategorieën hebben altijd dezelfde herkenbare kleur: <em>Kleuters</em> = Rood, <em>Groep</em> = Goud/Oker, <em>Jeelo</em> = Groen, <em>Overig</em> = Blauw.
+      </div>
+      <div class="sg-rule-box">
+        <strong>Regel 5: Begrijpelijke taal (Taalniveau B1)</strong>
+        Korte, actieve teksten op knoppen ("Boek aanvragen" in plaats van "Formulier verzenden"). Foutmeldingen leggen vriendelijk uit wat er ontbreekt en hoe de gebruiker het kan oplossen.
+      </div>
+    </div>
+  </section>
+
+  <!-- 2. KLEURENPALET -->
+  <section class="sg-section" id="kleuren">
+    <h2 class="sg-section-title">2. Kleurenpalet (WCAG AA Getoetst)</h2>
+    <div class="card">
+      <p style="font-size:14px; color:var(--ink-soft); margin-top:0;">
+        Gebaseerd op de naam "Het Sterrenwerk": nachtblauwe hemel met gouden sterren, aangevuld met functionele signaalkleuren.
+      </p>
+
+      <div class="sg-grid-colors">
+        <div class="sg-color-swatch">
+          <div class="sg-color-preview" style="background:#14213D;"></div>
+          <div class="sg-color-info">
+            <div class="sg-color-name">Nachtblauw (--ink)</div>
+            <div class="sg-color-hex">#14213D</div>
+            <div class="sg-color-meta">Primaire tekst &amp; hoofdacties</div>
+          </div>
+        </div>
+
+        <div class="sg-color-swatch">
+          <div class="sg-color-preview" style="background:#525C76;"></div>
+          <div class="sg-color-info">
+            <div class="sg-color-name">Zacht Blauwgrijs (--ink-soft)</div>
+            <div class="sg-color-hex">#525C76</div>
+            <div class="sg-color-meta">WCAG AA contrast &gt; 4.8:1</div>
+          </div>
+        </div>
+
+        <div class="sg-color-swatch">
+          <div class="sg-color-preview" style="background:#D4A72C;"></div>
+          <div class="sg-color-info">
+            <div class="sg-color-name">Goud Accent (--gold)</div>
+            <div class="sg-color-hex">#D4A72C</div>
+            <div class="sg-color-meta">Focus-ringen &amp; accenten</div>
+          </div>
+        </div>
+
+        <div class="sg-color-swatch">
+          <div class="sg-color-preview" style="background:#8F6800;"></div>
+          <div class="sg-color-info">
+            <div class="sg-color-name">Donker Goud (--gold-dark)</div>
+            <div class="sg-color-hex">#8F6800</div>
+            <div class="sg-color-meta">Leesbare tekst &gt; 4.5:1</div>
+          </div>
+        </div>
+
+        <div class="sg-color-swatch">
+          <div class="sg-color-preview" style="background:#1E6B47;"></div>
+          <div class="sg-color-info">
+            <div class="sg-color-name">Groen (--green)</div>
+            <div class="sg-color-hex">#1E6B47</div>
+            <div class="sg-color-meta">Status Binnen / Succes</div>
+          </div>
+        </div>
+
+        <div class="sg-color-swatch">
+          <div class="sg-color-preview" style="background:#B83228;"></div>
+          <div class="sg-color-info">
+            <div class="sg-color-name">Rood (--red)</div>
+            <div class="sg-color-hex">#B83228</div>
+            <div class="sg-color-meta">Gevaar / Niet leverbaar</div>
+          </div>
+        </div>
+
+        <div class="sg-color-swatch">
+          <div class="sg-color-preview" style="background:#1D4ED8;"></div>
+          <div class="sg-color-info">
+            <div class="sg-color-name">Blauw (--blue)</div>
+            <div class="sg-color-hex">#1D4ED8</div>
+            <div class="sg-color-meta">Informatie / Status Besteld</div>
+          </div>
+        </div>
+
+        <div class="sg-color-swatch">
+          <div class="sg-color-preview" style="background:#F4F5F8; border-bottom:1px solid var(--line);"></div>
+          <div class="sg-color-info">
+            <div class="sg-color-name">Achtergrond (--bg)</div>
+            <div class="sg-color-hex">#F4F5F8</div>
+            <div class="sg-color-meta">Rustige school-achtergrond</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3. TYPOGRAFIE -->
+  <section class="sg-section" id="typografie">
+    <h2 class="sg-section-title">3. Typografie</h2>
+    <div class="card">
+      <div style="margin-bottom:20px;">
+        <span style="font-size:12px; font-weight:700; color:var(--gold-dark); text-transform:uppercase;">Koppen-lettertype: Space Grotesk</span>
+        <h1 style="margin-top:4px;">Kop H1: Boeken Sterrenwerk (22px)</h1>
+        <h2 style="margin-top:8px;">Kop H2: Welke boeken zijn er al? (18px)</h2>
+        <h3 style="margin-top:8px;">Kop H3: Te bestellen boeken (15px)</h3>
+      </div>
+      <hr style="border:none; border-top:1px solid var(--line); margin:20px 0;">
+      <div>
+        <span style="font-size:12px; font-weight:700; color:var(--gold-dark); text-transform:uppercase;">Lopende tekst: Inter</span>
+        <p style="margin-top:6px; font-size:15px; color:var(--ink);">
+          Dit is de standaard lopende tekst (15px, Inter). Zeer rustig voor het oog, met een royale regelhoogte van 1.5. Geschikt voor lange beschrijvingen en boekentips.
+        </p>
+        <p style="font-size:13px; color:var(--ink-soft);">
+          Dit is secundaire tekst / hulptekst (13px, Inter). Wordt gebruikt voor metadata, ISBN-nummers, auteurs en formulier-toelichtingen.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4. KNOPPENSYSTEEM -->
+  <section class="sg-section" id="knoppen">
+    <h2 class="sg-section-title">4. Knoppensysteem (.btn)</h2>
+    <div class="card">
+      <p style="font-size:14px; color:var(--ink-soft); margin-top:0;">
+        Elke knop gebruikt de basisklasse <code>.btn</code>, gecombineerd met een variant.
+      </p>
+
+      <!-- Primary -->
+      <div class="sg-row-demo">
+        <div class="sg-row-label">Primair (Hoofdactie)</div>
+        <button type="button" class="btn btn-primary">Boek aanvragen</button>
+        <button type="button" class="btn btn-primary" disabled>Verzenden...</button>
+        <div style="font-size:12px; color:var(--ink-soft);">Max 1 per scherm. Nachtblauw met wit.</div>
+      </div>
+      <div class="sg-code-snippet">&lt;button class="btn btn-primary"&gt;Boek aanvragen&lt;/button&gt;</div>
+
+      <!-- Secondary -->
+      <div class="sg-row-demo">
+        <div class="sg-row-label">Secundair (Goud/Oker)</div>
+        <button type="button" class="btn btn-secondary">Bewerken</button>
+        <button type="button" class="btn btn-secondary">Markeer als besteld</button>
+        <button type="button" class="btn btn-secondary" disabled>Uitgeschakeld</button>
+      </div>
+      <div class="sg-code-snippet">&lt;button class="btn btn-secondary"&gt;Bewerken&lt;/button&gt;</div>
+
+      <!-- Neutral -->
+      <div class="sg-row-demo">
+        <div class="sg-row-label">Neutraal (Wit/Grijs)</div>
+        <button type="button" class="btn btn-neutral">Exporteer naar CSV</button>
+        <button type="button" class="btn btn-neutral">Print overzicht</button>
+      </div>
+      <div class="sg-code-snippet">&lt;button class="btn btn-neutral"&gt;Exporteer naar CSV&lt;/button&gt;</div>
+
+      <!-- Danger -->
+      <div class="sg-row-demo">
+        <div class="sg-row-label">Gevaar (Rood)</div>
+        <button type="button" class="btn btn-danger">Afwijzen</button>
+        <button type="button" class="btn btn-danger">Selectie verwijderen</button>
+      </div>
+      <div class="sg-code-snippet">&lt;button class="btn btn-danger"&gt;Afwijzen&lt;/button&gt;</div>
+
+      <!-- Ghost / Link -->
+      <div class="sg-row-demo">
+        <div class="sg-row-label">Ghost / Link</div>
+        <button type="button" class="btn btn-ghost">Annuleren</button>
+        <button type="button" class="btn btn-link">Filters wissen</button>
+      </div>
+      <div class="sg-code-snippet">&lt;button class="btn btn-ghost"&gt;Annuleren&lt;/button&gt;</div>
+
+      <!-- Maten -->
+      <div class="sg-row-demo">
+        <div class="sg-row-label">Maten (S / M / L)</div>
+        <button type="button" class="btn btn-neutral btn-sm">Klein (.btn-sm)</button>
+        <button type="button" class="btn btn-primary">Standaard (44px)</button>
+        <button type="button" class="btn btn-primary btn-lg">Groot (.btn-lg)</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5. FORMULIEREN -->
+  <section class="sg-section" id="formulieren">
+    <h2 class="sg-section-title">5. Formulieren &amp; Invoervelden</h2>
+    <div class="card">
+      <div style="max-width:500px;">
+        <label for="demo-naam">Jouw naam <span style="color:var(--red);">*</span></label>
+        <input type="text" id="demo-naam" value="Juf Anneke" placeholder="bijv. Juf Anneke">
+
+        <label for="demo-isbn">Artikelnummer (ISBN, 13 cijfers)</label>
+        <div class="input-with-action">
+          <input type="text" id="demo-isbn" value="9789043919678" placeholder="9789043919678">
+          <button type="button" class="btn btn-secondary" title="Scan barcode via camera">
+            📷 Scan barcode
+          </button>
+        </div>
+        <div class="form-hint">Tip: typ 13 cijfers of scan direct met je camera. Titel en auteur worden automatisch aangevuld.</div>
+
+        <label for="demo-prijs">Prijs (€)</label>
+        <div class="prijs-input-wrap">
+          <span class="currency-prefix">€</span>
+          <input type="text" id="demo-prijs" class="prijs-input" value="14,99">
+        </div>
+
+        <label for="demo-select">Voor een groep, Kleuters, Jeelo of overig thema?</label>
+        <select id="demo-select">
+          <option>Groep</option>
+          <option selected>Kleuters</option>
+          <option>Jeelo</option>
+          <option>Overige thema's</option>
+        </select>
+      </div>
+    </div>
+  </section>
+
+  <!-- 6. BADGES & TAGS -->
+  <section class="sg-section" id="badges">
+    <h2 class="sg-section-title">6. Badges &amp; Categorie-tags</h2>
+    <div class="card">
+      <div class="sg-row-demo">
+        <div class="sg-row-label">Categorieën</div>
+        <span class="tag cat-tag cat-Kleuters">Kleuters: Lente &amp; Zomer</span>
+        <span class="tag cat-tag cat-Groep">Groep 4</span>
+        <span class="tag cat-tag cat-Jeelo">Jeelo: Zorgen voor elkaar</span>
+        <span class="tag cat-tag cat-Overig">Overig: Kinderboekenweek</span>
+      </div>
+
+      <div class="sg-row-demo">
+        <div class="sg-row-label">Statussen</div>
+        <span class="tag status-aangevraagd">Aangevraagd (te bestellen)</span>
+        <span class="tag status-besteld">Besteld (onderweg)</span>
+        <span class="tag status-binnen">Binnen (op school)</span>
+        <span class="tag status-afgewezen">Niet leverbaar</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7. MELDINGEN & BANNERS -->
+  <section class="sg-section" id="meldingen">
+    <h2 class="sg-section-title">7. Meldingen &amp; Banners</h2>
+    <div class="card">
+      <div class="alert alert-success">
+        <div>
+          <div class="alert-title">✓ Boek succesvol aangevraagd</div>
+          Het boek "Kikker is verliefd" is toegevoegd aan de lijst van de taalcoördinator.
+        </div>
+      </div>
+
+      <div class="alert alert-warning" style="margin-top:12px;">
+        <div>
+          <div class="alert-title">⚠️ Let op: dit boek staat al op school</div>
+          Er is al een exemplaar aanwezig in kast Jeelo. Weet je zeker dat je nog een exemplaar wilt aanvragen?
+        </div>
+      </div>
+
+      <div class="alert alert-danger" style="margin-top:12px;">
+        <div>
+          <div class="alert-title">✕ ISBN onvolledig</div>
+          Een geldig ISBN bestaat uit precies 13 cijfers (zonder streepjes of spaties).
+        </div>
+      </div>
+
+      <div class="alert alert-info" style="margin-top:12px;">
+        <div>
+          <div class="alert-title">ℹ Tip voor leerkrachten</div>
+          Boekentips kunnen door iedereen gelezen en aangevuld worden. Deel handige lesideeën met je collega's!
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 8. CATALOGUS WEERGAVEN -->
+  <section class="sg-section" id="weergaven">
+    <h2 class="sg-section-title">8. Catalogus Weergaven (3 Standen)</h2>
+    <div class="card">
+      <p style="font-size:14px; color:var(--ink-soft); margin-top:0;">
+        Gebruikers kunnen met de schakelaar kiezen tussen kaarten, compacte lijst of tabel:
+      </p>
+
+      <div class="view-toggle-group" style="margin-bottom:16px;">
+        <button class="view-toggle-btn active">🗂 Kaarten</button>
+        <button class="view-toggle-btn">☰ Lijst</button>
+        <button class="view-toggle-btn">⊞ Tabel</button>
+      </div>
+
+      <!-- Voorbeeld Kaart -->
+      <div style="max-width:380px;">
+        <div class="book-card">
+          <div class="book-card-cover">
+            <img src="https://books.google.com/books/content?id=9789043919678&printsec=frontcover&img=1&zoom=1" alt="Cover" onerror="this.parentElement.innerHTML='📖';">
+          </div>
+          <div class="book-card-body">
+            <div class="book-card-title">Kikker en het vogeltje</div>
+            <div class="book-card-author">Max Velthuijs</div>
+            <div class="book-card-tags">
+              <span class="tag cat-tag cat-Kleuters">Kleuters</span>
+              <span class="tag tag-isbn">9789043919678</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer style="text-align:center; padding:30px; font-size:13px; color:var(--ink-soft); border-top:1px solid var(--line); background:var(--surface);">
+  <strong>Boeken Sterrenwerk</strong> — Basisschool Het Sterrenwerk Sassenheim • Design System conform NL Design System voor Onderwijs
+</footer>
+
+</body>
+</html>

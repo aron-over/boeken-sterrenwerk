@@ -9,8 +9,24 @@ ontvangst-workflow door de taalcoördinator, en een doorzoekbare catalogus.
 - **Live**: https://aron-over.github.io/boeken-sterrenwerk/
 - **Database**: Supabase (Postgres), rechtstreeks vanuit de browser via `@supabase/supabase-js`
   met de **anon key** — die staat bewust in de broncode, dat hoort zo bij Supabase.
-- **Geen build/deploy-stap**: wat in `index.html` op de `main`-branch staat, is precies wat
-  live staat. Committen + pushen = live.
+- **Geen build/deploy-stap**: directe koppeling naar `style.css` en `app.js` in `index.html`. Wat op de `main`-branch staat, is direct live via GitHub Pages.
+- **Stijlgids & Componentenbibliotheek**: `stijlgids.html` toont alle componenten, knoppen, statussen en de 5 NL Design System huisregels interactief.
+
+## Bestandsstructuur
+- `index.html`: Semantische HTML-structuur van de 3 tabbladen, modals en navigatie.
+- `style.css`: Centraal Design System conform NL Design System voor Onderwijs (design tokens, `.btn` knoppensysteem, WCAG AA contrast, kaarten, tabellen en print-stylesheet voor bestelbonnen).
+- `app.js`: Alle client-side logica, Supabase koppeling (inclusief in-memory testomgeving), Google Books ISBN auto-lookup, barcode camera-scanner, en exportfuncties.
+- `stijlgids.html`: Levende stijlgids en documentatie van alle visuele elementen en interactieregels.
+
+## NL Design System Knoppenstandaard (.btn)
+In alle HTML en dynamische templates gebruiken we de gestandaardiseerde `.btn`-klassen:
+- `.btn`: basisklasse (min-height: 44px voor touch-targets, 8px afronding, focus-ring `3px solid var(--gold)`).
+- `.btn-primary`: Nachtblauw (`#14213D`) met wit. Maximaal 1 per formulier/scherm voor de hoofdactie.
+- `.btn-secondary`: Zacht goud (`#FBF0D4`) met donker goud (`#8F6800`). Voor nevenacties zoals bewerken of statuswijziging.
+- `.btn-neutral`: Wit met grijze rand (`--line`). Voor exports, filters en hulpmiddelen.
+- `.btn-danger`: Zacht rood (`#FCE8E6`) met rood (`#B83228`). Voor destructieve acties (afwijzen, verwijderen — altijd met bevestiging).
+- `.btn-ghost`: Zonder achtergrond of rand. Voor annuleren en subtiele tekstknoppen.
+- `.btn-sm`: Compacte maat (32px hoog) voor rijen in tabellen en overzichten.
 
 ## Database-schema
 
