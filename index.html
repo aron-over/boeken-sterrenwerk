@@ -275,7 +275,8 @@
   .result-card-action{
     flex-shrink:0;
   }
-  .result-card .boekentip-toggle{
+  .result-card .boekentip-toggle,
+  .open-coord-tip-btn{
     white-space:nowrap;
     display:inline-flex;
     align-items:center;
@@ -283,61 +284,411 @@
     padding:5px 11px;
     border-radius:6px;
     font-size:12px;
+    cursor:pointer;
+    border:1px solid var(--line);
+    background:var(--surface);
+    color:var(--ink-soft);
+    font-family:inherit;
+    font-weight:500;
   }
-  .result-card .boekentip-toggle.has-tips{
+  .result-card .boekentip-toggle:hover,
+  .open-coord-tip-btn:hover{
+    border-color:var(--gold);
+    color:var(--ink);
+  }
+  .result-card .boekentip-toggle.has-tips,
+  .open-coord-tip-btn.has-tips{
     background:var(--gold-soft);
     color:var(--gold-dark);
     border-color:var(--gold);
     font-weight:600;
   }
-  .result-card .boekentip-toggle.active{
-    background:var(--ink);
-    color:#fff;
-    border-color:var(--ink);
+  .result-card .boekentip-toggle.has-tips:hover,
+  .open-coord-tip-btn.has-tips:hover{
+    background:#f5e5bd;
   }
-  .boekentip-panel{
-    margin-top:10px;
-    padding-top:10px;
-    border-top:1px solid var(--line);
+
+  /* Modal Dialog */
+  .modal-overlay{
+    position:fixed;
+    inset:0;
+    z-index:9999;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:16px;
+    opacity:0;
+    pointer-events:none;
+    transition:opacity 0.18s ease-out;
   }
-  .boekentip-item{
-    font-size:13px;
+  .modal-overlay.open{
+    opacity:1;
+    pointer-events:auto;
+  }
+  .modal-backdrop{
+    position:absolute;
+    inset:0;
+    background:rgba(20, 33, 61, 0.55);
+    backdrop-filter:blur(3px);
+  }
+  .modal-window{
+    position:relative;
+    z-index:1;
+    background:var(--surface);
+    border-radius:14px;
+    width:100%;
+    max-width:640px;
+    max-height:90vh;
+    display:flex;
+    flex-direction:column;
+    box-shadow:0 24px 48px rgba(20, 33, 61, 0.22);
+    border:1px solid var(--line);
+    transform:scale(0.96);
+    transition:transform 0.18s ease-out;
+    overflow:hidden;
+  }
+  .modal-overlay.open .modal-window{
+    transform:scale(1);
+  }
+  .modal-header{
+    padding:18px 22px 14px;
+    border-bottom:1px solid var(--line);
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:16px;
+    background:var(--surface);
+  }
+  .modal-subtitle{
+    font-size:11px;
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:0.5px;
+    color:var(--gold-dark);
+    margin-bottom:3px;
+  }
+  .modal-title{
+    font-family:'Space Grotesk', sans-serif;
+    font-size:18px;
+    font-weight:700;
     color:var(--ink);
-    margin-bottom:6px;
-    padding:6px 10px;
+    margin:0;
+    line-height:1.3;
+  }
+  .modal-book-meta{
+    font-size:13px;
+    color:var(--ink-soft);
+    margin-top:4px;
+  }
+  .modal-close-btn{
+    background:none;
+    border:none;
+    font-size:24px;
+    line-height:1;
+    color:var(--ink-soft);
+    cursor:pointer;
+    padding:4px 8px;
     border-radius:6px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+  .modal-close-btn:hover{
     background:var(--bg);
+    color:var(--ink);
+  }
+  .modal-body{
+    padding:18px 22px;
+    overflow-y:auto;
+    flex:1;
+    display:flex;
+    flex-direction:column;
+    gap:18px;
+  }
+  .modal-tips-list{
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+  }
+  .modal-no-tips{
+    padding:16px;
+    background:var(--bg);
+    border-radius:8px;
+    font-size:13px;
+    color:var(--ink-soft);
+    font-style:italic;
+    text-align:center;
+  }
+  .modal-tip-card{
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-left:4px solid var(--gold);
+    border-radius:10px;
+    display:flex;
+    flex-direction:column;
+    box-shadow:0 2px 6px rgba(20, 33, 61, 0.05);
+    overflow:hidden;
+    transition:box-shadow 0.15s ease, border-color 0.15s ease;
+  }
+  .modal-tip-card:hover{
+    box-shadow:0 4px 12px rgba(20, 33, 61, 0.08);
+    border-color:#d4d7e2;
+    border-left-color:var(--gold-dark);
+  }
+  .modal-tip-header{
     display:flex;
     justify-content:space-between;
     align-items:center;
-    gap:10px;
-  }
-  .boekentip-item.is-editing{align-items:flex-start;}
-  .boekentip-item .tip-text{flex:1; word-break:break-word;}
-  .boekentip-item .tip-actions{display:flex; gap:8px; align-items:center; flex-shrink:0;}
-  .boekentip-item .link{flex-shrink:0;}
-  .boekentip-item .tip-edit-box{width:100%; display:flex; flex-direction:column; gap:4px;}
-  .boekentip-item textarea.tip-edit-input{
-    width:100%;
-    min-height:36px;
-    padding:6px 8px;
-    font-size:13px;
-    font-family:inherit;
-    line-height:1.45;
-    border-radius:6px;
-    border:1px solid var(--gold);
+    gap:12px;
+    padding:12px 16px;
+    cursor:pointer;
+    user-select:none;
     background:var(--surface);
+    transition:background-color 0.15s ease;
+  }
+  .modal-tip-header:hover{
+    background:rgba(212, 167, 44, 0.06);
+  }
+  .modal-tip-card.is-open .modal-tip-header{
+    border-bottom:1px solid var(--line);
+    background:rgba(244, 245, 248, 0.6);
+  }
+  .modal-tip-meta{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    flex:1;
+    min-width:0;
+    overflow:hidden;
+  }
+  .modal-tip-author{
+    font-weight:700;
     color:var(--ink);
-    resize:none;
-    overflow-y:hidden;
-    box-sizing:border-box;
+    font-size:13.5px;
+    white-space:nowrap;
   }
-  .boekentip-item textarea.tip-edit-input:focus{
-    outline:2px solid var(--gold);
-    outline-offset:0;
+  .modal-tip-date{
+    color:var(--ink-soft);
+    font-size:11.5px;
+    white-space:nowrap;
   }
-  .boekentip-add{display:flex; gap:8px; margin-top:8px;}
-  .boekentip-add input, .boekentip-add textarea{flex:1; padding:7px 10px; font-size:13px;}
+  .modal-tip-snippet{
+    font-size:12.5px;
+    color:var(--ink-soft);
+    font-weight:normal;
+    margin-left:6px;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    flex:1;
+  }
+  .modal-tip-card.is-open .modal-tip-snippet{
+    display:none;
+  }
+  .modal-tip-header-right{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    flex-shrink:0;
+  }
+  .modal-tip-actions{
+    display:flex;
+    gap:8px;
+    align-items:center;
+  }
+  .modal-tip-chevron{
+    font-size:10px;
+    color:var(--gold-dark);
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    width:22px;
+    height:22px;
+    border-radius:50%;
+    background:var(--gold-soft);
+    transition:transform 0.2s ease, background-color 0.15s ease;
+    line-height:1;
+  }
+  .modal-tip-header:hover .modal-tip-chevron{
+    background:#f5e2b3;
+  }
+  .modal-tip-card.is-open .modal-tip-chevron{
+    transform:rotate(180deg);
+  }
+  .modal-tip-body{
+    display:none;
+    padding:16px 18px;
+    font-size:15px;
+    line-height:1.6;
+    color:var(--ink);
+    word-break:break-word;
+    background:var(--surface);
+  }
+  .modal-tip-card.is-open .modal-tip-body{
+    display:block;
+  }
+  .modal-tip-body p{margin:0 0 8px;}
+  .modal-tip-body p:last-child{margin-bottom:0;}
+  .modal-tip-body ul, .modal-tip-body ol{margin:6px 0 10px 22px; padding:0;}
+  .modal-tip-body li{margin-bottom:4px;}
+  .modal-tip-body h2, .modal-tip-body h3, .modal-tip-body h4{
+    font-family:'Space Grotesk', sans-serif;
+    font-size:16px;
+    margin:12px 0 4px;
+    color:var(--ink);
+    font-weight:700;
+  }
+  .modal-tip-body a{
+    color:#1E6091;
+    text-decoration:underline;
+    font-weight:600;
+    word-break:break-all;
+  }
+  .modal-tip-body a:hover{color:var(--ink);}
+  .modal-tip-body blockquote{
+    border-left:3px solid var(--gold);
+    margin:8px 0;
+    padding-left:12px;
+    color:var(--ink-soft);
+    font-style:italic;
+  }
+
+  /* Add Tip Trigger Button */
+  .modal-add-tip-wrap{
+    margin-top:4px;
+  }
+  .modal-add-btn{
+    width:100%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+    padding:11px 16px;
+    border:1.5px dashed var(--gold);
+    border-radius:9px;
+    background:var(--gold-soft);
+    color:var(--gold-dark);
+    font-family:'Space Grotesk', sans-serif;
+    font-weight:600;
+    font-size:14px;
+    cursor:pointer;
+    transition:all 0.15s ease;
+  }
+  .modal-add-btn:hover{
+    background:#faeac4;
+    border-color:var(--gold-dark);
+    color:var(--ink);
+    box-shadow:0 2px 8px rgba(212, 167, 44, 0.2);
+  }
+
+  /* Rich Editor Section */
+  .modal-editor-section{
+    border-top:1px solid var(--line);
+    padding-top:16px;
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+    animation:fadeInEditor 0.18s ease-out;
+  }
+  @keyframes fadeInEditor{
+    from{opacity:0; transform:translateY(-6px);}
+    to{opacity:1; transform:translateY(0);}
+  }
+  .rich-editor-container{
+    border:1px solid var(--line);
+    border-radius:8px;
+    overflow:hidden;
+    background:var(--surface);
+    display:flex;
+    flex-direction:column;
+    transition:border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+  .rich-editor-container:focus-within{
+    border-color:var(--gold);
+    box-shadow:0 0 0 2px rgba(212, 167, 44, 0.2);
+  }
+  .rich-editor-toolbar{
+    display:flex;
+    flex-wrap:wrap;
+    gap:4px;
+    padding:6px 8px;
+    background:var(--bg);
+    border-bottom:1px solid var(--line);
+    align-items:center;
+  }
+  .rich-editor-toolbar button{
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:4px;
+    padding:3px 7px;
+    font-size:12px;
+    cursor:pointer;
+    color:var(--ink);
+    font-family:inherit;
+    font-weight:500;
+    min-width:26px;
+    height:26px;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    user-select:none;
+  }
+  .rich-editor-toolbar button:hover{
+    background:var(--gold-soft);
+    border-color:var(--gold);
+    color:var(--gold-dark);
+  }
+  .rich-editor-toolbar button.active{
+    background:var(--ink);
+    border-color:var(--ink);
+    color:#fff;
+  }
+  .toolbar-divider{
+    width:1px;
+    height:16px;
+    background:var(--line);
+    margin:0 3px;
+  }
+  .rich-editor-content{
+    min-height:100px;
+    max-height:220px;
+    overflow-y:auto;
+    padding:10px 12px;
+    font-size:14px;
+    line-height:1.5;
+    color:var(--ink);
+    outline:none;
+    word-break:break-word;
+  }
+  .rich-editor-content:empty:before{
+    content:attr(data-placeholder);
+    color:var(--ink-soft);
+    pointer-events:none;
+    display:block;
+  }
+  .rich-editor-content p{margin:0 0 6px;}
+  .rich-editor-content p:last-child{margin-bottom:0;}
+  .rich-editor-content ul, .rich-editor-content ol{margin:4px 0 8px 20px; padding:0;}
+  .rich-editor-content li{margin-bottom:3px;}
+  .rich-editor-content h3{
+    font-family:'Space Grotesk', sans-serif;
+    font-size:15px;
+    margin:6px 0 3px;
+    color:var(--ink);
+    font-weight:700;
+  }
+  .rich-editor-content a{
+    color:#1E6091;
+    text-decoration:underline;
+  }
+  .modal-footer{
+    padding:12px 22px;
+    border-top:1px solid var(--line);
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    background:var(--bg);
+  }
   .tag{
     display:inline-block;
     font-size:12px;
@@ -991,6 +1342,77 @@
 
 </main>
 
+<!-- Boekentip Modal Popup -->
+<div id="boekentip-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-book-title">
+  <div class="modal-backdrop" id="modal-backdrop"></div>
+  <div class="modal-window">
+    <div class="modal-header">
+      <div>
+        <div class="modal-subtitle">Boekentips & Lesideeën</div>
+        <h2 class="modal-title" id="modal-book-title">Titel van het boek</h2>
+        <div class="modal-book-meta" id="modal-book-meta"></div>
+      </div>
+      <button type="button" class="modal-close-btn" id="modal-close-x-btn" title="Sluiten (Esc)">&times;</button>
+    </div>
+
+    <div class="modal-body">
+      <!-- Bestaande boekentips -->
+      <div id="modal-tips-list" class="modal-tips-list"></div>
+
+      <!-- Knop om de editor te openen (standaard zichtbaar) -->
+      <div class="modal-add-tip-wrap" id="modal-add-tip-wrap">
+        <button type="button" id="modal-show-add-btn" class="modal-add-btn">
+          <span style="font-size:16px; font-weight:700; line-height:1;">+</span> Boekentip toevoegen
+        </button>
+      </div>
+
+      <!-- Nieuwe tip toevoegen / bewerken (standaard verborgen) -->
+      <div id="modal-editor-section" class="modal-editor-section" style="display:none;">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <strong id="modal-editor-heading" style="font-size:14px; color:var(--ink);">💡 Boekentip toevoegen</strong>
+          <button type="button" id="modal-editor-cancel-btn" class="link" style="font-size:12px; color:var(--red);">Annuleren</button>
+        </div>
+
+        <div style="display:flex; gap:10px; align-items:center;">
+          <input type="text" id="modal-tip-author" placeholder="Je naam (optioneel, bijv. Juf Sanne)" style="padding:7px 10px; font-size:13px; max-width:280px;">
+        </div>
+
+        <div class="rich-editor-container">
+          <div class="rich-editor-toolbar" id="modal-editor-toolbar">
+            <button type="button" data-cmd="bold" title="Vetgedrukt (Ctrl+B)"><b>B</b></button>
+            <button type="button" data-cmd="italic" title="Cursief (Ctrl+I)"><i>I</i></button>
+            <button type="button" data-cmd="underline" title="Onderstreept (Ctrl+U)"><u>U</u></button>
+            <span class="toolbar-divider"></span>
+            <button type="button" data-cmd="h3" title="Tussenkopje"><b>H</b></button>
+            <button type="button" data-cmd="insertUnorderedList" title="Opsomming met bullets">• Lijst</button>
+            <button type="button" data-cmd="insertOrderedList" title="Genummerde lijst">1. Lijst</button>
+            <span class="toolbar-divider"></span>
+            <button type="button" data-cmd="link" title="Web- of Teams-koppeling toevoegen">🔗 Link</button>
+            <button type="button" data-cmd="removeFormat" title="Opmaak wissen">🧹</button>
+          </div>
+          <div id="modal-rich-editor" class="rich-editor-content" contenteditable="true" data-placeholder="Typ hier je boekentip of lesidee, of plak direct tekst uit Word of Teams…"></div>
+        </div>
+
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:2px;">
+          <span style="font-size:11px; color:var(--ink-soft);">
+            Tip: je kunt opgemaakte tekst en links rechtstreeks vanuit Word of Teams hierin plakken.
+          </span>
+          <div style="display:flex; gap:8px; align-items:center;">
+            <button type="button" id="modal-editor-cancel-bottom-btn" class="secondary" style="padding:6px 12px; font-size:13px;">Annuleren</button>
+            <button type="button" id="modal-save-tip-btn" class="primary" style="margin-top:0; width:auto; padding:7px 18px; font-size:13px;">Tip opslaan</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <span id="modal-footer-hint" style="font-size:12px; color:var(--ink-soft);">Sluiten kan ook met <kbd style="background:var(--surface); border:1px solid var(--line); border-radius:3px; padding:1px 4px; font-size:11px;">Esc</kbd></span>
+      <button type="button" id="modal-close-bottom-btn" class="secondary" style="padding:6px 14px; font-size:13px;">Sluiten</button>
+    </div>
+  </div>
+</div>
+
+
 <script>
 // Omgeving detecteren: lokaal (localhost/127.0.0.1) gebruikt de testdatabase, elders productie
 const IS_LOCAL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
@@ -1232,10 +1654,593 @@ function themaLabel(b){
   return thema ? (b.categorie || '') + ' · ' + thema : (b.categorie || '');
 }
 
+// ---------- Boekentips: Data, Sanitization & Modal Dialog ----------
+
+function parseBoekentips(raw){
+  if (!raw || typeof raw !== 'string') return [];
+  const trimmed = raw.trim();
+  if (!trimmed) return [];
+  if (trimmed.startsWith('[')){
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (Array.isArray(parsed)){
+        return parsed.map((item, idx) => {
+          if (typeof item === 'string'){
+            return { id: 'tip-' + idx, html: item, author: '', created_at: '' };
+          }
+          return {
+            id: item.id || ('tip-' + idx + '-' + Date.now()),
+            html: item.html || item.text || '',
+            author: item.author || '',
+            created_at: item.created_at || ''
+          };
+        }).filter(t => t.html && t.html.trim().length > 0);
+      }
+    } catch (e) {
+      console.warn('Fout bij parsen van boekentip JSON, val terug op platte tekst', e);
+    }
+  }
+  // Terugwaartse compatibiliteit: legacy platte tekst gescheiden door newlines
+  const lines = trimmed.split('\n').map(l => l.trim()).filter(Boolean);
+  return lines.map((line, idx) => {
+    const cleanLine = line.replace(/^-\s*/, '');
+    return {
+      id: 'legacy-' + idx,
+      html: `<p>${escapeHtml(cleanLine)}</p>`,
+      author: '',
+      created_at: ''
+    };
+  });
+}
+
+function serializeBoekentips(tips){
+  if (!tips || !tips.length) return null;
+  return JSON.stringify(tips);
+}
+
+function boekentipZoekTekst(raw){
+  if (!raw) return '';
+  const tips = parseBoekentips(raw);
+  return tips.map(t => {
+    const textOnly = t.html ? t.html.replace(/<[^>]*>/g, ' ') : '';
+    return textOnly + ' ' + (t.author || '');
+  }).join(' ');
+}
+
+function formatTipDatum(isoStr){
+  if (!isoStr) return '';
+  try {
+    const d = new Date(isoStr);
+    if (isNaN(d.getTime())) return '';
+    return d.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', year: 'numeric' });
+  } catch(e){
+    return '';
+  }
+}
+
+// Sanitiseert HTML van de rich editor of Word/Teams-paste: alleen veilige tags en attributen toestaan
+function sanitizeTipHtml(dirtyHtml){
+  if (!dirtyHtml) return '';
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(dirtyHtml, 'text/html');
+
+  const allowedTags = new Set([
+    'B', 'STRONG', 'I', 'EM', 'U', 'S', 'STRIKE',
+    'P', 'BR', 'UL', 'OL', 'LI', 'A',
+    'H2', 'H3', 'H4', 'BLOCKQUOTE'
+  ]);
+
+  function cleanNode(node){
+    if (node.nodeType === Node.TEXT_NODE) return;
+    if (node.nodeType !== Node.ELEMENT_NODE){
+      node.remove();
+      return;
+    }
+
+    const tagName = node.tagName.toUpperCase();
+
+    // Verwijder onveilige elementen inclusief hun inhoud
+    if (['SCRIPT', 'STYLE', 'IFRAME', 'OBJECT', 'EMBED', 'FORM', 'INPUT', 'BUTTON', 'SELECT', 'TEXTAREA', 'META', 'LINK'].includes(tagName)){
+      node.remove();
+      return;
+    }
+
+    // Eerst kinderen recursief opschonen
+    const children = Array.from(node.childNodes);
+    for (const child of children){
+      cleanNode(child);
+    }
+
+    // Als de tag niet in de veilige lijst staat (bijv. <div>, <font>, <span>): unwrap (kinderen behouden)
+    if (!allowedTags.has(tagName)){
+      const parent = node.parentNode;
+      if (parent){
+        while (node.firstChild){
+          parent.insertBefore(node.firstChild, node);
+        }
+        parent.removeChild(node);
+      }
+      return;
+    }
+
+    // Toegestane tag: attributen strippen en opschonen
+    const attrs = Array.from(node.attributes);
+    for (const attr of attrs){
+      const attrName = attr.name.toLowerCase();
+      if (tagName === 'A' && attrName === 'href'){
+        const val = attr.value.trim();
+        if (/^https?:\/\/|^mailto:/i.test(val)){
+          node.setAttribute('href', val);
+          node.setAttribute('target', '_blank');
+          node.setAttribute('rel', 'noopener noreferrer');
+        } else {
+          node.removeAttribute('href');
+        }
+      } else {
+        node.removeAttribute(attr.name);
+      }
+    }
+  }
+
+  Array.from(doc.body.childNodes).forEach(cleanNode);
+
+  let clean = doc.body.innerHTML.trim();
+  // Lege witregels en loze alinea's aan begin/einde opschonen
+  clean = clean.replace(/^(<p>(\s|&nbsp;|<br>)*<\/p>)+/gi, '')
+               .replace(/(<p>(\s|&nbsp;|<br>)*<\/p>)+$/gi, '');
+  return clean;
+}
+
+// Modal status & editor state
+let activeModalBookId = null;
+let editingTipId = null;
+let modalInitialized = false;
+
+function openBoekentipModal(bookId){
+  const book = allBooksCache.find(x => String(x.id) === String(bookId));
+  if (!book) return;
+
+  activeModalBookId = bookId;
+  editingTipId = null;
+
+  // Header vullen
+  const titleEl = document.getElementById('modal-book-title');
+  if (titleEl) titleEl.textContent = book.titel || 'Geen titel';
+
+  const metaEl = document.getElementById('modal-book-meta');
+  if (metaEl){
+    const parts = [];
+    if (book.auteur) parts.push(book.auteur);
+    const thema = themaLabel(book);
+    if (thema) parts.push(thema);
+    if (book.isbn) parts.push('ISBN: ' + book.isbn);
+    metaEl.textContent = parts.join(' · ');
+  }
+
+  hideModalEditor();
+  renderModalTipsList(bookId);
+
+  const modalEl = document.getElementById('boekentip-modal');
+  if (modalEl){
+    modalEl.classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+
+  // Zorg dat de modal events eenmalig gekoppeld zijn
+  initBoekentipModal();
+}
+
+function getTipSnippet(html){
+  if (!html) return '';
+  const text = html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+  return text.length > 55 ? text.slice(0, 52) + '…' : text;
+}
+
+function showModalEditor(isEdit = false){
+  const addWrap = document.getElementById('modal-add-tip-wrap');
+  if (addWrap) addWrap.style.display = 'none';
+
+  const editorSection = document.getElementById('modal-editor-section');
+  if (editorSection) editorSection.style.display = 'flex';
+
+  const heading = document.getElementById('modal-editor-heading');
+  if (heading) heading.textContent = isEdit ? '✏️ Boekentip bewerken' : '💡 Boekentip toevoegen';
+
+  const saveBtn = document.getElementById('modal-save-tip-btn');
+  if (saveBtn) saveBtn.textContent = isEdit ? 'Wijziging opslaan' : 'Tip opslaan';
+
+  const authorInp = document.getElementById('modal-tip-author');
+  const editor = document.getElementById('modal-rich-editor');
+
+  if (!isEdit && authorInp && !authorInp.value){
+    authorInp.value = localStorage.getItem('boeken_leerkracht_naam') || '';
+  }
+
+  if (!authorInp?.value){
+    authorInp?.focus();
+  } else {
+    editor?.focus();
+  }
+  editorSection?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function hideModalEditor(){
+  const addWrap = document.getElementById('modal-add-tip-wrap');
+  if (addWrap) addWrap.style.display = '';
+
+  const editorSection = document.getElementById('modal-editor-section');
+  if (editorSection) editorSection.style.display = 'none';
+
+  resetModalEditor();
+}
+
+function closeBoekentipModal(){
+  const editor = document.getElementById('modal-rich-editor');
+  const editorSection = document.getElementById('modal-editor-section');
+  if (editorSection && editorSection.style.display !== 'none' && editor && editor.innerText.trim()){
+    if (!confirm('Je hebt nog tekst in de editor staan die niet is opgeslagen. Weet je zeker dat je wilt sluiten?')){
+      return;
+    }
+  }
+  const modalEl = document.getElementById('boekentip-modal');
+  if (modalEl){
+    modalEl.classList.remove('open');
+    document.body.style.overflow = '';
+  }
+  activeModalBookId = null;
+  editingTipId = null;
+  hideModalEditor();
+}
+
+function resetModalEditor(){
+  editingTipId = null;
+  const authorInp = document.getElementById('modal-tip-author');
+  if (authorInp){
+    // Automatisch voorinvullen met laatst gebruikte naam van de leerkracht
+    authorInp.value = localStorage.getItem('boeken_leerkracht_naam') || '';
+  }
+
+  const editor = document.getElementById('modal-rich-editor');
+  if (editor) editor.innerHTML = '';
+
+  const heading = document.getElementById('modal-editor-heading');
+  if (heading) heading.textContent = '💡 Boekentip toevoegen';
+
+  const saveBtn = document.getElementById('modal-save-tip-btn');
+  if (saveBtn) saveBtn.textContent = 'Tip opslaan';
+}
+
+function renderModalTipsList(bookId, openTargetTipId = null){
+  const container = document.getElementById('modal-tips-list');
+  if (!container) return;
+
+  const book = allBooksCache.find(x => String(x.id) === String(bookId));
+  if (!book){
+    container.innerHTML = '';
+    return;
+  }
+
+  const tips = parseBoekentips(book.boekentip);
+
+  const addBtn = document.getElementById('modal-show-add-btn');
+  if (addBtn){
+    addBtn.innerHTML = tips.length > 0
+      ? '<span style="font-size:16px; font-weight:700; line-height:1;">+</span> Boekentip toevoegen'
+      : '<span style="font-size:16px; font-weight:700; line-height:1;">+</span> De eerste boekentip toevoegen';
+  }
+
+  if (!tips.length){
+    container.innerHTML = `
+      <div class="modal-no-tips">
+        Nog geen boekentips of lesideeën voor dit boek.<br>
+        Klik hieronder om als eerste een lestip of lesvoorbereiding toe te voegen!
+      </div>
+    `;
+    return;
+  }
+
+  // Alleen bewerken/verwijderen als de gebruiker daadwerkelijk in het Coördinator tabblad zit én ontgrendeld is
+  const activeTabBtn = document.querySelector('nav.tabs button.active');
+  const isCoordTab = activeTabBtn && activeTabBtn.dataset.tab === 'coordinator';
+  const canManageTips = isCoordTab && coordUnlocked;
+
+  container.innerHTML = tips.map((tip, idx) => {
+    const datum = formatTipDatum(tip.created_at);
+    const authorLabel = tip.author ? ('Tip van: ' + escapeHtml(tip.author)) : 'Boekentip';
+    const snippet = getTipSnippet(tip.html);
+
+    // Als er 1 tip is, is deze standaard open zodat hij direct leesbaar is.
+    // Bij meerdere tips: open de gewenste tip of de eerste tip.
+    let isOpen = false;
+    if (tips.length === 1){
+      isOpen = true;
+    } else if (openTargetTipId){
+      isOpen = (tip.id === openTargetTipId);
+    } else if (idx === 0){
+      isOpen = true;
+    }
+
+    return `
+      <div class="modal-tip-card ${isOpen ? 'is-open' : ''}" data-tip-id="${escapeHtml(tip.id)}">
+        <div class="modal-tip-header" title="Klik om open of dicht te klappen">
+          <div class="modal-tip-meta">
+            <span class="modal-tip-author">💡 <strong>${authorLabel}</strong></span>
+            ${datum ? `<span class="modal-tip-date">· ${datum}</span>` : ''}
+            <span class="modal-tip-snippet">${escapeHtml(snippet)}</span>
+          </div>
+          <div class="modal-tip-header-right">
+            ${canManageTips ? `
+              <div class="modal-tip-actions">
+                <button type="button" class="link tip-edit-btn" data-tip-id="${escapeHtml(tip.id)}">Wijzigen</button>
+                <button type="button" class="link tip-del-btn" data-tip-id="${escapeHtml(tip.id)}" style="color:var(--red);">Verwijderen</button>
+              </div>
+            ` : ''}
+            <span class="modal-tip-chevron" title="Open/dichtklappen">▼</span>
+          </div>
+        </div>
+        <div class="modal-tip-body">
+          ${tip.html}
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  // Klikken op de header klapt de tip open of dicht
+  container.querySelectorAll('.modal-tip-header').forEach(hdr => {
+    hdr.addEventListener('click', e => {
+      if (e.target.closest('.tip-edit-btn') || e.target.closest('.tip-del-btn')) return;
+      const card = hdr.closest('.modal-tip-card');
+      if (card){
+        card.classList.toggle('is-open');
+      }
+    });
+  });
+
+  // Event handlers voor coördinator (wijzigen en verwijderen)
+  if (canManageTips){
+    container.querySelectorAll('.tip-del-btn').forEach(btn => {
+      btn.addEventListener('click', async e => {
+        e.stopPropagation();
+        const tipId = btn.dataset.tipId;
+        if (!confirm('Weet je zeker dat je deze boekentip wilt verwijderen?')) return;
+        const currentTips = parseBoekentips(book.boekentip).filter(t => t.id !== tipId);
+        const serialized = serializeBoekentips(currentTips);
+        btn.disabled = true;
+        btn.textContent = 'Verwijderen…';
+        const ok = await dbUpdate(bookId, { boekentip: serialized });
+        if (ok){
+          book.boekentip = serialized;
+          renderModalTipsList(bookId);
+          syncTipTriggersOutsideModal(bookId, currentTips.length);
+        } else {
+          btn.disabled = false;
+          btn.textContent = 'Verwijderen';
+        }
+      });
+    });
+
+    container.querySelectorAll('.tip-edit-btn').forEach(btn => {
+      btn.addEventListener('click', e => {
+        e.stopPropagation();
+        const tipId = btn.dataset.tipId;
+        const currentTips = parseBoekentips(book.boekentip);
+        const tip = currentTips.find(t => t.id === tipId);
+        if (!tip) return;
+
+        editingTipId = tip.id;
+        const authorInp = document.getElementById('modal-tip-author');
+        if (authorInp) authorInp.value = tip.author || '';
+
+        const editor = document.getElementById('modal-rich-editor');
+        if (editor){
+          editor.innerHTML = tip.html;
+        }
+
+        showModalEditor(true);
+      });
+    });
+  }
+}
+
+function syncTipTriggersOutsideModal(bookId, tipCount){
+  // 1. Zoek-resultaten kaart bijwerken
+  const zoekCard = document.querySelector(`.result-card[data-id="${bookId}"]`);
+  if (zoekCard){
+    const toggleBtn = zoekCard.querySelector('.boekentip-toggle');
+    if (toggleBtn){
+      toggleBtn.dataset.tipsCount = tipCount;
+      if (tipCount > 0){
+        toggleBtn.classList.add('has-tips');
+        toggleBtn.textContent = tipCount === 1 ? '💡 1 boekentip' : `💡 ${tipCount} boekentips`;
+      } else {
+        toggleBtn.classList.remove('has-tips');
+        toggleBtn.textContent = '+ Boekentip';
+      }
+    }
+  }
+
+  // 2. Coördinator Alle Boeken rij bijwerken
+  const coordRow = document.querySelector(`.alle-row[data-id="${bookId}"]`);
+  if (coordRow){
+    const book = allBooksCache.find(x => String(x.id) === String(bookId));
+    if (book) updateSummaryHeader(coordRow, book);
+
+    const countText = coordRow.querySelector('.coord-tip-count-text');
+    if (countText){
+      countText.textContent = tipCount > 0
+        ? (tipCount === 1 ? '1 boekentip aanwezig' : `${tipCount} boekentips aanwezig`)
+        : 'Nog geen boekentips voor dit boek';
+    }
+    const tipBtn = coordRow.querySelector('.open-coord-tip-btn');
+    if (tipBtn){
+      if (tipCount > 0){
+        tipBtn.classList.add('has-tips');
+        tipBtn.textContent = '💡 Bekijken & Beheren';
+      } else {
+        tipBtn.classList.remove('has-tips');
+        tipBtn.textContent = '+ Boekentip toevoegen';
+      }
+    }
+  }
+}
+
+function initBoekentipModal(){
+  if (modalInitialized) return;
+  modalInitialized = true;
+
+  const modalEl = document.getElementById('boekentip-modal');
+  const backdropEl = document.getElementById('modal-backdrop');
+  const closeXBtn = document.getElementById('modal-close-x-btn');
+  const closeBottomBtn = document.getElementById('modal-close-bottom-btn');
+  const cancelTopBtn = document.getElementById('modal-editor-cancel-btn');
+  const cancelBottomBtn = document.getElementById('modal-editor-cancel-bottom-btn');
+  const showAddBtn = document.getElementById('modal-show-add-btn');
+  const saveBtn = document.getElementById('modal-save-tip-btn');
+  const editorEl = document.getElementById('modal-rich-editor');
+  const toolbar = document.getElementById('modal-editor-toolbar');
+
+  // Sluiten via knoppen of backdrop
+  backdropEl?.addEventListener('click', closeBoekentipModal);
+  closeXBtn?.addEventListener('click', closeBoekentipModal);
+  closeBottomBtn?.addEventListener('click', closeBoekentipModal);
+
+  // Editor openen en sluiten
+  showAddBtn?.addEventListener('click', () => {
+    showModalEditor(false);
+  });
+  cancelTopBtn?.addEventListener('click', hideModalEditor);
+  cancelBottomBtn?.addEventListener('click', hideModalEditor);
+
+  // Esc-toets om te sluiten
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && modalEl?.classList.contains('open')){
+      closeBoekentipModal();
+    }
+  });
+
+  // Toolbar commando's
+  if (toolbar && editorEl){
+    toolbar.querySelectorAll('button[data-cmd]').forEach(btn => {
+      btn.addEventListener('mousedown', e => {
+        // Voorkom dat de knop de cursor-focus van de editor weghaalt
+        e.preventDefault();
+      });
+      btn.addEventListener('click', () => {
+        const cmd = btn.dataset.cmd;
+        if (cmd === 'h3'){
+          // Toggle tussen kopje en gewone alinea
+          const isH3 = document.queryCommandValue('formatBlock') === 'h3';
+          document.execCommand('formatBlock', false, isH3 ? '<p>' : '<h3>');
+        } else if (cmd === 'link'){
+          let url = prompt('Voer de web- of Teams-koppeling in (bijv. https://...):');
+          if (url){
+            url = url.trim();
+            if (!/^https?:\/\//i.test(url) && !/^mailto:/i.test(url)){
+              url = 'https://' + url;
+            }
+            document.execCommand('createLink', false, url);
+            // Zorg dat de gecreëerde link target="_blank" heeft
+            const sel = window.getSelection();
+            if (sel && sel.anchorNode){
+              const a = sel.anchorNode.parentElement?.closest('a') || sel.anchorNode.closest?.('a');
+              if (a){
+                a.setAttribute('target', '_blank');
+                a.setAttribute('rel', 'noopener noreferrer');
+              }
+            }
+          }
+        } else {
+          document.execCommand(cmd, false, null);
+        }
+        editorEl.focus();
+      });
+    });
+
+    // Paste event in de editor: Word/Teams troep filteren en veilige opmaak behouden
+    editorEl.addEventListener('paste', e => {
+      e.preventDefault();
+      const clipboard = e.clipboardData || window.clipboardData;
+      if (!clipboard) return;
+
+      const html = clipboard.getData('text/html');
+      const text = clipboard.getData('text/plain');
+
+      if (html){
+        const clean = sanitizeTipHtml(html);
+        document.execCommand('insertHTML', false, clean);
+      } else if (text){
+        const textHtml = escapeHtml(text).replace(/\r?\n/g, '<br>');
+        document.execCommand('insertHTML', false, textHtml);
+      }
+    });
+  }
+
+  // Tip opslaan
+  saveBtn?.addEventListener('click', async () => {
+    if (!activeModalBookId) return;
+    const book = allBooksCache.find(x => String(x.id) === String(activeModalBookId));
+    if (!book) return;
+
+    const rawHtml = editorEl ? editorEl.innerHTML : '';
+    const cleanHtml = sanitizeTipHtml(rawHtml);
+    const textOnly = cleanHtml.replace(/<[^>]*>/g, '').trim();
+
+    if (!textOnly){
+      alert('Typ of plak eerst een boekentip of lesidee.');
+      editorEl?.focus();
+      return;
+    }
+
+    const authorInp = document.getElementById('modal-tip-author');
+    const author = authorInp ? authorInp.value.trim() : '';
+    if (author){
+      try { localStorage.setItem('boeken_leerkracht_naam', author); } catch(e){}
+    }
+
+    const currentTips = parseBoekentips(book.boekentip);
+    let savedTipId = null;
+
+    if (editingTipId){
+      // Bestaande tip bewerken
+      const tipIdx = currentTips.findIndex(t => t.id === editingTipId);
+      if (tipIdx >= 0){
+        currentTips[tipIdx].html = cleanHtml;
+        currentTips[tipIdx].author = author;
+        currentTips[tipIdx].updated_at = new Date().toISOString();
+        savedTipId = editingTipId;
+      }
+    } else {
+      // Nieuwe tip toevoegen
+      savedTipId = 'tip-' + Date.now() + '-' + Math.random().toString(36).substr(2, 5);
+      currentTips.push({
+        id: savedTipId,
+        html: cleanHtml,
+        author: author,
+        created_at: new Date().toISOString()
+      });
+    }
+
+    const serialized = serializeBoekentips(currentTips);
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Opslaan…';
+
+    const ok = await dbUpdate(activeModalBookId, { boekentip: serialized });
+    saveBtn.disabled = false;
+    saveBtn.textContent = 'Tip opslaan';
+
+    if (ok){
+      book.boekentip = serialized;
+      hideModalEditor();
+      renderModalTipsList(activeModalBookId, savedTipId);
+      syncTipTriggersOutsideModal(activeModalBookId, currentTips.length);
+    }
+  });
+}
+
 // Brede vrije-tekstzoekopdracht (gebruikt door zowel "Boeken zoeken" als coördinator "Alle boeken"):
 // titel, auteur, ISBN, thema, aanvrager, opmerking en boekentips.
 function boekZoekTekst(b){
-  return [b.titel, b.auteur, b.isbn, themaVan(b), b.naam_aanvrager, b.opmerking, b.boekentip]
+  return [b.titel, b.auteur, b.isbn, themaVan(b), b.naam_aanvrager, b.opmerking, boekentipZoekTekst(b.boekentip)]
     .filter(Boolean).join(' ').toLowerCase();
 }
 
@@ -1591,7 +2596,7 @@ function renderZoekLijst(){
     return;
   }
   container.innerHTML = lijst.map(b => {
-    const tips = (b.boekentip || '').split('\n').filter(Boolean);
+    const tips = parseBoekentips(b.boekentip);
     const hasTips = tips.length > 0;
     const tipLabel = hasTips
       ? (tips.length === 1 ? '💡 1 boekentip' : `💡 ${tips.length} boekentips`)
@@ -1610,83 +2615,19 @@ function renderZoekLijst(){
             </div>
           </div>
           <div class="result-card-action">
-            <button class="tiny boekentip-toggle ${hasTips ? 'has-tips' : ''}" data-tips-count="${tips.length}">
+            <button type="button" class="tiny boekentip-toggle ${hasTips ? 'has-tips' : ''}" data-id="${b.id}" data-tips-count="${tips.length}">
               ${tipLabel}
             </button>
-          </div>
-        </div>
-        <div class="boekentip-panel" style="display:none">
-          ${hasTips ? `
-            <div class="boekentip-list">
-              ${tips.map(t => `<div class="boekentip-item"><span>${escapeHtml(t)}</span></div>`).join('')}
-            </div>
-          ` : ''}
-          <div class="boekentip-add">
-            <input type="text" class="boekentip-input" placeholder="Boekentip toevoegen (lesidee bij dit boek)">
-            <button class="tiny boekentip-submit" style="background:var(--ink); color:#fff; border-color:var(--ink);">Toevoegen</button>
-            <button type="button" class="tiny boekentip-cancel">Annuleren</button>
           </div>
         </div>
       </div>
     `;
   }).join('');
-  container.querySelectorAll('.result-card').forEach(card => {
-    const id = card.dataset.id;
-    const toggleBtn = card.querySelector('.boekentip-toggle');
-    const panel = card.querySelector('.boekentip-panel');
-    const input = card.querySelector('.boekentip-input');
-    const btn = card.querySelector('.boekentip-submit');
-    const cancelBtn = card.querySelector('.boekentip-cancel');
-    const tipsCount = parseInt(toggleBtn.dataset.tipsCount, 10) || 0;
-    const defaultLabel = tipsCount > 0
-      ? (tipsCount === 1 ? '💡 1 boekentip' : `💡 ${tipsCount} boekentips`)
-      : '+ Boekentip';
 
-    function sluitTip(){
-      panel.style.display = 'none';
-      toggleBtn.textContent = defaultLabel;
-      toggleBtn.classList.remove('active');
-      input.value = '';
-    }
-
-    function openTip(){
-      panel.style.display = 'block';
-      toggleBtn.textContent = '✕ Sluiten';
-      toggleBtn.classList.add('active');
-      input.focus();
-    }
-
-    toggleBtn.addEventListener('click', () => {
-      if (panel.style.display === 'none' || !panel.style.display){
-        openTip();
-      } else {
-        sluitTip();
-      }
-    });
-
-    if (cancelBtn){
-      cancelBtn.addEventListener('click', sluitTip);
-    }
-
-    const submitTip = async () => {
-      const tekst = input.value.trim();
-      if (!tekst) return;
-      const boek = allBooksCache.find(x => String(x.id) === String(id));
-      const bestaand = boek && boek.boekentip ? boek.boekentip + '\n' : '';
-      const { error } = await client.from('boeken').update({ boekentip: bestaand + '- ' + tekst }).eq('id', id);
-      if (error){ alert('Opslaan mislukt: ' + error.message); return; }
-      await fetchAllBooks();
-      renderZoekLijst();
-    };
-    btn.addEventListener('click', submitTip);
-    input.addEventListener('keydown', e => {
-      if (e.key === 'Enter'){
-        e.preventDefault();
-        submitTip();
-      } else if (e.key === 'Escape'){
-        e.preventDefault();
-        sluitTip();
-      }
+  container.querySelectorAll('.boekentip-toggle').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      openBoekentipModal(btn.dataset.id);
     });
   });
 }
@@ -1763,7 +2704,7 @@ function renderSummaryMeta(b){
     metaParts.push(`<span class="summary-opm" title="${escapeHtml(cleanOpm)}">opm: ${escapeHtml(shortOpm)}</span>`);
   }
   if (b.boekentip){
-    const tips = b.boekentip.split('\n').filter(Boolean).length;
+    const tips = parseBoekentips(b.boekentip).length;
     if (tips) metaParts.push(tips === 1 ? '💡 1 boekentip' : `💡 ${tips} boekentips`);
   }
   return metaParts.join(' &middot; ');
@@ -2156,7 +3097,20 @@ function fullRowHtml(b){
           </div>
         </div>
 
-        <div class="boekentips-container" style="margin-top:14px;"></div>
+        <div class="coord-boekentips-box" data-id="${b.id}" style="margin-top:14px; padding:10px 14px; background:var(--bg); border-radius:8px; border:1px solid var(--line); display:flex; justify-content:space-between; align-items:center; gap:12px;">
+          <div>
+            <div style="font-size:13px; font-weight:600; color:var(--ink);">💡 Boekentips &amp; Lesideeën</div>
+            <div class="coord-tip-count-text" style="font-size:12px; color:var(--ink-soft);">
+              ${(() => {
+                const count = parseBoekentips(b.boekentip).length;
+                return count > 0 ? (count === 1 ? '1 boekentip aanwezig' : `${count} boekentips aanwezig`) : 'Nog geen boekentips voor dit boek';
+              })()}
+            </div>
+          </div>
+          <button type="button" class="tiny open-coord-tip-btn ${parseBoekentips(b.boekentip).length > 0 ? 'has-tips' : ''}" data-id="${b.id}">
+            ${parseBoekentips(b.boekentip).length > 0 ? '💡 Bekijken &amp; Beheren' : '+ Boekentip toevoegen'}
+          </button>
+        </div>
 
         <div class="row-actions" style="align-items:flex-start; margin-top:14px; padding-top:10px; border-top:1px solid var(--line);">
           <button class="link" data-delete="${b.id}" style="color:var(--red);">Dit boek definitief verwijderen</button>
@@ -2164,148 +3118,6 @@ function fullRowHtml(b){
       </div>
     </details>
   `;
-}
-
-function renderBookTipsUi(row, id, updateField){
-  const container = row.querySelector('.boekentips-container');
-  if (!container) return;
-
-  const book = allBooksCache.find(x => String(x.id) === String(id));
-  if (!book) return;
-
-  function autoResize(el){
-    if (!el) return;
-    el.style.height = 'auto';
-    el.style.height = Math.max(34, el.scrollHeight) + 'px';
-  }
-
-  const tips = (book.boekentip || '').split('\n').filter(Boolean);
-
-  let html = `<div class="subsection-title" style="margin:0 0 6px;">Boekentips</div>`;
-  if (tips.length > 0){
-    html += `<div class="boekentip-list">`;
-    html += tips.map((t, i) => `
-      <div class="boekentip-item" data-tip-index="${i}">
-        <span class="tip-text">${escapeHtml(t)}</span>
-        <div class="tip-actions">
-          <button type="button" class="link tip-edit-btn" data-tip-edit="${i}">Wijzigen</button>
-          <button type="button" class="link tip-del-btn" data-tip-delete="${i}" style="color:var(--red);">Verwijderen</button>
-        </div>
-      </div>
-    `).join('');
-    html += `</div>`;
-  } else {
-    html += `<div style="font-size:12px; color:var(--ink-soft); margin-bottom:6px; font-style:italic;">Nog geen boekentips voor dit boek.</div>`;
-  }
-
-  html += `
-    <div class="boekentip-add" style="display:flex; gap:8px; margin-top:6px; align-items:flex-start;">
-      <textarea class="boekentip-new-input" rows="1" placeholder="Nieuwe boekentip toevoegen…" style="flex:1; min-height:34px; padding:6px 9px; font-size:13px; border-radius:6px; border:1px solid var(--line); background:var(--bg); color:var(--ink); font-family:inherit; line-height:1.4; resize:none; overflow-y:hidden; box-sizing:border-box;"></textarea>
-      <button type="button" class="tiny boekentip-add-btn" style="background:var(--ink); color:#fff; border-color:var(--ink); padding:6px 12px; border-radius:6px; font-weight:600; flex-shrink:0;">+ Toevoegen</button>
-    </div>
-  `;
-
-  container.innerHTML = html;
-
-  // Verwijderen
-  container.querySelectorAll('[data-tip-delete]').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      const idx = parseInt(btn.dataset.tipDelete, 10);
-      if (!confirm('Weet je zeker dat je deze boekentip wilt verwijderen?')) return;
-      const currentTips = (book.boekentip || '').split('\n').filter(Boolean);
-      currentTips.splice(idx, 1);
-      const val = currentTips.length ? currentTips.join('\n') : null;
-      await updateField('boekentip', val);
-      renderBookTipsUi(row, id, updateField);
-    });
-  });
-
-  // Wijzigen
-  container.querySelectorAll('[data-tip-edit]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const idx = parseInt(btn.dataset.tipEdit, 10);
-      const tipItem = btn.closest('.boekentip-item');
-      if (!tipItem) return;
-
-      const currentTips = (book.boekentip || '').split('\n').filter(Boolean);
-      const oldText = currentTips[idx] || '';
-
-      tipItem.classList.add('is-editing');
-      tipItem.innerHTML = `
-        <div class="tip-edit-box">
-          <textarea class="tip-edit-input" rows="1" placeholder="Boekentip bewerken…">${escapeHtml(oldText)}</textarea>
-          <div class="tip-edit-actions" style="display:flex; gap:8px; justify-content:flex-end; align-items:center; margin-top:4px;">
-            <button type="button" class="link tip-cancel-btn" style="font-size:12px;">Annuleren</button>
-            <button type="button" class="tiny tip-save-btn" style="background:var(--ink); color:#fff; border-color:var(--ink); padding:4px 12px; border-radius:6px; font-weight:600;">Opslaan</button>
-          </div>
-        </div>
-      `;
-
-      const editInput = tipItem.querySelector('.tip-edit-input');
-      const saveBtn = tipItem.querySelector('.tip-save-btn');
-      const cancelBtn = tipItem.querySelector('.tip-cancel-btn');
-
-      autoResize(editInput);
-      requestAnimationFrame(() => autoResize(editInput));
-      editInput.addEventListener('input', () => autoResize(editInput));
-
-      editInput.focus();
-      editInput.select();
-
-      async function saveEdit(){
-        const newText = editInput.value.replace(/\r?\n+/g, ' ').replace(/\s{2,}/g, ' ').trim();
-        if (!newText){
-          if (!confirm('Boekentip is leeg. Wil je deze boekentip verwijderen?')) return;
-          currentTips.splice(idx, 1);
-        } else {
-          currentTips[idx] = newText;
-        }
-        const val = currentTips.length ? currentTips.join('\n') : null;
-        await updateField('boekentip', val);
-        renderBookTipsUi(row, id, updateField);
-      }
-
-      saveBtn.addEventListener('click', saveEdit);
-      editInput.addEventListener('keydown', e => {
-        if (e.key === 'Enter' && !e.shiftKey){
-          e.preventDefault();
-          saveEdit();
-        } else if (e.key === 'Escape'){
-          renderBookTipsUi(row, id, updateField);
-        }
-      });
-      cancelBtn.addEventListener('click', () => {
-        renderBookTipsUi(row, id, updateField);
-      });
-    });
-  });
-
-  // Nieuwe tip toevoegen
-  const newInp = container.querySelector('.boekentip-new-input');
-  const addBtn = container.querySelector('.boekentip-add-btn');
-
-  if (newInp){
-    autoResize(newInp);
-    newInp.addEventListener('input', () => autoResize(newInp));
-  }
-
-  async function addNewTip(){
-    const text = newInp.value.replace(/\r?\n+/g, ' ').replace(/\s{2,}/g, ' ').trim();
-    if (!text) return;
-    const currentTips = (book.boekentip || '').split('\n').filter(Boolean);
-    currentTips.push(text);
-    const val = currentTips.join('\n');
-    await updateField('boekentip', val);
-    renderBookTipsUi(row, id, updateField);
-  }
-
-  addBtn.addEventListener('click', addNewTip);
-  newInp.addEventListener('keydown', e => {
-    if (e.key === 'Enter' && !e.shiftKey){
-      e.preventDefault();
-      addNewTip();
-    }
-  });
 }
 
 function wireFullRow(row){
@@ -2442,7 +3254,13 @@ function wireFullRow(row){
     await refreshCoordinatorData();
   });
 
-  renderBookTipsUi(row, id, updateField);
+  const tipBtn = row.querySelector('.open-coord-tip-btn');
+  if (tipBtn){
+    tipBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      openBoekentipModal(id);
+    });
+  }
 }
 
 // ---- Intuïtief zoeken/filteren door "Alle boeken" ----
