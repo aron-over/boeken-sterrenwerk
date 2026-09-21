@@ -21,33 +21,86 @@ let allBooksCache = [];
 let pristineBaselineData = null;
 let initialBaselineLoaded = false;
 
+// Lokale cache (Stale-While-Revalidate) voor directe weergave (< 20ms) bij paginabezoek
+const CACHE_KEY = IS_LOCAL ? 'boeken_cache_test_v1' : 'boeken_cache_prod_v1';
+const CACHE_TIME_KEY = IS_LOCAL ? 'boeken_cache_test_time' : 'boeken_cache_prod_time';
+
+function loadCachedBooks(){
+  try {
+    const raw = localStorage.getItem(CACHE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed) && parsed.length > 0){
+      return parsed;
+    }
+  } catch (e) {
+    console.warn('Fout bij uitlezen lokale cache:', e);
+  }
+  return null;
+}
+
+function saveCachedBooks(books){
+  try {
+    if (Array.isArray(books)){
+      localStorage.setItem(CACHE_KEY, JSON.stringify(books));
+      localStorage.setItem(CACHE_TIME_KEY, String(Date.now()));
+    }
+  } catch (e) {
+    console.warn('Fout bij opslaan in lokale cache:', e);
+  }
+}
+
 // Supabase/PostgREST geeft standaard maximaal 1000 rijen per query terug, ongeacht select('*').
-// Daarom hier altijd in pagina's ophalen en samenvoegen, onafhankelijk van de Max Rows-instelling.
+// We halen pagina 1 op met count: 'exact', en als er meer rijen zijn halen we de overige pagina's
+// parallel op via Promise.all() in plaats van sequentieel.
 const FETCH_PAGE_SIZE = 1000;
 async function fetchAllRows(table, orderCol = 'titel', ascending = true){
-  let rows = [];
-  let from = 0;
-  while (true){
-    const { data, error } = await realClient
+  // 1. Eerste pagina en exact totaalaantal tegelijk ophalen
+  const { data: firstPage, count, error: firstErr } = await realClient
+    .from(table)
+    .select('*', { count: 'exact' })
+    .order(orderCol, { ascending })
+    .range(0, FETCH_PAGE_SIZE - 1);
+
+  if (firstErr) return { data: null, error: firstErr };
+  if (!firstPage) return { data: [], error: null };
+
+  // Als alle rijen al binnen zijn (bijv. totaal <= 1000)
+  if (count === null || count <= FETCH_PAGE_SIZE || firstPage.length < FETCH_PAGE_SIZE){
+    return { data: firstPage, error: null };
+  }
+
+  // 2. Resterende pagina's gelijktijdig ophalen met Promise.all
+  const remainingRanges = [];
+  for (let from = FETCH_PAGE_SIZE; from < count; from += FETCH_PAGE_SIZE){
+    remainingRanges.push([from, Math.min(from + FETCH_PAGE_SIZE - 1, count - 1)]);
+  }
+
+  const pagePromises = remainingRanges.map(([from, to]) =>
+    realClient
       .from(table)
       .select('*')
       .order(orderCol, { ascending })
-      .range(from, from + FETCH_PAGE_SIZE - 1);
-    if (error) return { data: null, error };
-    rows = rows.concat(data);
-    if (!data || data.length < FETCH_PAGE_SIZE) break;
-    from += FETCH_PAGE_SIZE;
+      .range(from, to)
+  );
+
+  const results = await Promise.all(pagePromises);
+  let allRows = [...firstPage];
+  for (const res of results){
+    if (res.error) return { data: null, error: res.error };
+    if (res.data) allRows = allRows.concat(res.data);
   }
-  return { data: rows, error: null };
+  return { data: allRows, error: null };
 }
 
 function resetTestData(){
   if (!pristineBaselineData) return;
   allBooksCache = JSON.parse(JSON.stringify(pristineBaselineData));
+  saveCachedBooks(allBooksCache);
   const activeBtn = document.querySelector('nav.tabs button.active');
   const activeTab = activeBtn ? activeBtn.dataset.tab : 'zoeken';
   if (activeTab === 'zoeken') renderZoekLijst();
-  if (activeTab === 'coordinator' && coordUnlocked) refreshCoordinatorData();
+  if (activeTab === 'coordinator' && coordUnlocked) refreshCoordinatorData(true);
   const infoEl = document.getElementById('test-reset-info');
   if (infoEl){
     infoEl.textContent = 'Data hersteld!';
@@ -165,7 +218,7 @@ if (IS_LOCAL){
 const COORD_PASSWORD = 'sterrenwerk2026';
 
 const GROEPEN = ['Groep 3','Groep 4','Groep 5','Groep 6','Groep 7','Groep 8'];
-const KLEUTERS_THEMAS = ['Baby familie','Beroepen','Bouwen','Verkeer','Lente','Zomer','Herfst','Winter','Seizoenen','Zoekboek','Gezondheid','Sociaal emotioneel','Dieren','Natuur','Koningshuis','Koken en bakken','Rekenen','Sprookjes','Taal','Vakantie','Vriendschap','Kikker','Voorlezen','Boerderij','Ruimte','Kerst','Sinterklaas','Pasen','Emoties'].sort((a, b) => a.localeCompare(b, 'nl'));
+const KLEUTERS_THEMAS = ['Baby familie','Beroepen','Boerderij','Bouwen','Carnaval','Dieren','Dikkie Dik',"Draken & Dino's",'Emoties','Gezondheid','Herfst','Jarig & Feest','Kermis','Kerst','Kikker','Koken en bakken','Koningshuis','Kunst','Lente','Liedjes & Versjes','Natuur','Pasen','Rekenen','Ruimte','Seizoenen','Sinterklaas','Sociaal emotioneel','Sporten','Sprookjes','Taal','Vakantie','Verkeer','Voorlezen','Vriendschap','Winter','Zoekboek'].sort((a, b) => a.localeCompare(b, 'nl'));
 const JEELO_THEMAS = ['Omgaan met elkaar','Maken van je eigen product','Leren voor later','Zorgen voor dieren','Bebeleven van onze planeet','Veilig in het verkeer','Zorgen voor jezelf en anderen','Omgaan met geld','Leren van personen van vroeger','Inrichten van je eigen omgeving','Omgaan met natuur','Veilig helpen'];
 const OVERIGE_THEMAS = ['Lessen taal','Gedichten',"Sprookjes (verhalen, legenden, mythen)",'Bekende personen','Engelse boeken','Andere talen','Geschiedenis','Oorlog','Aardrijkskunde','Burgerschap','Relaties en Seksualiteit','Gedrag','Kunst','Digitale geletterdheid','Hoogbegaafdheid','Voorleesboeken'];
 const ANDERS = '__anders__';
@@ -832,6 +885,9 @@ async function dbUpdate(id, fields){
     alert('Opslaan is mislukt: ' + error.message);
     return false;
   }
+  const item = allBooksCache.find(b => String(b.id) === String(id));
+  if (item) Object.assign(item, fields);
+  saveCachedBooks(allBooksCache);
   return true;
 }
 
@@ -843,7 +899,7 @@ document.querySelectorAll('nav.tabs button').forEach(btn => {
     btn.classList.add('active');
     document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
     if (btn.dataset.tab === 'zoeken') renderZoekLijst();
-    if (btn.dataset.tab === 'coordinator' && coordUnlocked) refreshCoordinatorData();
+    if (btn.dataset.tab === 'coordinator' && coordUnlocked) refreshCoordinatorData(true);
   });
 });
 
@@ -929,21 +985,51 @@ if (kleuterZoekInput && kleuterSuggesties){
 }
 
 // ---------- Dubbele-aanvraag check & Boeken laden ----------
+let isFetchingBooks = false;
 async function fetchAllBooks(forceReload = false){
   if (IS_LOCAL && initialBaselineLoaded && !forceReload){
     return true;
   }
-  const { data, error } = IS_LOCAL
-    ? await client.from('boeken').select('*').order('titel', { ascending: true })
-    : await fetchAllRows('boeken', 'titel', true);
-  if (!error && data){
-    allBooksCache = data;
-    if (IS_LOCAL && !pristineBaselineData){
-      pristineBaselineData = JSON.parse(JSON.stringify(data));
-      initialBaselineLoaded = true;
+  if (isFetchingBooks) return true;
+  isFetchingBooks = true;
+
+  try {
+    const { data, error } = IS_LOCAL
+      ? await client.from('boeken').select('*').order('titel', { ascending: true })
+      : await fetchAllRows('boeken', 'titel', true);
+
+    if (!error && data){
+      // Snelle controle of de ontvangen data verschilt van wat we in het geheugen hebben
+      const isDifferent = allBooksCache.length !== data.length ||
+        (allBooksCache.length > 0 && data.length > 0 && (
+          allBooksCache[0].id !== data[0].id ||
+          allBooksCache[allBooksCache.length - 1].id !== data[data.length - 1].id ||
+          allBooksCache[0].titel !== data[0].titel
+        )) ||
+        JSON.stringify(allBooksCache) !== JSON.stringify(data);
+
+      allBooksCache = data;
+      saveCachedBooks(data);
+
+      if (IS_LOCAL && !pristineBaselineData){
+        pristineBaselineData = JSON.parse(JSON.stringify(data));
+        initialBaselineLoaded = true;
+      }
+
+      // Indien de data gewijzigd is (bijv. op achtergrond gesynchroniseerd), update de actieve weergave
+      if (isDifferent){
+        const activeTab = document.querySelector('nav.tabs button.active')?.dataset.tab || 'zoeken';
+        if (activeTab === 'zoeken') renderZoekLijst();
+        if (activeTab === 'coordinator' && coordUnlocked) refreshCoordinatorData(true);
+      }
     }
+    return !error;
+  } catch (err){
+    console.error('Fout bij ophalen boeken:', err);
+    return false;
+  } finally {
+    isFetchingBooks = false;
   }
-  return !error;
 }
 
 function debounce(fn, wait){
@@ -1289,11 +1375,12 @@ document.querySelectorAll('.view-toggle-btn').forEach(btn => {
     catalogViewMode = btn.dataset.view;
     localStorage.setItem('catalogus_weergave', catalogViewMode);
     document.querySelectorAll('.view-toggle-btn').forEach(b => b.classList.toggle('active', b === btn));
-    renderZoekLijst();
+    renderZoekLijst(true);
   });
 });
 
-document.getElementById('zoek-input')?.addEventListener('input', renderZoekLijst);
+const debouncedRenderZoekLijst = debounce(() => renderZoekLijst(true), 150);
+document.getElementById('zoek-input')?.addEventListener('input', debouncedRenderZoekLijst);
 
 document.getElementById('zoek-cat-pills')?.addEventListener('click', e => {
   const btn = e.target.closest('.pill');
@@ -1302,7 +1389,7 @@ document.getElementById('zoek-cat-pills')?.addEventListener('click', e => {
   zoekThema = '';
   document.querySelectorAll('#zoek-cat-pills .pill').forEach(p => p.classList.toggle('active', p === btn));
   populateZoekThemaPills();
-  renderZoekLijst();
+  renderZoekLijst(true);
 });
 
 function populateZoekThemaPills(){
@@ -1330,7 +1417,7 @@ function populateZoekThemaPills(){
       document.getElementById('zoek-thema-clear')?.addEventListener('click', () => {
         zoekThema = '';
         populateZoekThemaPills();
-        renderZoekLijst();
+        renderZoekLijst(true);
       });
       return;
     }
@@ -1347,7 +1434,7 @@ function populateZoekThemaPills(){
       opt => {
         zoekThema = opt.value;
         populateZoekThemaPills();
-        renderZoekLijst();
+        renderZoekLijst(true);
       }
     );
     return;
@@ -1359,7 +1446,7 @@ function populateZoekThemaPills(){
   container.querySelectorAll('.pill').forEach(btn => btn.addEventListener('click', () => {
     zoekThema = btn.dataset.thema;
     container.querySelectorAll('.pill').forEach(p => p.classList.toggle('active', p === btn));
-    renderZoekLijst();
+    renderZoekLijst(true);
   }));
 }
 
@@ -1411,7 +1498,14 @@ function getCoverImgTag(isbn, titel){
   `;
 }
 
-function renderZoekLijst(){
+const ZOEK_PAGE_SIZE = 36;
+let zoekDisplayCount = ZOEK_PAGE_SIZE;
+let zoekIntersectionObserver = null;
+
+function renderZoekLijst(resetCount = true){
+  if (resetCount){
+    zoekDisplayCount = ZOEK_PAGE_SIZE;
+  }
   const q = document.getElementById('zoek-input')?.value.trim().toLowerCase() || '';
 
   let lijst = allBooksCache.filter(b => b.status === 'binnen');
@@ -1428,15 +1522,30 @@ function renderZoekLijst(){
   if (!container) return;
 
   if (!lijst.length){
+    if (zoekIntersectionObserver){ zoekIntersectionObserver.disconnect(); zoekIntersectionObserver = null; }
     container.innerHTML = `<div class="empty-state">Geen boeken gevonden.</div>`;
     return;
   }
+
+  const zichtbaar = lijst.slice(0, zoekDisplayCount);
+  const heeftMeer = lijst.length > zoekDisplayCount;
+  const resterend = lijst.length - zoekDisplayCount;
+
+  const loadMoreHtml = heeftMeer ? `
+    <div class="load-more-wrap">
+      <div class="load-more-info">Je bekijkt ${zichtbaar.length} van de ${lijst.length} boeken</div>
+      <button type="button" class="btn btn-neutral btn-load-more" id="btn-zoek-load-more">
+        Toon meer boeken (${Math.min(resterend, ZOEK_PAGE_SIZE)} van ${resterend} resterend)
+      </button>
+      <div id="zoek-sentinel" class="catalog-sentinel"></div>
+    </div>
+  ` : '';
 
   // Stand 1: Kaarten met Kaft (Grid)
   if (catalogViewMode === 'cards'){
     container.innerHTML = `
       <div class="books-grid">
-        ${lijst.map(b => {
+        ${zichtbaar.map(b => {
           const tips = parseBoekentips(b.boekentip);
           const hasTips = tips.length > 0;
           const tipLabel = hasTips
@@ -1464,6 +1573,7 @@ function renderZoekLijst(){
           `;
         }).join('')}
       </div>
+      ${loadMoreHtml}
     `;
   }
   // Stand 2: Tabelweergave
@@ -1480,7 +1590,7 @@ function renderZoekLijst(){
             </tr>
           </thead>
           <tbody>
-            ${lijst.map(b => {
+            ${zichtbaar.map(b => {
               const tips = parseBoekentips(b.boekentip);
               const hasTips = tips.length > 0;
               const tipLabel = hasTips
@@ -1506,38 +1616,44 @@ function renderZoekLijst(){
           </tbody>
         </table>
       </div>
+      ${loadMoreHtml}
     `;
   }
   // Stand 3: Compacte Lijst (Classic)
   else {
-    container.innerHTML = lijst.map(b => {
-      const tips = parseBoekentips(b.boekentip);
-      const hasTips = tips.length > 0;
-      const tipLabel = hasTips
-        ? (tips.length === 1 ? '💡 1 boekentip' : `💡 ${tips.length} boekentips`)
-        : '+ Boekentip';
+    container.innerHTML = `
+      <div class="catalog-list-wrap">
+        ${zichtbaar.map(b => {
+          const tips = parseBoekentips(b.boekentip);
+          const hasTips = tips.length > 0;
+          const tipLabel = hasTips
+            ? (tips.length === 1 ? '💡 1 boekentip' : `💡 ${tips.length} boekentips`)
+            : '+ Boekentip';
 
-      return `
-        <div class="result-card cat-${escapeHtml(b.categorie || '')}" data-id="${b.id}">
-          <div class="result-card-main">
-            <div class="result-card-content">
-              <div class="title-row">
-                <span class="titel">${escapeHtml(b.titel)}</span>
-                ${b.auteur ? `<span class="meta-inline">· ${escapeHtml(b.auteur)}</span>` : ''}
-              </div>
-              <div class="tags-row">
-                ${renderZoekTags(b)}
+          return `
+            <div class="result-card cat-${escapeHtml(b.categorie || '')}" data-id="${b.id}">
+              <div class="result-card-main">
+                <div class="result-card-content">
+                  <div class="title-row">
+                    <span class="titel">${escapeHtml(b.titel)}</span>
+                    ${b.auteur ? `<span class="meta-inline">· ${escapeHtml(b.auteur)}</span>` : ''}
+                  </div>
+                  <div class="tags-row">
+                    ${renderZoekTags(b)}
+                  </div>
+                </div>
+                <div class="result-card-action">
+                  <button type="button" class="btn btn-secondary btn-sm boekentip-toggle ${hasTips ? 'has-tips' : ''}" data-id="${b.id}" data-tips-count="${tips.length}">
+                    ${tipLabel}
+                  </button>
+                </div>
               </div>
             </div>
-            <div class="result-card-action">
-              <button type="button" class="btn btn-secondary btn-sm boekentip-toggle ${hasTips ? 'has-tips' : ''}" data-id="${b.id}" data-tips-count="${tips.length}">
-                ${tipLabel}
-              </button>
-            </div>
-          </div>
-        </div>
-      `;
-    }).join('');
+          `;
+        }).join('')}
+      </div>
+      ${loadMoreHtml}
+    `;
   }
 
   container.querySelectorAll('.boekentip-toggle').forEach(btn => {
@@ -1546,6 +1662,33 @@ function renderZoekLijst(){
       openBoekentipModal(btn.dataset.id);
     });
   });
+
+  if (heeftMeer){
+    document.getElementById('btn-zoek-load-more')?.addEventListener('click', () => {
+      zoekDisplayCount += ZOEK_PAGE_SIZE;
+      renderZoekLijst(false);
+    });
+
+    if (zoekIntersectionObserver){
+      zoekIntersectionObserver.disconnect();
+      zoekIntersectionObserver = null;
+    }
+    const sentinel = document.getElementById('zoek-sentinel');
+    if (sentinel && 'IntersectionObserver' in window){
+      zoekIntersectionObserver = new IntersectionObserver((entries) => {
+        if (entries[0].isIntersecting){
+          zoekDisplayCount += ZOEK_PAGE_SIZE;
+          renderZoekLijst(false);
+        }
+      }, { rootMargin: '300px' });
+      zoekIntersectionObserver.observe(sentinel);
+    }
+  } else {
+    if (zoekIntersectionObserver){
+      zoekIntersectionObserver.disconnect();
+      zoekIntersectionObserver = null;
+    }
+  }
 }
 
 // ---------- Tab 3: Coördinator ----------
@@ -1565,14 +1708,17 @@ document.getElementById('coord-unlock')?.addEventListener('click', () => {
     sessionStorage.setItem('coord_ok', '1');
     document.getElementById('coord-lock').style.display = 'none';
     document.getElementById('coord-content').style.display = '';
-    refreshCoordinatorData();
+    refreshCoordinatorData(true);
+    fetchAllBooks(false);
   } else {
     document.getElementById('coord-lock-msg').textContent = 'Onjuist wachtwoord.';
   }
 });
 
-async function refreshCoordinatorData(){
-  await fetchAllBooks();
+async function refreshCoordinatorData(skipNetwork = false){
+  if (!skipNetwork){
+    await fetchAllBooks();
+  }
   renderBudget();
   renderTeBestellen();
   renderOnderweg();
@@ -1898,8 +2044,8 @@ function wireEditableRow(row){
   // Knoppen voor acties
   const rejectBtn = row.querySelector('[data-reject]');
   if (rejectBtn) rejectBtn.addEventListener('click', async () => {
-    await dbUpdate(id, { status: 'afgewezen' });
-    await refreshCoordinatorData();
+    const ok = await dbUpdate(id, { status: 'afgewezen' });
+    if (ok) await refreshCoordinatorData(true);
   });
 
   row.querySelector('[data-delete]')?.addEventListener('click', async () => {
@@ -1907,7 +2053,9 @@ function wireEditableRow(row){
     if (!bevestigVerwijderen(boek && boek.titel)) return;
     const { error } = await client.from('boeken').delete().eq('id', id);
     if (error){ alert('Verwijderen mislukt: ' + error.message); return; }
-    await refreshCoordinatorData();
+    allBooksCache = allBooksCache.filter(x => String(x.id) !== String(id));
+    saveCachedBooks(allBooksCache);
+    await refreshCoordinatorData(true);
   });
 }
 
@@ -1964,15 +2112,17 @@ function renderAfgewezen(){
     </div>
   `).join('');
   container.querySelectorAll('[data-restore]').forEach(btn => btn.addEventListener('click', async () => {
-    await dbUpdate(btn.dataset.restore, { status: 'aangevraagd', besteld_op: null });
-    await refreshCoordinatorData();
+    const ok = await dbUpdate(btn.dataset.restore, { status: 'aangevraagd', besteld_op: null });
+    if (ok) await refreshCoordinatorData(true);
   }));
   container.querySelectorAll('[data-delete]').forEach(btn => btn.addEventListener('click', async () => {
     const boek = allBooksCache.find(x => String(x.id) === String(btn.dataset.delete));
     if (!bevestigVerwijderen(boek && boek.titel)) return;
     const { error } = await client.from('boeken').delete().eq('id', btn.dataset.delete);
     if (error){ alert('Verwijderen mislukt: ' + error.message); return; }
-    await refreshCoordinatorData();
+    allBooksCache = allBooksCache.filter(x => String(x.id) !== String(btn.dataset.delete));
+    saveCachedBooks(allBooksCache);
+    await refreshCoordinatorData(true);
   }));
 }
 
@@ -2282,7 +2432,9 @@ function wireFullRow(row){
     if (!bevestigVerwijderen(boek && boek.titel)) return;
     const { error } = await client.from('boeken').delete().eq('id', id);
     if (error){ alert('Verwijderen mislukt: ' + error.message); return; }
-    await refreshCoordinatorData();
+    allBooksCache = allBooksCache.filter(x => String(x.id) !== String(id));
+    saveCachedBooks(allBooksCache);
+    await refreshCoordinatorData(true);
   });
 
   const tipBtn = row.querySelector('.open-coord-tip-btn');
@@ -2359,7 +2511,13 @@ function updateResetButtonVisibility(q, statusFilter){
   resetBtn.style.display = hasFilter ? 'inline-block' : 'none';
 }
 
-function renderAlleBoeken(){
+const ALLE_PAGE_SIZE = 40;
+let alleDisplayCount = ALLE_PAGE_SIZE;
+
+function renderAlleBoeken(resetCount = true){
+  if (resetCount){
+    alleDisplayCount = ALLE_PAGE_SIZE;
+  }
   const openIds = new Set([...document.querySelectorAll('#lijst-alle details[open]')].map(d => d.dataset.id));
   const q = (document.getElementById('alle-zoek')?.value || '').trim().toLowerCase();
   const statusFilter = document.getElementById('alle-status-filter')?.value || '';
@@ -2458,16 +2616,47 @@ function renderAlleBoeken(){
     updateAlleBulkInfo();
     return;
   }
-  container.innerHTML = lijst.map(fullRowHtml).join('');
+
+  const zichtbaar = lijst.slice(0, alleDisplayCount);
+  const heeftMeer = lijst.length > alleDisplayCount;
+  const resterend = lijst.length - alleDisplayCount;
+
+  const loadMoreHtml = heeftMeer ? `
+    <div class="load-more-wrap" style="margin-top:16px;">
+      <div class="load-more-info">Je bekijkt ${zichtbaar.length} van de ${lijst.length} boeken</div>
+      <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:center;">
+        <button type="button" class="btn btn-neutral btn-load-more" id="btn-alle-load-more">
+          Toon nog ${Math.min(resterend, ALLE_PAGE_SIZE)} boeken (${resterend} resterend)
+        </button>
+        <button type="button" class="btn btn-ghost btn-sm" id="btn-alle-load-all" style="color:var(--ink-soft);">
+          Toon alle ${lijst.length} boeken
+        </button>
+      </div>
+    </div>
+  ` : '';
+
+  container.innerHTML = zichtbaar.map(fullRowHtml).join('') + loadMoreHtml;
   container.querySelectorAll('.book-details').forEach(row => {
     wireFullRow(row);
     if (openIds.has(row.dataset.id)) row.open = true;
   });
+
+  document.getElementById('btn-alle-load-more')?.addEventListener('click', () => {
+    alleDisplayCount += ALLE_PAGE_SIZE;
+    renderAlleBoeken(false);
+  });
+
+  document.getElementById('btn-alle-load-all')?.addEventListener('click', () => {
+    alleDisplayCount = lijst.length;
+    renderAlleBoeken(false);
+  });
+
   updateAlleBulkInfo();
 }
 
-document.getElementById('alle-zoek')?.addEventListener('input', renderAlleBoeken);
-document.getElementById('alle-status-filter')?.addEventListener('change', renderAlleBoeken);
+const debouncedRenderAlleBoeken = debounce(() => renderAlleBoeken(true), 150);
+document.getElementById('alle-zoek')?.addEventListener('input', debouncedRenderAlleBoeken);
+document.getElementById('alle-status-filter')?.addEventListener('change', () => renderAlleBoeken(true));
 
 document.querySelectorAll('#alle-cat-pills .pill').forEach(btn => {
   btn.addEventListener('click', () => {
@@ -2475,7 +2664,7 @@ document.querySelectorAll('#alle-cat-pills .pill').forEach(btn => {
     document.querySelectorAll('#alle-cat-pills .pill').forEach(p => p.classList.toggle('active', p === btn));
     alleSubThemaFilter = '';
     populateAlleSubThemaPills();
-    renderAlleBoeken();
+    renderAlleBoeken(true);
   });
 });
 
@@ -2513,7 +2702,7 @@ document.querySelectorAll('#alle-eigenschappen-filters .pill[data-leegfilter]').
         document.querySelector(`#alle-eigenschappen-filters .pill[data-leegfilter="${opposite}"]`)?.classList.remove('active');
       }
     }
-    renderAlleBoeken();
+    renderAlleBoeken(true);
   });
 });
 
@@ -2526,7 +2715,7 @@ document.getElementById('alle-reset-filters')?.addEventListener('click', () => {
   document.querySelectorAll('#alle-cat-pills .pill').forEach(p => p.classList.toggle('active', p.dataset.cat === ''));
   document.querySelectorAll('#alle-eigenschappen-filters .pill').forEach(p => p.classList.remove('active'));
   populateAlleSubThemaPills();
-  renderAlleBoeken();
+  renderAlleBoeken(true);
 });
 
 // ---- Bulk Toolbar ----
@@ -2638,7 +2827,8 @@ document.getElementById('alle-bulk-status-apply')?.addEventListener('click', asy
   allBooksCache.forEach(b => {
     if (ids.includes(String(b.id))) Object.assign(b, updates);
   });
-  await refreshCoordinatorData();
+  saveCachedBooks(allBooksCache);
+  await refreshCoordinatorData(true);
 });
 
 document.getElementById('alle-bulk-thema-apply')?.addEventListener('click', async () => {
@@ -2678,7 +2868,8 @@ document.getElementById('alle-bulk-thema-apply')?.addEventListener('click', asyn
   allBooksCache.forEach(b => {
     if (ids.includes(String(b.id))) Object.assign(b, updates);
   });
-  await refreshCoordinatorData();
+  saveCachedBooks(allBooksCache);
+  await refreshCoordinatorData(true);
 });
 
 document.getElementById('alle-bulk-opmerking-set')?.addEventListener('click', async () => {
@@ -2694,8 +2885,9 @@ document.getElementById('alle-bulk-opmerking-set')?.addEventListener('click', as
   allBooksCache.forEach(b => {
     if (ids.includes(String(b.id))) Object.assign(b, updates);
   });
+  saveCachedBooks(allBooksCache);
   document.getElementById('alle-bulk-opmerking-tekst').value = '';
-  await refreshCoordinatorData();
+  await refreshCoordinatorData(true);
 });
 
 document.getElementById('alle-bulk-opmerking-delete')?.addEventListener('click', async () => {
@@ -2716,7 +2908,8 @@ document.getElementById('alle-bulk-opmerking-delete')?.addEventListener('click',
   allBooksCache.forEach(b => {
     if (idsToClear.includes(b.id)) b.opmerking = null;
   });
-  await refreshCoordinatorData();
+  saveCachedBooks(allBooksCache);
+  await refreshCoordinatorData(true);
 });
 
 document.getElementById('alle-bulk-delete')?.addEventListener('click', async () => {
@@ -2726,7 +2919,10 @@ document.getElementById('alle-bulk-delete')?.addEventListener('click', async () 
   const resultaten = await Promise.all(ids.map(id => client.from('boeken').delete().eq('id', id)));
   const mislukt = resultaten.filter(r => r.error).length;
   if (mislukt) alert(`Verwijderen van ${mislukt} boek(en) mislukt.`);
-  await refreshCoordinatorData();
+  const mislukteIds = resultaten.filter(r => r.error).map((r, i) => ids[i]);
+  allBooksCache = allBooksCache.filter(b => !ids.includes(String(b.id)) || mislukteIds.includes(String(b.id)));
+  saveCachedBooks(allBooksCache);
+  await refreshCoordinatorData(true);
 });
 
 function updateBulkInfo(groep){
@@ -2776,17 +2972,27 @@ document.getElementById('sel-all-besteld')?.addEventListener('change', e => {
 document.getElementById('bulk-besteld')?.addEventListener('click', async () => {
   const ids = [...document.querySelectorAll('.sel-aangevraagd:checked')].map(cb => cb.dataset.id);
   if (!ids.length) return;
-  const { error } = await client.from('boeken').update({ status: 'besteld', besteld_op: new Date().toISOString() }).in('id', ids);
+  const now = new Date().toISOString();
+  const { error } = await client.from('boeken').update({ status: 'besteld', besteld_op: now }).in('id', ids);
   if (error){ console.error(error); alert('Markeren als besteld is mislukt: ' + error.message); return; }
-  await refreshCoordinatorData();
+  allBooksCache.forEach(b => {
+    if (ids.includes(String(b.id))) { b.status = 'besteld'; b.besteld_op = now; }
+  });
+  saveCachedBooks(allBooksCache);
+  await refreshCoordinatorData(true);
 });
 
 document.getElementById('bulk-binnen')?.addEventListener('click', async () => {
   const ids = [...document.querySelectorAll('.sel-besteld:checked')].map(cb => cb.dataset.id);
   if (!ids.length) return;
-  const { error } = await client.from('boeken').update({ status: 'binnen', binnen_op: new Date().toISOString() }).in('id', ids);
+  const now = new Date().toISOString();
+  const { error } = await client.from('boeken').update({ status: 'binnen', binnen_op: now }).in('id', ids);
   if (error){ console.error(error); alert('Markeren als binnengekomen is mislukt: ' + error.message); return; }
-  await refreshCoordinatorData();
+  allBooksCache.forEach(b => {
+    if (ids.includes(String(b.id))) { b.status = 'binnen'; b.binnen_op = now; }
+  });
+  saveCachedBooks(allBooksCache);
+  await refreshCoordinatorData(true);
 });
 
 // ---------- Export: CSV & Printbare Bestelbon (Keuze 18) ----------
@@ -2934,7 +3140,19 @@ window.addEventListener('beforeunload', e => {
 });
 
 // ---------- Init ----------
-fetchAllBooks().then(() => {
+// 1. Direct uit lokale cache tonen (binnen ~10ms!)
+const cachedStartupBooks = loadCachedBooks();
+if (cachedStartupBooks && cachedStartupBooks.length > 0){
+  allBooksCache = cachedStartupBooks;
   renderZoekLijst();
-  if (coordUnlocked) refreshCoordinatorData();
+  if (coordUnlocked) refreshCoordinatorData(true);
+}
+
+// 2. Verse data op de achtergrond synchroniseren
+fetchAllBooks().then(() => {
+  // Als er nog geen cache was (koude eerste start), toon dan nu de boeken
+  if (!cachedStartupBooks || !cachedStartupBooks.length){
+    renderZoekLijst();
+    if (coordUnlocked) refreshCoordinatorData(true);
+  }
 });
