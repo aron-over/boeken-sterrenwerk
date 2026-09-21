@@ -1077,7 +1077,7 @@
   </div>
   <nav class="tabs">
     <button data-tab="zoeken" class="active">Boeken zoeken</button>
-    <button data-tab="aanvraag">Aanvraag indienen</button>
+    <button data-tab="aanvraag">Boek aanvragen</button>
     <button data-tab="coordinator">Coördinator</button>
   </nav>
 </header>
@@ -1102,7 +1102,7 @@
     </div>
   </section>
 
-  <!-- TAB 2: AANVRAAG INDIENEN -->
+  <!-- TAB 2: BOEK AANVRAGEN -->
   <section class="tab-panel" id="tab-aanvraag">
     <div class="card">
       <h2>Boek aanvragen</h2>
@@ -1162,7 +1162,7 @@
         <label for="opmerking">Opmerking (optioneel)</label>
         <textarea id="opmerking"></textarea>
 
-        <button type="submit" class="primary">Aanvraag indienen</button>
+        <button type="submit" class="primary">Boek aanvragen</button>
         <div id="form-msg"></div>
       </form>
     </div>
@@ -2397,7 +2397,7 @@ document.getElementById('isbn').addEventListener('input', e => {
 document.getElementById('titel').addEventListener('input', checkTitelMatch);
 document.getElementById('isbn').addEventListener('input', checkIsbnMatch);
 
-// ---------- Aanvraag indienen ----------
+// ---------- Boek aanvragen ----------
 document.getElementById('book-form').addEventListener('submit', async e => {
   e.preventDefault();
 

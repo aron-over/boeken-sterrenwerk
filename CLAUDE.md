@@ -30,7 +30,7 @@ staan als `GROEPEN`, `JEELO_THEMAS`, `OVERIGE_THEMAS` bovenin het `<script>` van
 huidige kalenderjaar.
 
 ## Structuur van de site (3 tabbladen)
-1. **Aanvraag indienen** — open voor iedereen, geen wachtwoord. Verplicht: naam, titel, ISBN
+1. **Boek aanvragen** — open voor iedereen, geen wachtwoord. Verplicht: naam, titel, ISBN
    (exact 13 cijfers, wordt live gevalideerd). Waarschuwt bij een titel/ISBN die al lijkt te
    bestaan (client-side check tegen de al geladen boekenlijst).
 2. **Boeken zoeken** — toont alleen `status = binnen`. Pil-filters op categorie + dynamisch
@@ -72,7 +72,7 @@ verandert (bijv. "Boekentip-veld toevoegen aan zoekresultaten"), niet de technis
 ## Wie is wie
 - Aron (jij, deze gebruiker): bouwt en beheert de site voor zijn vrouw.
 - Zijn vrouw: taalcoördinator op Het Sterrenwerk, de "coördinator"-gebruiker van de site.
-- Collega-leraren: gebruiken alleen de tabbladen "Aanvraag indienen" en "Boeken zoeken".
+- Collega-leraren: gebruiken alleen de tabbladen "Boek aanvragen" en "Boeken zoeken".
 
 ## Nog openstaand / bekend werk in uitvoering
 - Twee grote bronlijsten (~1450 titels, Prentenboeken + "nieuw op school") worden via een
