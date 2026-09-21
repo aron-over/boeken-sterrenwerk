@@ -179,7 +179,7 @@
         <div class="form-section">
           <div class="form-section-title">1. Wie ben je?</div>
           <label for="naam_aanvrager">Jouw naam <span style="color:var(--red);">*</span></label>
-          <input type="text" id="naam_aanvrager" required placeholder="bijv. Meester Daan of Juf Sanne">
+          <input type="text" id="naam_aanvrager" required placeholder="bijv. Lisa of Thomas">
         </div>
 
         <!-- Sectie 2: Boekgegevens & ISBN -->
@@ -201,12 +201,12 @@
           <div id="titel-match" class="match-list" style="display:none"></div>
 
           <label for="auteur">Auteur (optioneel)</label>
-          <input type="text" id="auteur" autocomplete="off" placeholder="Auteur of illustrator">
+          <input type="text" id="auteur" autocomplete="off" placeholder="Naam van de auteur">
 
-          <label for="prijs">Prijs (€, optioneel)</label>
+          <label for="prijs">Prijs (€) <span style="color:var(--red);">*</span></label>
           <div class="prijs-input-wrap">
             <span class="currency-prefix">€</span>
-            <input type="text" inputmode="decimal" id="prijs" class="prijs-input" placeholder="0,00" autocomplete="off">
+            <input type="text" inputmode="decimal" id="prijs" class="prijs-input" placeholder="0,00" autocomplete="off" required>
           </div>
         </div>
 
@@ -505,7 +505,7 @@
           <label for="modal-tip-author" style="display:block; font-size:12px; font-weight:600; color:var(--ink-soft); margin-bottom:4px;">
             Je naam (optioneel):
           </label>
-          <input type="text" id="modal-tip-author" placeholder="Bijv. Juf Sanne of Meester Bart" style="max-width:320px; width:100%;">
+          <input type="text" id="modal-tip-author" placeholder="bijv. Lisa of Thomas" style="max-width:320px; width:100%;">
         </div>
 
         <div class="rich-editor-container">
@@ -521,7 +521,7 @@
             <button type="button" tabindex="-1" data-cmd="link" title="Web- of Teams-koppeling toevoegen">🔗 Link</button>
             <button type="button" tabindex="-1" data-cmd="removeFormat" title="Opmaak wissen">🧹</button>
           </div>
-          <div id="modal-rich-editor" class="rich-editor-content" contenteditable="true" tabindex="0" data-placeholder="Typ hier je boekentip of lesidee, of plak direct tekst uit Word of Teams…"></div>
+          <div id="modal-rich-editor" class="rich-editor-content" contenteditable="true" tabindex="0" data-placeholder="Typ hier je boekentip of lesidee of plak direct tekst uit Word of Teams…"></div>
         </div>
 
         <div style="display:flex; justify-content:space-between; align-items:center; margin-top:2px;">
