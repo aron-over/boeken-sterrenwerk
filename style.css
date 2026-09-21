@@ -1078,14 +1078,20 @@ textarea:focus {
   width: 96vw;
 }
 
-/* Invoermethode Tabs */
+/* Invoermethode Tabs (Vast onder modal-header) */
+.import-method-tabs-wrap {
+  flex-shrink: 0;
+  background: var(--surface);
+  border-bottom: 2px solid var(--line-soft);
+  padding: 10px 20px 0;
+}
 .import-method-tabs {
   display: flex;
   gap: 6px;
-  border-bottom: 2px solid var(--line-soft);
-  margin-bottom: 16px;
+  border-bottom: none;
+  margin-bottom: 0;
   overflow-x: auto;
-  padding-bottom: 2px;
+  padding-bottom: 0;
 }
 .import-tab-btn {
   display: inline-flex;
@@ -1416,6 +1422,7 @@ textarea:focus {
   align-items: flex-start;
   gap: 16px;
   background: var(--surface);
+  flex-shrink: 0;
 }
 .modal-subtitle {
   font-size: 11px;
@@ -1458,7 +1465,8 @@ textarea:focus {
 .modal-body {
   padding: 18px 22px;
   overflow-y: auto;
-  flex: 1;
+  flex: 1 1 auto;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   gap: 18px;
@@ -1711,6 +1719,7 @@ textarea:focus {
   justify-content: space-between;
   align-items: center;
   background: var(--bg);
+  flex-shrink: 0;
 }
 .modal-footer kbd {
   background: var(--surface);
@@ -2511,12 +2520,15 @@ textarea:focus {
     width: 100% !important;
     max-width: 100% !important;
   }
+  .import-method-tabs-wrap {
+    padding: 8px 12px 0;
+  }
   .import-method-tabs {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
     gap: 4px;
-    padding-bottom: 4px;
+    padding-bottom: 2px;
   }
   .import-method-tabs::-webkit-scrollbar {
     display: none;

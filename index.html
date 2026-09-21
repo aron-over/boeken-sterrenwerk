@@ -500,9 +500,8 @@
       <button type="button" class="modal-close-btn" id="coord-import-close-btn" title="Sluiten (Esc)">&times;</button>
     </div>
 
-    <div class="modal-body" style="padding: 16px 20px; overflow-y:auto; max-height:calc(88vh - 130px);">
-      
-      <!-- Invoermethode Navigatie (Subtabs) -->
+    <!-- Invoermethode Navigatie (Vaste tabs onder de header) -->
+    <div class="import-method-tabs-wrap">
       <div class="import-method-tabs" role="tablist">
         <button type="button" class="import-tab-btn active" data-import-tab="manual">
           <span class="import-tab-icon">✍️</span>
@@ -521,7 +520,9 @@
           <span>Excel / CSV importeren</span>
         </button>
       </div>
+    </div>
 
+    <div class="modal-body" style="padding: 16px 20px;">
       <!-- Tab Inhoud 1: Los Toevoegen & Bulk Tekst (Standaard Actief) -->
       <div class="import-tab-panel active" id="import-pane-manual">
         <div class="import-manual-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap:14px; margin-bottom:14px;">

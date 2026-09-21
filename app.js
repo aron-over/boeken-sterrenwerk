@@ -2155,6 +2155,9 @@ function openCoordImportModal(){
   modal.classList.add('open');
   document.body.style.overflow = 'hidden';
 
+  const modalBody = modal.querySelector('.modal-body');
+  if (modalBody) modalBody.scrollTop = 0;
+
   setupCoordImportDefaults();
   renderImportQueue();
   updateCameraStatusUI();
