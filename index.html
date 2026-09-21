@@ -14,13 +14,13 @@
 <!-- SheetJS (Excel .xlsx en .xls parsing) -->
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <!-- NL Design System Stijlen voor Onderwijs -->
-<link rel="stylesheet" href="style.css?v=20260921_bulk">
+<link rel="stylesheet" href="style.css?v=20260921_responsive">
 </head>
 <body>
 
 <header class="topbar">
   <div class="topbar-inner">
-    <div style="display:flex; align-items:center; gap:12px;">
+    <div class="topbar-brand" style="display:flex; align-items:center; gap:10px;">
       <img src="https://11qwhetsterrenwerk-live-e440c3dc752b468-78a827d.divio-media.com/filer_public/e3/66/e36619fc-2ab6-4c1c-bc07-65325143d0b2/het_sterrenwerk_liggend.png" alt="Het Sterrenwerk" style="height:34px; width:auto;">
       <h1>Boeken Sterrenwerk</h1>
       <span id="test-badge" class="topbar-badge" style="display:none;">Testomgeving</span>
@@ -296,7 +296,7 @@
 
       <!-- Te bestellen boeken met exportfuncties -->
       <div class="card">
-        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:14px;">
+        <div class="coordinator-section-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:14px;">
           <h2 style="margin:0;">Te bestellen boeken</h2>
           <div style="display:flex; gap:8px; flex-wrap:wrap;">
             <button type="button" class="btn btn-neutral btn-sm" id="btn-export-csv" title="Download een Excel/CSV bestand van de te bestellen boeken">
@@ -524,7 +524,7 @@
 
       <!-- Tab Inhoud 1: Los Toevoegen & Bulk Tekst (Standaard Actief) -->
       <div class="import-tab-panel active" id="import-pane-manual">
-        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap:14px; margin-bottom:14px;">
+        <div class="import-manual-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap:14px; margin-bottom:14px;">
           
           <!-- Blok A: Snel los boek toevoegen -->
           <div class="card" style="padding:14px; background:#FAFBFD; border:1px solid var(--line); margin:0;">
