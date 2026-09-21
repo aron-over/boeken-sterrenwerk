@@ -278,6 +278,30 @@
         </div>
       </div>
 
+      <!-- Melding: Gescande boeken van mobiel klaar voor verwerking -->
+      <div id="coord-scan-queue-banner" class="scan-queue-banner" style="display:none;">
+        <div class="scan-queue-banner-text">
+          <div class="scan-queue-icon">📱</div>
+          <div>
+            <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+              <strong style="font-size:16px; color:var(--ink);">Gescande boeken van mobiel staan klaar!</strong>
+              <span id="scan-queue-badge" class="scan-queue-badge">0 boeken</span>
+            </div>
+            <p style="margin:3px 0 0; font-size:13px; color:var(--ink-soft);">
+              Deze boeken zijn gescand met de mobiele camera. Open ze om categorieën en thema's toe te wijzen en ze definitief toe te voegen.
+            </p>
+          </div>
+        </div>
+        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+          <button type="button" class="btn btn-primary" id="btn-open-scan-queue" style="font-weight:700;">
+            👉 Nu bekijken &amp; categoriseren
+          </button>
+          <button type="button" class="btn btn-ghost btn-sm" id="btn-clear-scan-queue-remote" style="color:var(--red);" title="Wachtrij legen">
+            Wachtrij wissen
+          </button>
+        </div>
+      </div>
+
       <!-- Boeken toevoegen & importeren (Actiekaart voor Coördinator) -->
       <div class="card coord-import-banner">
         <div class="coord-import-banner-content">
@@ -285,12 +309,17 @@
             <span class="coord-import-badge">✨ Collectiebeheer</span>
             <h3 style="margin:4px 0 6px; font-size:19px; color:var(--ink);">Nieuwe boeken toevoegen (los, bulk of scan)</h3>
             <p style="margin:0; font-size:13.5px; color:rgba(255,255,255,0.88); max-width:640px;">
-              Voeg <strong>losse boeken</strong> toe, plak een <strong>lijst met titels/ISBN's</strong>, scan streepjescodes met de <strong>camera</strong>, upload <strong>foto's</strong> of importeer een <strong>Excel / CSV-bestand</strong>.
+              Scan streepjescodes met de <strong>mobiele camera</strong>, voeg <strong>losse boeken</strong> toe, plak een <strong>lijst met titels/ISBN's</strong> of upload <strong>foto's / Excel</strong>.
             </p>
           </div>
-          <button type="button" class="btn btn-primary" id="btn-open-coord-import" style="white-space:nowrap; padding:12px 20px; font-weight:700;">
-            📚 + Boeken toevoegen (los / bulk)
-          </button>
+          <div style="display:flex; gap:10px; flex-wrap:wrap;">
+            <button type="button" class="btn btn-secondary" id="btn-open-coord-scanner" style="white-space:nowrap; padding:12px 18px; font-weight:700;">
+              📷 Mobiel scannen
+            </button>
+            <button type="button" class="btn btn-primary" id="btn-open-coord-import" style="white-space:nowrap; padding:12px 20px; font-weight:700;">
+              📚 Boeken toevoegen &amp; importeren
+            </button>
+          </div>
         </div>
       </div>
 
@@ -600,9 +629,12 @@
 
       <!-- Tab Inhoud 2: Live Camera Scanner -->
       <div class="import-tab-panel" id="import-pane-camera" style="display:none;">
+        <div style="background:#EEF4FF; border:1px solid #C7D7F0; border-radius:var(--radius-md); padding:10px 14px; margin-bottom:12px; font-size:12.5px; color:var(--ink); line-height:1.4;">
+          📲 <strong>Mobiel scannen naar PC:</strong> Elke barcode die je scant, wordt direct veilig online bewaard in de centrale <em>scan-wachtrij</em>. Je kunt dus continu stapels boeken scannen op je mobiel, en ze daarna op je pc rustig categoriseren en definitief toevoegen!
+        </div>
         <div class="import-pane-header">
           <p class="import-instruction">
-            Richt de camera op de barcode achterop een boek. De barcode wordt direct herkend en het boek verschijnt in de lijst hieronder. Je kunt continu door blijven scannen voor stapels boeken!
+            Richt de camera op de barcode achterop een boek. De barcode wordt direct herkend en het boek verschijnt in de lijst.
           </p>
           <div class="import-camera-actions">
             <button type="button" class="btn btn-secondary btn-sm" id="btn-camera-toggle">
@@ -616,6 +648,17 @@
         </div>
         <div id="camera-last-scanned" style="display:none;" class="import-scanned-notice">
           <span>✓ Laatst gescand:</span> <strong id="camera-last-title">–</strong> (<span id="camera-last-isbn">–</span>)
+        </div>
+
+        <!-- Live overzicht van gescande boeken tijdens het scannen -->
+        <div id="camera-session-summary" style="margin-top:14px; display:none;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+            <strong style="font-size:13px; color:var(--ink);">Klaargezet in wachtrij (<span id="camera-session-count">0</span>):</strong>
+            <button type="button" class="btn btn-ghost btn-sm" id="btn-camera-view-table" style="font-size:12px;">
+              Naar categorietabel ↓
+            </button>
+          </div>
+          <div id="camera-session-list" class="scan-mobile-preview-list"></div>
         </div>
       </div>
 

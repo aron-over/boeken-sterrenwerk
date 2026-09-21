@@ -31,8 +31,27 @@ create table if not exists instellingen (
   jaarbudget numeric
 );
 
+create table if not exists scan_wachtrij (
+  id uuid primary key default gen_random_uuid(),
+  created_at timestamptz default now(),
+  isbn text,
+  titel text,
+  auteur text,
+  prijs numeric,
+  categorie text,
+  groep text,
+  jeelo_thema text,
+  overig_thema text,
+  kleuters_thema text,
+  opmerking text,
+  cover_url text,
+  status text default 'binnen',
+  gescand_door text default 'Mobiel'
+);
+
 alter table boeken enable row level security;
 alter table instellingen enable row level security;
+alter table scan_wachtrij enable row level security;
 
 -- De site werkt volledig client-side met de anon key, zonder login
 -- (het coördinator-wachtwoord is alleen een UI-drempel, geen echte auth).
@@ -42,3 +61,7 @@ create policy "anon volledige toegang boeken" on boeken
 
 create policy "anon volledige toegang instellingen" on instellingen
   for all to anon using (true) with check (true);
+
+create policy "anon volledige toegang scan_wachtrij" on scan_wachtrij
+  for all to anon using (true) with check (true);
+

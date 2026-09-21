@@ -1290,6 +1290,239 @@ let cameraScannerInstance = null;
 let cameraScanningActive = false;
 let lastScannedIsbnTimes = {};
 
+// Centrale scan-wachtrij in Supabase (voor mobiel -> pc overdracht)
+let scanWachtrijTableExists = true;
+let scanWachtrijCache = [];
+let remoteUpdateTimer = null;
+
+async function fetchScanWachtrij(){
+  try {
+    const { data, error } = await realClient
+      .from('scan_wachtrij')
+      .select('*')
+      .order('created_at', { ascending: true });
+
+    if (error){
+      if (error.code === 'PGRST205' || String(error.message).includes('scan_wachtrij')){
+        scanWachtrijTableExists = false;
+        console.warn('Tabel scan_wachtrij bestaat nog niet in Supabase (voer migratie_scan_wachtrij.sql uit).');
+      }
+      return [];
+    }
+    scanWachtrijTableExists = true;
+    scanWachtrijCache = data || [];
+    return scanWachtrijCache;
+  } catch (err){
+    console.warn('Fout bij ophalen van scan_wachtrij:', err);
+    return [];
+  }
+}
+
+async function updateScanQueueBanner(){
+  const banner = document.getElementById('coord-scan-queue-banner');
+  const badge = document.getElementById('scan-queue-badge');
+  if (!banner) return;
+  if (!coordUnlocked){
+    banner.style.display = 'none';
+    return;
+  }
+
+  const rows = await fetchScanWachtrij();
+  if (rows && rows.length > 0){
+    banner.style.display = 'flex';
+    if (badge){
+      badge.textContent = `${rows.length} ${rows.length === 1 ? 'boek' : 'boeken'}`;
+    }
+  } else {
+    banner.style.display = 'none';
+  }
+}
+
+async function syncAddBookToRemoteQueue(book){
+  if (!scanWachtrijTableExists) return null;
+  try {
+    const record = {
+      isbn: book.isbn || null,
+      titel: book.titel || null,
+      auteur: book.auteur || null,
+      prijs: book.prijs || null,
+      categorie: book.categorie || null,
+      groep: book.categorie === 'Groep' ? (book.thema || null) : null,
+      jeelo_thema: book.categorie === 'Jeelo' ? (book.thema || null) : null,
+      overig_thema: book.categorie === 'Overig' ? (book.thema || null) : null,
+      kleuters_thema: book.categorie === 'Kleuters' ? (book.thema || null) : null,
+      cover_url: book.coverUrl || null,
+      status: book.status || 'binnen',
+      gescand_door: 'Mobiel'
+    };
+    const { data, error } = await realClient
+      .from('scan_wachtrij')
+      .insert([record])
+      .select();
+
+    if (!error && data && data.length > 0){
+      book.remoteQueueId = data[0].id;
+      updateScanQueueBanner();
+      return data[0].id;
+    }
+  } catch (err){
+    console.warn('Fout bij opslaan in centrale scan_wachtrij:', err);
+  }
+  return null;
+}
+
+async function syncUpdateBookInRemoteQueue(book){
+  if (!scanWachtrijTableExists || !book.remoteQueueId) return;
+  try {
+    await realClient
+      .from('scan_wachtrij')
+      .update({
+        titel: book.titel || null,
+        auteur: book.auteur || null,
+        isbn: book.isbn || null,
+        prijs: book.prijs || null,
+        categorie: book.categorie || null,
+        groep: book.categorie === 'Groep' ? (book.thema || null) : null,
+        jeelo_thema: book.categorie === 'Jeelo' ? (book.thema || null) : null,
+        overig_thema: book.categorie === 'Overig' ? (book.thema || null) : null,
+        kleuters_thema: book.categorie === 'Kleuters' ? (book.thema || null) : null,
+        cover_url: book.coverUrl || null,
+        status: book.status || 'binnen'
+      })
+      .eq('id', book.remoteQueueId);
+  } catch (err){
+    console.warn('Fout bij bijwerken in centrale scan_wachtrij:', err);
+  }
+}
+
+function debouncedSyncUpdateRemoteBook(book){
+  if (!book || !book.remoteQueueId || !scanWachtrijTableExists) return;
+  clearTimeout(remoteUpdateTimer);
+  remoteUpdateTimer = setTimeout(() => {
+    syncUpdateBookInRemoteQueue(book);
+  }, 600);
+}
+
+async function syncRemoveBookFromRemoteQueue(remoteId){
+  if (!scanWachtrijTableExists || !remoteId) return;
+  try {
+    await realClient
+      .from('scan_wachtrij')
+      .delete()
+      .eq('id', remoteId);
+    updateScanQueueBanner();
+  } catch (err){
+    console.warn('Fout bij verwijderen uit centrale scan_wachtrij:', err);
+  }
+}
+
+async function clearScanWachtrijRemote(){
+  if (!scanWachtrijTableExists) return;
+  try {
+    await realClient
+      .from('scan_wachtrij')
+      .delete()
+      .neq('id', '00000000-0000-0000-0000-000000000000');
+    scanWachtrijCache = [];
+    updateScanQueueBanner();
+  } catch (err){
+    console.warn('Fout bij leegmaken van centrale scan_wachtrij:', err);
+  }
+}
+
+async function syncImportQueueFromRemote(){
+  if (!scanWachtrijTableExists) return;
+  const rows = await fetchScanWachtrij();
+  if (!rows || rows.length === 0) return;
+
+  let addedCount = 0;
+  rows.forEach(r => {
+    const cleanIsbn = r.isbn ? String(r.isbn).replace(/\D/g, '') : '';
+    const exists = coordImportQueue.some(b => 
+      (b.remoteQueueId && b.remoteQueueId === r.id) ||
+      (cleanIsbn && b.isbn && b.isbn === cleanIsbn)
+    );
+    if (!exists){
+      let thema = '';
+      if (r.categorie === 'Groep') thema = r.groep || '';
+      else if (r.categorie === 'Kleuters') thema = r.kleuters_thema || '';
+      else if (r.categorie === 'Jeelo') thema = r.jeelo_thema || '';
+      else if (r.categorie === 'Overig') thema = r.overig_thema || '';
+
+      coordImportQueue.push({
+        id: 'remote_' + r.id,
+        remoteQueueId: r.id,
+        isbn: cleanIsbn,
+        titel: r.titel || '',
+        auteur: r.auteur || '',
+        prijs: r.prijs || null,
+        categorie: r.categorie || '',
+        thema: thema,
+        status: r.status || 'binnen',
+        opmerking: r.opmerking || null,
+        coverUrl: r.cover_url || null,
+        isDuplicate: checkBookExistsInDatabase(cleanIsbn, r.titel),
+        lookupDone: Boolean(r.titel),
+        source: 'camera'
+      });
+      addedCount++;
+    }
+  });
+
+  if (addedCount > 0){
+    renderImportQueue();
+    updateCameraSessionSummary();
+  }
+}
+
+async function loadScanQueueIntoImportModal(){
+  await openCoordImportModal();
+  await syncImportQueueFromRemote();
+  renderImportQueue();
+  setTimeout(() => {
+    const tableWrap = document.getElementById('import-table-wrap');
+    if (tableWrap){
+      tableWrap.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, 300);
+}
+
+function updateCameraSessionSummary(){
+  const summaryWrap = document.getElementById('camera-session-summary');
+  const countEl = document.getElementById('camera-session-count');
+  const listEl = document.getElementById('camera-session-list');
+  if (!summaryWrap || !listEl) return;
+
+  const count = coordImportQueue.length;
+  if (countEl) countEl.textContent = String(count);
+
+  if (count === 0){
+    summaryWrap.style.display = 'none';
+    listEl.innerHTML = '';
+    return;
+  }
+
+  summaryWrap.style.display = 'block';
+  const reversed = [...coordImportQueue].reverse();
+  listEl.innerHTML = reversed.map((item, rIdx) => {
+    const origIdx = coordImportQueue.length - 1 - rIdx;
+    const coverHtml = item.coverUrl
+      ? `<img src="${escapeHtml(item.coverUrl)}" alt="">`
+      : `<div style="width:28px; height:38px; background:var(--line-soft); border-radius:3px; display:flex; align-items:center; justify-content:center; font-size:12px;">📖</div>`;
+
+    return `
+      <div class="scan-mobile-item">
+        ${coverHtml}
+        <div class="scan-info">
+          <div class="scan-title">${escapeHtml(item.titel || 'Gegevens ophalen…')}</div>
+          <div class="scan-meta">${item.isbn || 'Geen ISBN'}${item.auteur ? ' · ' + escapeHtml(item.auteur) : ''}</div>
+        </div>
+        <button type="button" class="btn btn-ghost btn-sm" data-remove-idx="${origIdx}" style="color:var(--red); padding:2px 6px;" title="Verwijderen">✕</button>
+      </div>
+    `;
+  }).join('');
+}
+
 // Web Audio API feedback bij geslaagde barcode-scan
 function playBarcodeBeep(){
   try {
@@ -1413,6 +1646,10 @@ function addBookToImportQueue(data, onDoneCallback){
 
   coordImportQueue.push(newBook);
   renderImportQueue();
+  updateCameraSessionSummary();
+
+  // Bewaar direct in de centrale scan-wachtrij in Supabase
+  syncAddBookToRemoteQueue(newBook);
 
   // Als er wel een ISBN is maar nog geen titel: haal online op
   if (!newBook.titel && cleanIsbn && (cleanIsbn.length === 13 || cleanIsbn.length === 10)){
@@ -1424,6 +1661,8 @@ function addBookToImportQueue(data, onDoneCallback){
         newBook.lookupDone = true;
         newBook.isDuplicate = checkBookExistsInDatabase(cleanIsbn, newBook.titel);
         renderImportQueue();
+        updateCameraSessionSummary();
+        syncUpdateBookInRemoteQueue(newBook);
       }
       if (onDoneCallback) onDoneCallback(newBook);
     }).catch(() => {
@@ -1546,6 +1785,7 @@ document.getElementById('import-table-tbody')?.addEventListener('input', e => {
   if (field === 'isbn' || field === 'titel'){
     coordImportQueue[idx].isDuplicate = checkBookExistsInDatabase(coordImportQueue[idx].isbn, coordImportQueue[idx].titel);
   }
+  debouncedSyncUpdateRemoteBook(coordImportQueue[idx]);
 });
 
 document.getElementById('import-table-tbody')?.addEventListener('change', e => {
@@ -1560,6 +1800,7 @@ document.getElementById('import-table-tbody')?.addEventListener('change', e => {
     coordImportQueue[idx].thema = '';
     renderImportQueue();
   }
+  debouncedSyncUpdateRemoteBook(coordImportQueue[idx]);
 });
 
 document.getElementById('import-table-tbody')?.addEventListener('click', e => {
@@ -1567,8 +1808,12 @@ document.getElementById('import-table-tbody')?.addEventListener('click', e => {
   if (!btn) return;
   const idx = parseInt(btn.getAttribute('data-remove-idx'), 10);
   if (!isNaN(idx) && coordImportQueue[idx]){
-    coordImportQueue.splice(idx, 1);
+    const removed = coordImportQueue.splice(idx, 1)[0];
+    if (removed && removed.remoteQueueId){
+      syncRemoveBookFromRemoteQueue(removed.remoteQueueId);
+    }
     renderImportQueue();
+    updateCameraSessionSummary();
   }
 });
 
@@ -1585,16 +1830,21 @@ document.getElementById('btn-apply-batch-settings')?.addEventListener('click', (
       b.categorie = cat;
       b.thema = thema;
     }
+    if (b.remoteQueueId){
+      debouncedSyncUpdateRemoteBook(b);
+    }
   });
   renderImportQueue();
 });
 
 // Lijst leegmaken
-document.getElementById('btn-clear-import-queue')?.addEventListener('click', () => {
+document.getElementById('btn-clear-import-queue')?.addEventListener('click', async () => {
   if (!coordImportQueue.length) return;
   if (confirm('Weet je zeker dat je alle klaargezette boeken uit de lijst wilt wissen?')){
     coordImportQueue = [];
+    await clearScanWachtrijRemote();
     renderImportQueue();
+    updateCameraSessionSummary();
   }
 });
 
@@ -1652,8 +1902,9 @@ async function startCameraScanner(){
 
           addBookToImportQueue({ isbn: cleanDigits, source: 'camera' }, (addedBook) => {
             if (lastTitleEl && addedBook){
-              lastTitleEl.textContent = addedBook.titel || '✓ Boek toegevoegd';
+              lastTitleEl.textContent = addedBook.titel || '✓ Opgeslagen in wachtrij';
             }
+            updateCameraSessionSummary();
           });
         }
       },
@@ -2149,7 +2400,7 @@ document.getElementById('btn-add-table-row')?.addEventListener('click', addEmpty
 document.getElementById('btn-add-blank-row')?.addEventListener('click', addEmptyRowToImportQueue);
 
 // --- Modal Openen & Sluiten ---
-function openCoordImportModal(){
+async function openCoordImportModal(){
   const modal = document.getElementById('coord-import-modal');
   if (!modal) return;
   modal.classList.add('open');
@@ -2161,10 +2412,24 @@ function openCoordImportModal(){
   setupCoordImportDefaults();
   renderImportQueue();
   updateCameraStatusUI();
+  updateCameraSessionSummary();
 
-  // Zorg dat standaard de tab 'Los toevoegen & Bulk tekst' actief is
-  const manualTabBtn = document.querySelector('.import-tab-btn[data-import-tab="manual"]');
-  if (manualTabBtn) manualTabBtn.click();
+  // Wachtrijboeken uit Supabase direct synchroniseren
+  await syncImportQueueFromRemote();
+
+  // Zorg dat standaard de tab 'Los toevoegen & Bulk tekst' actief is als er nog geen tab actief is
+  const activeTab = document.querySelector('.import-tab-btn.active');
+  if (!activeTab){
+    const manualTabBtn = document.querySelector('.import-tab-btn[data-import-tab="manual"]');
+    if (manualTabBtn) manualTabBtn.click();
+  }
+}
+
+async function openCoordScannerDirect(){
+  await openCoordImportModal();
+  const cameraTabBtn = document.querySelector('.import-tab-btn[data-import-tab="camera"]');
+  if (cameraTabBtn) cameraTabBtn.click();
+  startCameraScanner();
 }
 
 function closeCoordImportModal(){
@@ -2174,6 +2439,7 @@ function closeCoordImportModal(){
     document.body.style.overflow = '';
   }
   stopCameraScanner();
+  updateScanQueueBanner();
 }
 
 // Subtab navigatie in de modal
@@ -2196,6 +2462,22 @@ document.querySelectorAll('.import-tab-btn').forEach(btn => {
 });
 
 document.getElementById('btn-open-coord-import')?.addEventListener('click', openCoordImportModal);
+document.getElementById('btn-open-coord-scanner')?.addEventListener('click', openCoordScannerDirect);
+document.getElementById('btn-open-scan-queue')?.addEventListener('click', loadScanQueueIntoImportModal);
+document.getElementById('btn-clear-scan-queue-remote')?.addEventListener('click', async () => {
+  if (confirm('Weet je zeker dat je alle gescande boeken uit de centrale wachtrij wilt wissen?')){
+    await clearScanWachtrijRemote();
+    coordImportQueue = [];
+    renderImportQueue();
+    updateCameraSessionSummary();
+  }
+});
+document.getElementById('btn-camera-view-table')?.addEventListener('click', () => {
+  const tableWrap = document.getElementById('import-table-wrap');
+  if (tableWrap){
+    tableWrap.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+});
 document.getElementById('coord-import-close-btn')?.addEventListener('click', closeCoordImportModal);
 document.getElementById('btn-cancel-coord-import')?.addEventListener('click', closeCoordImportModal);
 document.getElementById('coord-import-backdrop')?.addEventListener('click', closeCoordImportModal);
@@ -2289,8 +2571,13 @@ async function submitCoordImportQueue(){
   renderZoekLijst();
   if (coordUnlocked) refreshCoordinatorData(true);
 
+  // Wis de verwerkte boeken uit de centrale scan_wachtrij in Supabase
+  await clearScanWachtrijRemote();
+
   coordImportQueue = [];
   renderImportQueue();
+  updateCameraSessionSummary();
+  updateScanQueueBanner();
   closeCoordImportModal();
 
   alert(`✓ Succes! Er zijn ${totalCount} ${totalCount === 1 ? 'boek' : 'boeken'} succesvol toegevoegd aan de collectie.`);
@@ -2738,6 +3025,7 @@ let coordUnlocked = sessionStorage.getItem('coord_ok') === '1';
 if (coordUnlocked){
   document.getElementById('coord-lock').style.display = 'none';
   document.getElementById('coord-content').style.display = '';
+  updateScanQueueBanner();
 }
 
 document.getElementById('coord-password')?.addEventListener('keydown', e => {
@@ -2750,6 +3038,7 @@ document.getElementById('coord-unlock')?.addEventListener('click', () => {
     sessionStorage.setItem('coord_ok', '1');
     document.getElementById('coord-lock').style.display = 'none';
     document.getElementById('coord-content').style.display = '';
+    updateScanQueueBanner();
     refreshCoordinatorData(true);
     fetchAllBooks(false);
   } else {
@@ -2766,7 +3055,27 @@ async function refreshCoordinatorData(skipNetwork = false){
   renderOnderweg();
   renderAfgewezen();
   renderAlleBoeken();
+  updateScanQueueBanner();
 }
+
+// Automatisch de centrale scan-wachtrij controleren als de coördinator actief is
+setInterval(() => {
+  if (coordUnlocked && !document.hidden){
+    updateScanQueueBanner();
+  }
+}, 12000);
+
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden && coordUnlocked){
+    updateScanQueueBanner();
+  }
+});
+
+document.querySelector('nav.tabs button[data-tab="coordinator"]')?.addEventListener('click', () => {
+  if (coordUnlocked){
+    updateScanQueueBanner();
+  }
+});
 
 function renderBudget(){
   const jaar = new Date().getFullYear();

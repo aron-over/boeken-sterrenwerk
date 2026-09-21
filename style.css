@@ -1073,6 +1073,83 @@ textarea:focus {
   margin-bottom: 2px;
 }
 
+/* Scan Wachtrij Melding (Mobiel -> PC notificatie) */
+.scan-queue-banner {
+  background: linear-gradient(135deg, #FFF9EB 0%, #FDF3D6 100%);
+  border: 2px solid var(--gold);
+  border-radius: var(--radius-lg);
+  padding: 16px 20px;
+  margin-bottom: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px;
+  box-shadow: 0 4px 16px rgba(212, 167, 44, 0.2);
+}
+.scan-queue-banner-text {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.scan-queue-icon {
+  font-size: 32px;
+  line-height: 1;
+}
+.scan-queue-badge {
+  background: var(--ink);
+  color: #FFFFFF;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  display: inline-block;
+}
+.scan-mobile-preview-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 240px;
+  overflow-y: auto;
+  margin-top: 10px;
+  padding: 6px;
+  background: #FFFFFF;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+}
+.scan-mobile-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px;
+  background: #FAFBFD;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+}
+.scan-mobile-item img {
+  width: 28px;
+  height: 38px;
+  object-fit: cover;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+.scan-mobile-item .scan-info {
+  flex: 1;
+  min-width: 0;
+}
+.scan-mobile-item .scan-title {
+  font-weight: 600;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.scan-mobile-item .scan-meta {
+  font-size: 11px;
+  color: var(--ink-soft);
+}
+
 .modal-window-wide {
   max-width: 960px !important;
   width: 96vw;
