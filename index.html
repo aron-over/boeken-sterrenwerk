@@ -1529,8 +1529,9 @@ function populateZoekThemaPills(){
     return;
   }
 
-  container.innerHTML = `<button class="pill active" data-thema="">Alle thema's</button>` +
-    waarden.map(w => `<button class="pill" data-thema="${escapeHtml(w)}">${escapeHtml(w)}</button>`).join('');
+  const allLabel = (zoekCategorie === 'Groep') ? 'Alle groepen' : "Alle thema's";
+  container.innerHTML = `<button class="pill ${!zoekThema ? 'active' : ''}" data-thema="">${allLabel}</button>` +
+    waarden.map(w => `<button class="pill ${zoekThema === w ? 'active' : ''}" data-thema="${escapeHtml(w)}">${escapeHtml(w)}</button>`).join('');
   container.querySelectorAll('.pill').forEach(btn => btn.addEventListener('click', () => {
     zoekThema = btn.dataset.thema;
     container.querySelectorAll('.pill').forEach(p => p.classList.toggle('active', p === btn));
