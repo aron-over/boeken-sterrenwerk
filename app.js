@@ -1294,13 +1294,28 @@ let lastScannedIsbnTimes = {};
 let scanWachtrijTableExists = true;
 let scanWachtrijCache = [];
 let remoteUpdateTimer = null;
+const prodScanClient = supabase.createClient(PROD_URL, PROD_KEY);
 
 async function fetchScanWachtrij(){
   try {
-    const { data, error } = await realClient
+    let { data, error } = await realClient
       .from('scan_wachtrij')
       .select('*')
       .order('created_at', { ascending: true });
+
+    // Als we lokaal testen en testdb heeft geen rijen, controleer live prod database
+    if (IS_LOCAL && (!data || data.length === 0)){
+      try {
+        const prodRes = await prodScanClient
+          .from('scan_wachtrij')
+          .select('*')
+          .order('created_at', { ascending: true });
+        if (prodRes.data && prodRes.data.length > 0){
+          data = prodRes.data;
+          error = null;
+        }
+      } catch (e){}
+    }
 
     if (error){
       if (error.code === 'PGRST205' || String(error.message).includes('scan_wachtrij')){
@@ -1319,19 +1334,45 @@ async function fetchScanWachtrij(){
 }
 
 async function updateScanQueueBanner(){
+  const tabBadge = document.getElementById('coord-tab-badge');
   const banner = document.getElementById('coord-scan-queue-banner');
   const badge = document.getElementById('scan-queue-badge');
-  if (!banner) return;
-  if (!coordUnlocked){
-    banner.style.display = 'none';
-    return;
-  }
+  const desc = document.getElementById('scan-queue-desc');
+  const actionBtn = document.getElementById('btn-open-scan-queue');
 
   const rows = await fetchScanWachtrij();
-  if (rows && rows.length > 0){
+  const count = rows ? rows.length : 0;
+
+  // 1. Altijd de navigatietab badge bijwerken (zichtbaar op élk scherm op PC)
+  if (tabBadge){
+    if (count > 0){
+      tabBadge.textContent = String(count);
+      tabBadge.style.display = 'inline-flex';
+    } else {
+      tabBadge.style.display = 'none';
+    }
+  }
+
+  // 2. Banner in het Coördinator tabblad
+  if (!banner) return;
+  if (count > 0){
     banner.style.display = 'flex';
     if (badge){
-      badge.textContent = `${rows.length} ${rows.length === 1 ? 'boek' : 'boeken'}`;
+      badge.textContent = `${count} ${count === 1 ? 'boek' : 'boeken'}`;
+    }
+    if (desc){
+      if (!coordUnlocked){
+        desc.textContent = `${count === 1 ? 'Dit boek is' : 'Deze boeken zijn'} gescand met de mobiele camera. Ontgrendel hieronder om de categorieën toe te wijzen en definitief toe te voegen.`;
+      } else {
+        desc.textContent = `${count === 1 ? 'Dit boek is' : 'Deze boeken zijn'} gescand met de mobiele camera. Open de wachtrij om categorieën en thema's toe te wijzen.`;
+      }
+    }
+    if (actionBtn){
+      if (!coordUnlocked){
+        actionBtn.textContent = '🔒 Ontgrendel om te bekijken';
+      } else {
+        actionBtn.textContent = '👉 Nu bekijken & categoriseren';
+      }
     }
   } else {
     banner.style.display = 'none';
@@ -1476,6 +1517,14 @@ async function syncImportQueueFromRemote(){
 }
 
 async function loadScanQueueIntoImportModal(){
+  if (!coordUnlocked){
+    const passInp = document.getElementById('coord-password');
+    if (passInp){
+      passInp.focus();
+      passInp.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+    return;
+  }
   await openCoordImportModal();
   await syncImportQueueFromRemote();
   renderImportQueue();
@@ -1484,7 +1533,7 @@ async function loadScanQueueIntoImportModal(){
     if (tableWrap){
       tableWrap.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
-  }, 300);
+  }, 350);
 }
 
 function updateCameraSessionSummary(){
@@ -3058,24 +3107,27 @@ async function refreshCoordinatorData(skipNetwork = false){
   updateScanQueueBanner();
 }
 
-// Automatisch de centrale scan-wachtrij controleren als de coördinator actief is
+// Automatisch de centrale scan-wachtrij controleren (zichtbaar voor coördinator)
 setInterval(() => {
-  if (coordUnlocked && !document.hidden){
+  if (!document.hidden){
     updateScanQueueBanner();
   }
-}, 12000);
+}, 8000);
 
 document.addEventListener('visibilitychange', () => {
-  if (!document.hidden && coordUnlocked){
+  if (!document.hidden){
     updateScanQueueBanner();
   }
 });
 
-document.querySelector('nav.tabs button[data-tab="coordinator"]')?.addEventListener('click', () => {
-  if (coordUnlocked){
+document.querySelectorAll('nav.tabs button').forEach(b => {
+  b.addEventListener('click', () => {
     updateScanQueueBanner();
-  }
+  });
 });
+
+// Direct bij het starten van de applicatie controleren
+updateScanQueueBanner();
 
 function renderBudget(){
   const jaar = new Date().getFullYear();

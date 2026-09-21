@@ -1105,6 +1105,36 @@ textarea:focus {
   font-weight: 700;
   display: inline-block;
 }
+
+/* Badge op navigatie tab Coördinator */
+.coord-nav-badge {
+  background: #B83228;
+  color: #FFFFFF;
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 999px;
+  padding: 1px 7px;
+  margin-left: 6px;
+  line-height: 1.3;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
+}
+
+/* Mobiele scan-knop: standaard VOLLEDIG VERBERGEN op web / pc */
+.mobile-only,
+#btn-open-coord-scanner {
+  display: none !important;
+}
+
+/* Alleen tonen op mobiel / tablet (schermen <= 768px) */
+@media (max-width: 768px) {
+  .mobile-only,
+  #btn-open-coord-scanner {
+    display: inline-flex !important;
+  }
+}
 .scan-mobile-preview-list {
   display: flex;
   flex-direction: column;

@@ -14,7 +14,7 @@
 <!-- SheetJS (Excel .xlsx en .xls parsing) -->
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <!-- NL Design System Stijlen voor Onderwijs -->
-<link rel="stylesheet" href="style.css?v=20260921_fixed">
+<link rel="stylesheet" href="style.css?v=20260921_v5">
 </head>
 <body>
 
@@ -38,7 +38,10 @@
   <nav class="tabs">
     <button data-tab="zoeken" class="active">Boeken zoeken</button>
     <button data-tab="aanvraag">Boek aanvragen</button>
-    <button data-tab="coordinator">Coördinator</button>
+    <button data-tab="coordinator" id="tab-btn-coordinator" style="position:relative;">
+      Coördinator
+      <span id="coord-tab-badge" class="coord-nav-badge" style="display:none;">0</span>
+    </button>
   </nav>
 </header>
 
@@ -262,6 +265,31 @@
 
   <!-- TAB 3: COORDINATOR -->
   <section class="tab-panel" id="tab-coordinator">
+
+    <!-- Melding: Gescande boeken van mobiel klaar voor verwerking (zichtbaar zodra er scans zijn) -->
+    <div id="coord-scan-queue-banner" class="scan-queue-banner" style="display:none;">
+      <div class="scan-queue-banner-text">
+        <div class="scan-queue-icon">📱</div>
+        <div>
+          <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+            <strong style="font-size:16px; color:var(--ink);">Gescande boeken van mobiel staan klaar!</strong>
+            <span id="scan-queue-badge" class="scan-queue-badge">0 boeken</span>
+          </div>
+          <p id="scan-queue-desc" style="margin:3px 0 0; font-size:13px; color:var(--ink-soft);">
+            Deze boeken zijn gescand met de mobiele camera. Open ze om categorieën en thema's toe te wijzen en ze definitief toe te voegen.
+          </p>
+        </div>
+      </div>
+      <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+        <button type="button" class="btn btn-primary" id="btn-open-scan-queue" style="font-weight:700;">
+          👉 Nu bekijken &amp; categoriseren
+        </button>
+        <button type="button" class="btn btn-ghost btn-sm" id="btn-clear-scan-queue-remote" style="color:var(--red);" title="Wachtrij legen">
+          Wachtrij wissen
+        </button>
+      </div>
+    </div>
+
     <div id="coord-lock" class="lock-screen">
       <h2>Coördinator</h2>
       <p>Dit gedeelte is alleen voor de taalcoördinator.</p>
@@ -278,30 +306,6 @@
         </div>
       </div>
 
-      <!-- Melding: Gescande boeken van mobiel klaar voor verwerking -->
-      <div id="coord-scan-queue-banner" class="scan-queue-banner" style="display:none;">
-        <div class="scan-queue-banner-text">
-          <div class="scan-queue-icon">📱</div>
-          <div>
-            <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-              <strong style="font-size:16px; color:var(--ink);">Gescande boeken van mobiel staan klaar!</strong>
-              <span id="scan-queue-badge" class="scan-queue-badge">0 boeken</span>
-            </div>
-            <p style="margin:3px 0 0; font-size:13px; color:var(--ink-soft);">
-              Deze boeken zijn gescand met de mobiele camera. Open ze om categorieën en thema's toe te wijzen en ze definitief toe te voegen.
-            </p>
-          </div>
-        </div>
-        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-          <button type="button" class="btn btn-primary" id="btn-open-scan-queue" style="font-weight:700;">
-            👉 Nu bekijken &amp; categoriseren
-          </button>
-          <button type="button" class="btn btn-ghost btn-sm" id="btn-clear-scan-queue-remote" style="color:var(--red);" title="Wachtrij legen">
-            Wachtrij wissen
-          </button>
-        </div>
-      </div>
-
       <!-- Boeken toevoegen & importeren (Actiekaart voor Coördinator) -->
       <div class="card coord-import-banner">
         <div class="coord-import-banner-content">
@@ -313,7 +317,7 @@
             </p>
           </div>
           <div style="display:flex; gap:10px; flex-wrap:wrap;">
-            <button type="button" class="btn btn-secondary" id="btn-open-coord-scanner" style="white-space:nowrap; padding:12px 18px; font-weight:700;">
+            <button type="button" class="btn btn-secondary mobile-only" id="btn-open-coord-scanner" style="white-space:nowrap; padding:12px 18px; font-weight:700;">
               📷 Mobiel scannen
             </button>
             <button type="button" class="btn btn-primary" id="btn-open-coord-import" style="white-space:nowrap; padding:12px 20px; font-weight:700;">
@@ -889,7 +893,7 @@
 <div id="print-bestelbon-area" style="display:none;"></div>
 
 <!-- Applicatie Script -->
-<script src="app.js?v=20260921_bulk"></script>
+<script src="app.js?v=20260921_v5"></script>
 
 </body>
 </html>
