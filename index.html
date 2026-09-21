@@ -153,7 +153,7 @@
     <div class="card" style="max-width:680px; margin:0 auto;">
       <h2>Boek aanvragen</h2>
       <p style="font-size:14px; color:var(--ink-soft); margin-top:-6px; margin-bottom:20px;">
-        Vraag een nieuw boek aan voor jouw groep of thema. Typ het 13-cijferige ISBN van het boek in.
+        Vraag een nieuw boek aan voor jouw groep of thema. Typ het ISBN of scan de barcode met je camera.
       </p>
 
       <!-- Succes-banner (wordt getoond na succesvol indienen) -->
@@ -188,7 +188,12 @@
         <div class="form-section">
           <div class="form-section-title">2. Boekgegevens</div>
           <label for="isbn">Artikelnummer (ISBN, 13 cijfers) <span style="color:var(--red);">*</span></label>
-          <input type="text" id="isbn" required inputmode="numeric" maxlength="13" placeholder="bijv. 9789043919678" autocomplete="off">
+          <div class="input-with-action">
+            <input type="text" id="isbn" required inputmode="numeric" maxlength="13" placeholder="bijv. 9789043919678" autocomplete="off">
+            <button type="button" id="btn-scan-isbn" class="btn btn-secondary" title="Scan barcode via de camera van je telefoon of tablet">
+              📷 Scan barcode
+            </button>
+          </div>
           <div id="isbn-lookup-status" style="display:none; font-size:12px; margin-top:4px; font-weight:600;"></div>
           <div id="isbn-error" style="display:none; color:var(--red); font-size:13px; margin-top:4px;">ISBN moet uit precies 13 cijfers bestaan.</div>
           <div id="isbn-match" class="match-list" style="display:none"></div>
@@ -459,6 +464,29 @@
   </section>
 
 </main>
+
+<!-- Barcode Scanner Modal (Camera) voor Boek Aanvragen -->
+<div id="scanner-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="scanner-modal-title">
+  <div class="modal-backdrop" id="scanner-backdrop"></div>
+  <div class="modal-window" style="max-width:480px;">
+    <div class="modal-header">
+      <div>
+        <div class="modal-subtitle">Barcode Scanner</div>
+        <h2 class="modal-title" id="scanner-modal-title">Scan de barcode van het boek</h2>
+      </div>
+      <button type="button" class="modal-close-btn" id="scanner-close-btn" title="Sluiten (Esc)">&times;</button>
+    </div>
+    <div class="modal-body" style="padding:16px;">
+      <p style="font-size:13px; color:var(--ink-soft); margin:0 0 10px;">
+        Richt je camera op de streepjescode achterop het boek. Het ISBN wordt automatisch ingevuld.
+      </p>
+      <div id="scanner-reader" style="width:100%; min-height:260px;"></div>
+    </div>
+    <div class="modal-footer" style="display:flex; justify-content:flex-end;">
+      <button type="button" class="btn btn-neutral" id="scanner-cancel-btn">Sluiten</button>
+    </div>
+  </div>
+</div>
 
 <!-- Coördinator: Boeken Toevoegen & Importeren Modal -->
 <div id="coord-import-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="coord-import-title">

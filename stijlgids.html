@@ -389,8 +389,13 @@
         <input type="text" id="demo-naam" value="Anneke" placeholder="bijv. Lisa of Thomas">
 
         <label for="demo-isbn">Artikelnummer (ISBN, 13 cijfers)</label>
-        <input type="text" id="demo-isbn" value="9789043919678" placeholder="9789043919678">
-        <div class="form-hint">Tip: typ het 13-cijferige ISBN. Titel en auteur worden automatisch aangevuld.</div>
+        <div class="input-with-action">
+          <input type="text" id="demo-isbn" value="9789043919678" placeholder="9789043919678">
+          <button type="button" class="btn btn-secondary" title="Scan barcode via camera">
+            📷 Scan barcode
+          </button>
+        </div>
+        <div class="form-hint">Tip: typ 13 cijfers of scan direct met je camera. Titel en auteur worden automatisch aangevuld.</div>
 
         <label for="demo-prijs">Prijs (€)</label>
         <div class="prijs-input-wrap">

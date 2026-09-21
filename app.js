@@ -1201,6 +1201,86 @@ document.getElementById('isbn')?.addEventListener('input', e => {
 document.getElementById('titel')?.addEventListener('input', checkTitelMatch);
 document.getElementById('isbn')?.addEventListener('input', checkIsbnMatch);
 
+// ---------- Camera Barcode Scanner (Boek Aanvragen) ----------
+let html5QrCodeScanner = null;
+
+function openBarcodeScanner(){
+  const modal = document.getElementById('scanner-modal');
+  if (!modal) return;
+  modal.classList.add('open');
+  document.body.style.overflow = 'hidden';
+
+  if (typeof Html5Qrcode === 'undefined'){
+    alert('Barcode scanner bibliotheek is nog aan het laden. Probeer het over enkele seconden opnieuw.');
+    closeBarcodeScanner();
+    return;
+  }
+
+  const readerDiv = document.getElementById('scanner-reader');
+  if (!readerDiv) return;
+
+  try {
+    html5QrCodeScanner = new Html5Qrcode('scanner-reader');
+    const config = { fps: 10, qrbox: { width: 250, height: 160 } };
+
+    html5QrCodeScanner.start(
+      { facingMode: 'environment' },
+      config,
+      (decodedText) => {
+        // Barcode gevonden
+        const cleanDigits = decodedText.replace(/\D/g, '');
+        if (cleanDigits.length === 13){
+          const isbnInp = document.getElementById('isbn');
+          if (isbnInp){
+            isbnInp.value = cleanDigits;
+            isbnInp.dispatchEvent(new Event('input'));
+          }
+          closeBarcodeScanner();
+        }
+      },
+      (errorMessage) => {
+        // Scan poging zonder match (normaal bij continu scannen)
+      }
+    ).catch(err => {
+      console.warn('Camera kon niet starten:', err);
+      // Toon melding maar laat het dialoogvenster netjes open zodat de gebruiker zelf kan sluiten
+      const reader = document.getElementById('scanner-reader');
+      if (reader){
+        reader.innerHTML = `<div style="padding:20px; text-align:center; color:#fff; font-size:13px;">Camera niet beschikbaar of geen toestemming gegeven.<br><br>Sluit dit venster om het ISBN handmatig in te voeren.</div>`;
+      }
+    });
+  } catch(e) {
+    console.error('Fout bij initialiseren van scanner:', e);
+  }
+}
+
+function closeBarcodeScanner(){
+  // 1. Sluit altijd DIRECT het dialoogvenster
+  const modal = document.getElementById('scanner-modal');
+  if (modal){
+    modal.classList.remove('open');
+    document.body.style.overflow = '';
+  }
+
+  // 2. Stop en ruim de scanner veilig op
+  if (html5QrCodeScanner){
+    try {
+      html5QrCodeScanner.stop().catch(() => {}).finally(() => {
+        try { html5QrCodeScanner.clear(); } catch(e){}
+        html5QrCodeScanner = null;
+      });
+    } catch(err){
+      try { html5QrCodeScanner.clear(); } catch(e){}
+      html5QrCodeScanner = null;
+    }
+  }
+}
+
+document.getElementById('btn-scan-isbn')?.addEventListener('click', openBarcodeScanner);
+document.getElementById('scanner-close-btn')?.addEventListener('click', closeBarcodeScanner);
+document.getElementById('scanner-backdrop')?.addEventListener('click', closeBarcodeScanner);
+document.getElementById('scanner-cancel-btn')?.addEventListener('click', closeBarcodeScanner);
+
 // ==========================================================================
 // Coördinator: Boeken Toevoegen & Importeren (Scanner, Foto's, Excel, Bulk)
 // ==========================================================================
@@ -2120,6 +2200,10 @@ document.getElementById('coord-import-backdrop')?.addEventListener('click', clos
 // Sluiten via Escape
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape'){
+    const scannerModal = document.getElementById('scanner-modal');
+    if (scannerModal && scannerModal.classList.contains('open')){
+      closeBarcodeScanner();
+    }
     const importModal = document.getElementById('coord-import-modal');
     if (importModal && importModal.classList.contains('open')){
       closeCoordImportModal();
