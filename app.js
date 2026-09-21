@@ -1100,44 +1100,30 @@ const checkIsbnMatch = debounce(() => {
 // Automatisch ISBN opzoeken via Google Books API (met Open Library fallback)
 const GOOGLE_BOOKS_API_KEY = 'AIzaSyCbxR69LAkdar7fdAXphsg5vs9e_QxWBY0';
 
-async function lookupIsbnGoogleBooks(isbn){
-  if (!isbn || isbn.length !== 13) return;
-  const statusEl = document.getElementById('isbn-lookup-status');
-  if (statusEl){
-    statusEl.textContent = 'Gegevens ophalen voor ISBN ' + isbn + '…';
-    statusEl.style.color = 'var(--ink-soft)';
-    statusEl.style.display = 'block';
-  }
+// Centrale functie om online metadata op te halen voor een ISBN
+async function fetchBookMetadataOnline(isbn){
+  if (!isbn) return null;
+  const cleanIsbn = String(isbn).replace(/\D/g, '');
+  if (cleanIsbn.length !== 10 && cleanIsbn.length !== 13) return null;
 
-  function applyBookInfo(title, author){
-    const titelInput = document.getElementById('titel');
-    const auteurInput = document.getElementById('auteur');
-    if (titelInput && (!titelInput.value || titelInput.value.trim() === '')){
-      titelInput.value = title;
-      checkTitelMatch();
-    }
-    if (auteurInput && (!auteurInput.value || auteurInput.value.trim() === '') && author){
-      auteurInput.value = author;
-    }
-    if (statusEl){
-      statusEl.textContent = `✓ Boek gevonden: "${title}"` + (author ? ` door ${author}` : '');
-      statusEl.style.color = 'var(--green)';
-      setTimeout(() => { statusEl.style.display = 'none'; }, 6000);
-    }
-  }
-
-  // 1. Probeer eerst Google Books met API key
+  // 1. Probeer Google Books met API key
   try {
-    const res = await fetch(`https://www.googleapis.com/books/v1/volumes?q=isbn:${isbn}&key=${GOOGLE_BOOKS_API_KEY}`);
+    const res = await fetch(`https://www.googleapis.com/books/v1/volumes?q=isbn:${cleanIsbn}&key=${GOOGLE_BOOKS_API_KEY}`);
     if (res.ok){
       const data = await res.json();
       if (data.items && data.items.length > 0){
         const info = data.items[0].volumeInfo;
         const title = info.title || '';
         const author = (info.authors && info.authors.length) ? info.authors.join(', ') : '';
+        let coverUrl = null;
+        if (info.imageLinks){
+          coverUrl = info.imageLinks.thumbnail || info.imageLinks.smallThumbnail || null;
+          if (coverUrl && coverUrl.startsWith('http://')){
+            coverUrl = coverUrl.replace('http://', 'https://');
+          }
+        }
         if (title){
-          applyBookInfo(title, author);
-          return;
+          return { title, author, coverUrl, source: 'google' };
         }
       }
     }
@@ -1147,16 +1133,19 @@ async function lookupIsbnGoogleBooks(isbn){
 
   // 2. Fallback: Open Library
   try {
-    const olRes = await fetch(`https://openlibrary.org/search.json?isbn=${isbn}`);
+    const olRes = await fetch(`https://openlibrary.org/search.json?isbn=${cleanIsbn}`);
     if (olRes.ok){
       const olData = await olRes.json();
       if (olData.docs && olData.docs.length > 0){
         const doc = olData.docs[0];
         const title = doc.title || '';
         const author = (doc.author_name && doc.author_name.length) ? doc.author_name.join(', ') : '';
+        let coverUrl = null;
+        if (doc.cover_i){
+          coverUrl = `https://covers.openlibrary.org/b/id/${doc.cover_i}-S.jpg`;
+        }
         if (title){
-          applyBookInfo(title, author);
-          return;
+          return { title, author, coverUrl, source: 'openlibrary' };
         }
       }
     }
@@ -1164,10 +1153,40 @@ async function lookupIsbnGoogleBooks(isbn){
     console.warn('OpenLibrary lookup fout:', olErr);
   }
 
+  return null;
+}
+
+async function lookupIsbnGoogleBooks(isbn){
+  if (!isbn || isbn.length !== 13) return;
+  const statusEl = document.getElementById('isbn-lookup-status');
   if (statusEl){
-    statusEl.textContent = 'Geen titel online gevonden voor dit ISBN; vul titel en auteur handmatig in.';
+    statusEl.textContent = 'Gegevens ophalen voor ISBN ' + isbn + '…';
     statusEl.style.color = 'var(--ink-soft)';
-    setTimeout(() => { statusEl.style.display = 'none'; }, 5000);
+    statusEl.style.display = 'block';
+  }
+
+  const meta = await fetchBookMetadataOnline(isbn);
+  if (meta && meta.title){
+    const titelInput = document.getElementById('titel');
+    const auteurInput = document.getElementById('auteur');
+    if (titelInput && (!titelInput.value || titelInput.value.trim() === '')){
+      titelInput.value = meta.title;
+      checkTitelMatch();
+    }
+    if (auteurInput && (!auteurInput.value || auteurInput.value.trim() === '') && meta.author){
+      auteurInput.value = meta.author;
+    }
+    if (statusEl){
+      statusEl.textContent = `✓ Boek gevonden: "${meta.title}"` + (meta.author ? ` door ${meta.author}` : '');
+      statusEl.style.color = 'var(--green)';
+      setTimeout(() => { statusEl.style.display = 'none'; }, 6000);
+    }
+  } else {
+    if (statusEl){
+      statusEl.textContent = 'Geen titel online gevonden voor dit ISBN; vul titel en auteur handmatig in.';
+      statusEl.style.color = 'var(--ink-soft)';
+      setTimeout(() => { statusEl.style.display = 'none'; }, 5000);
+    }
   }
 }
 
@@ -1182,95 +1201,1015 @@ document.getElementById('isbn')?.addEventListener('input', e => {
 document.getElementById('titel')?.addEventListener('input', checkTitelMatch);
 document.getElementById('isbn')?.addEventListener('input', checkIsbnMatch);
 
-// ---------- Camera Barcode Scanner ----------
-let html5QrCodeScanner = null;
+// ==========================================================================
+// Coördinator: Boeken Toevoegen & Importeren (Scanner, Foto's, Excel, Bulk)
+// ==========================================================================
 
-function openBarcodeScanner(){
-  const modal = document.getElementById('scanner-modal');
+let coordImportQueue = [];
+let cameraScannerInstance = null;
+let cameraScanningActive = false;
+let lastScannedIsbnTimes = {};
+
+// Web Audio API feedback bij geslaagde barcode-scan
+function playBarcodeBeep(){
+  try {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return;
+    const ctx = new AudioCtx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(880, ctx.currentTime); // A5 toon
+    gain.gain.setValueAtTime(0.12, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.12);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.12);
+  } catch(e){}
+}
+
+function getThemaListForCat(cat){
+  if (cat === 'Groep') return GROEPEN;
+  if (cat === 'Kleuters') return KLEUTERS_THEMAS;
+  if (cat === 'Jeelo') return JEELO_THEMAS;
+  if (cat === 'Overig') return OVERIGE_THEMAS;
+  return [];
+}
+
+function getSelectedDefaultThema(){
+  const cat = document.getElementById('import-default-cat')?.value;
+  if (!cat) return '';
+  const sel = document.getElementById('import-default-thema');
+  if (!sel) return '';
+  if (sel.value === ANDERS){
+    return document.getElementById('import-default-thema-anders')?.value.trim() || '';
+  }
+  return sel.value;
+}
+
+function setupCoordImportDefaults(){
+  const catSelect = document.getElementById('import-default-cat');
+  const themaWrap = document.getElementById('import-default-thema-wrap');
+  const themaSelect = document.getElementById('import-default-thema');
+  const andersInput = document.getElementById('import-default-thema-anders');
+
+  if (!catSelect || !themaSelect) return;
+
+  function updateThemaOptions(){
+    const cat = catSelect.value;
+    if (!cat){
+      if (themaWrap) themaWrap.style.display = 'none';
+      return;
+    }
+    if (themaWrap) themaWrap.style.display = 'flex';
+    const list = getThemaListForCat(cat);
+    const hasAnders = cat === 'Overig' || cat === 'Kleuters';
+
+    themaSelect.innerHTML = `<option value="">(Kies thema)</option>` +
+      list.map(t => `<option value="${escapeHtml(t)}">${escapeHtml(t)}</option>`).join('') +
+      (hasAnders ? `<option value="${ANDERS}">Anders, namelijk…</option>` : '');
+
+    if (andersInput) andersInput.style.display = 'none';
+  }
+
+  catSelect.onchange = updateThemaOptions;
+  themaSelect.onchange = () => {
+    if (andersInput){
+      andersInput.style.display = themaSelect.value === ANDERS ? 'inline-block' : 'none';
+      if (themaSelect.value === ANDERS) andersInput.focus();
+    }
+  };
+  updateThemaOptions();
+}
+
+function checkBookExistsInDatabase(isbn, titel){
+  if (!allBooksCache || !allBooksCache.length) return false;
+  if (isbn){
+    const clean = String(isbn).replace(/\D/g, '');
+    if (clean && allBooksCache.some(b => b.isbn && b.isbn.replace(/\D/g, '') === clean)){
+      return true;
+    }
+  }
+  if (titel && titel.trim().length >= 4){
+    const norm = titel.toLowerCase().replace(/[^a-z0-9]/g, '');
+    if (allBooksCache.some(b => b.titel && b.titel.toLowerCase().replace(/[^a-z0-9]/g, '') === norm)){
+      return true;
+    }
+  }
+  return false;
+}
+
+function addBookToImportQueue(data, onDoneCallback){
+  const cleanIsbn = data.isbn ? String(data.isbn).replace(/\D/g, '') : '';
+
+  // Controleer of ISBN al in de huidige wachtrij staat
+  if (cleanIsbn && coordImportQueue.some(b => b.isbn && b.isbn === cleanIsbn)){
+    if (onDoneCallback) onDoneCallback(coordImportQueue.find(b => b.isbn === cleanIsbn));
+    return;
+  }
+
+  const defaultStatus = document.getElementById('import-default-status')?.value || 'binnen';
+  const defaultCat = document.getElementById('import-default-cat')?.value || '';
+  const defaultThema = getSelectedDefaultThema();
+
+  const isDuplicate = checkBookExistsInDatabase(cleanIsbn, data.titel);
+
+  const newBook = {
+    id: 'tmp_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6),
+    isbn: cleanIsbn,
+    titel: data.titel || '',
+    auteur: data.auteur || '',
+    prijs: data.prijs || null,
+    categorie: data.categorie !== undefined ? data.categorie : defaultCat,
+    thema: data.thema !== undefined ? data.thema : (data.categorie ? '' : defaultThema),
+    status: data.status || defaultStatus,
+    opmerking: data.opmerking || null,
+    coverUrl: data.coverUrl || null,
+    isDuplicate: isDuplicate,
+    lookupDone: Boolean(data.titel),
+    source: data.source || null
+  };
+
+  coordImportQueue.push(newBook);
+  renderImportQueue();
+
+  // Als er wel een ISBN is maar nog geen titel: haal online op
+  if (!newBook.titel && cleanIsbn && (cleanIsbn.length === 13 || cleanIsbn.length === 10)){
+    fetchBookMetadataOnline(cleanIsbn).then(meta => {
+      if (meta){
+        if (meta.title && !newBook.titel) newBook.titel = meta.title;
+        if (meta.author && !newBook.auteur) newBook.auteur = meta.author;
+        if (meta.coverUrl) newBook.coverUrl = meta.coverUrl;
+        newBook.lookupDone = true;
+        newBook.isDuplicate = checkBookExistsInDatabase(cleanIsbn, newBook.titel);
+        renderImportQueue();
+      }
+      if (onDoneCallback) onDoneCallback(newBook);
+    }).catch(() => {
+      if (onDoneCallback) onDoneCallback(newBook);
+    });
+  } else {
+    if (onDoneCallback) onDoneCallback(newBook);
+  }
+}
+
+function renderImportQueue(){
+  const count = coordImportQueue.length;
+  const countEl = document.getElementById('import-queue-count');
+  const footerCountEl = document.getElementById('import-footer-count');
+  const emptyStateEl = document.getElementById('import-empty-state');
+  const tableWrapEl = document.getElementById('import-table-wrap');
+  const tbody = document.getElementById('import-table-tbody');
+  const clearBtn = document.getElementById('btn-clear-import-queue');
+  const submitBtn = document.getElementById('btn-submit-coord-import');
+
+  if (countEl) countEl.textContent = String(count);
+  if (footerCountEl) footerCountEl.textContent = `${count} ${count === 1 ? 'boek' : 'boeken'}`;
+
+  if (count === 0){
+    if (emptyStateEl) emptyStateEl.style.display = 'block';
+    if (tableWrapEl) tableWrapEl.style.display = 'none';
+    if (clearBtn) clearBtn.style.display = 'none';
+    if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = '✓ Boeken definitief toevoegen'; }
+    if (tbody) tbody.innerHTML = '';
+    return;
+  }
+
+  if (emptyStateEl) emptyStateEl.style.display = 'none';
+  if (tableWrapEl) tableWrapEl.style.display = 'block';
+  if (clearBtn) clearBtn.style.display = 'inline-flex';
+  if (submitBtn) {
+    submitBtn.disabled = false;
+    submitBtn.textContent = `✓ ${count} ${count === 1 ? 'boek' : 'boeken'} definitief toevoegen`;
+  }
+
+  if (!tbody) return;
+
+  tbody.innerHTML = coordImportQueue.map((item, index) => {
+    const coverHtml = item.coverUrl
+      ? `<img src="${escapeHtml(item.coverUrl)}" alt="" class="import-thumb">`
+      : `<div class="import-thumb-placeholder">📖</div>`;
+
+    const dupBadge = item.isDuplicate
+      ? `<div style="margin-top:3px;"><span class="badge-duplicate" title="Dit boek staat al in de catalogus van de school">⚠️ Al in catalogus</span></div>`
+      : '';
+
+    const catOptions = ['Groep', 'Kleuters', 'Jeelo', 'Overig'].map(c =>
+      `<option value="${c}" ${item.categorie === c ? 'selected' : ''}>${c}</option>`
+    ).join('');
+
+    const statusOptions = [
+      { val: 'binnen', label: 'Binnen (op school)' },
+      { val: 'aangevraagd', label: 'Aangevraagd' },
+      { val: 'besteld', label: 'Besteld' }
+    ].map(s => `<option value="${s.val}" ${item.status === s.val ? 'selected' : ''}>${s.label}</option>`).join('');
+
+    const themaList = getThemaListForCat(item.categorie);
+    const themaSelectHtml = themaList.length > 0
+      ? `<select data-idx="${index}" data-field="thema" style="margin-top:4px;">
+           <option value="">(Kies thema/groep)</option>
+           ${themaList.map(t => `<option value="${escapeHtml(t)}" ${item.thema === t ? 'selected' : ''}>${escapeHtml(t)}</option>`).join('')}
+         </select>`
+      : `<input type="text" data-idx="${index}" data-field="thema" placeholder="Thema..." value="${escapeHtml(item.thema || '')}" style="margin-top:4px;">`;
+
+    return `
+      <tr data-book-id="${item.id}">
+        <td style="color:var(--ink-soft); font-size:11px; text-align:center;">${index + 1}</td>
+        <td>${coverHtml}</td>
+        <td>
+          <input type="text" data-idx="${index}" data-field="isbn" value="${escapeHtml(item.isbn || '')}" placeholder="ISBN..." style="font-family:monospace; font-size:12px;">
+          ${dupBadge}
+        </td>
+        <td>
+          <input type="text" data-idx="${index}" data-field="titel" value="${escapeHtml(item.titel || '')}" placeholder="Titel van het boek *" required style="font-weight:600;">
+          ${!item.titel && item.isbn ? '<span style="font-size:11px; color:var(--ink-soft); display:block; margin-top:2px;">Gegevens ophalen…</span>' : ''}
+        </td>
+        <td>
+          <input type="text" data-idx="${index}" data-field="auteur" value="${escapeHtml(item.auteur || '')}" placeholder="Auteur...">
+        </td>
+        <td>
+          <select data-idx="${index}" data-field="categorie">
+            <option value="" ${!item.categorie ? 'selected' : ''}>Geen categorie</option>
+            ${catOptions}
+          </select>
+          ${item.categorie ? themaSelectHtml : ''}
+        </td>
+        <td>
+          <input type="text" data-idx="${index}" data-field="prijs" value="${item.prijs ? formatPrijs(item.prijs) : ''}" placeholder="€ 0,00" style="text-align:right;">
+        </td>
+        <td>
+          <select data-idx="${index}" data-field="status">
+            ${statusOptions}
+          </select>
+        </td>
+        <td style="text-align:center;">
+          <button type="button" class="btn btn-ghost btn-sm" data-remove-idx="${index}" style="color:var(--red); padding:4px 8px;" title="Verwijderen uit lijst">✕</button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+// Event delegation voor inline bewerkingen en verwijderen in de tabel
+document.getElementById('import-table-tbody')?.addEventListener('input', e => {
+  const target = e.target;
+  const idx = parseInt(target.getAttribute('data-idx'), 10);
+  const field = target.getAttribute('data-field');
+  if (isNaN(idx) || !coordImportQueue[idx] || !field) return;
+
+  if (field === 'prijs'){
+    coordImportQueue[idx].prijs = target.value ? parsePrijs(target.value) : null;
+  } else {
+    coordImportQueue[idx][field] = target.value;
+  }
+  if (field === 'isbn' || field === 'titel'){
+    coordImportQueue[idx].isDuplicate = checkBookExistsInDatabase(coordImportQueue[idx].isbn, coordImportQueue[idx].titel);
+  }
+});
+
+document.getElementById('import-table-tbody')?.addEventListener('change', e => {
+  const target = e.target;
+  const idx = parseInt(target.getAttribute('data-idx'), 10);
+  const field = target.getAttribute('data-field');
+  if (isNaN(idx) || !coordImportQueue[idx] || !field) return;
+
+  coordImportQueue[idx][field] = target.value;
+  if (field === 'categorie'){
+    // Her-render zodat thema opties direct mee veranderen
+    coordImportQueue[idx].thema = '';
+    renderImportQueue();
+  }
+});
+
+document.getElementById('import-table-tbody')?.addEventListener('click', e => {
+  const btn = e.target.closest('[data-remove-idx]');
+  if (!btn) return;
+  const idx = parseInt(btn.getAttribute('data-remove-idx'), 10);
+  if (!isNaN(idx) && coordImportQueue[idx]){
+    coordImportQueue.splice(idx, 1);
+    renderImportQueue();
+  }
+});
+
+// Toepassen van batch-instellingen op alle boeken
+document.getElementById('btn-apply-batch-settings')?.addEventListener('click', () => {
+  if (!coordImportQueue.length) return;
+  const status = document.getElementById('import-default-status')?.value || 'binnen';
+  const cat = document.getElementById('import-default-cat')?.value || '';
+  const thema = getSelectedDefaultThema();
+
+  coordImportQueue.forEach(b => {
+    b.status = status;
+    if (cat) {
+      b.categorie = cat;
+      b.thema = thema;
+    }
+  });
+  renderImportQueue();
+});
+
+// Lijst leegmaken
+document.getElementById('btn-clear-import-queue')?.addEventListener('click', () => {
+  if (!coordImportQueue.length) return;
+  if (confirm('Weet je zeker dat je alle klaargezette boeken uit de lijst wilt wissen?')){
+    coordImportQueue = [];
+    renderImportQueue();
+  }
+});
+
+// --- Live Camera Scanner Logica ---
+async function startCameraScanner(){
+  if (typeof Html5Qrcode === 'undefined'){
+    alert('Barcode scanner bibliotheek is nog aan het laden. Probeer het opnieuw.');
+    return;
+  }
+  const readerContainer = document.getElementById('import-camera-container');
+  if (readerContainer) readerContainer.style.display = 'block';
+
+  try {
+    if (cameraScannerInstance){
+      try { await cameraScannerInstance.stop(); } catch(e){}
+      cameraScannerInstance = null;
+    }
+
+    cameraScannerInstance = new Html5Qrcode('import-camera-reader');
+    cameraScanningActive = true;
+    updateCameraStatusUI();
+
+    const config = {
+      fps: 12,
+      qrbox: (viewfinderWidth, viewfinderHeight) => {
+        const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
+        return {
+          width: Math.floor(minEdge * 0.85),
+          height: Math.floor(minEdge * 0.55)
+        };
+      }
+    };
+
+    await cameraScannerInstance.start(
+      { facingMode: 'environment' },
+      config,
+      (decodedText) => {
+        const cleanDigits = decodedText.replace(/\D/g, '');
+        if (cleanDigits.length === 13 || cleanDigits.length === 10){
+          const now = Date.now();
+          if (lastScannedIsbnTimes[cleanDigits] && (now - lastScannedIsbnTimes[cleanDigits] < 2200)){
+            return;
+          }
+          lastScannedIsbnTimes[cleanDigits] = now;
+          playBarcodeBeep();
+
+          const noticeEl = document.getElementById('camera-last-scanned');
+          const lastIsbnEl = document.getElementById('camera-last-isbn');
+          const lastTitleEl = document.getElementById('camera-last-title');
+          if (noticeEl){
+            noticeEl.style.display = 'block';
+            if (lastIsbnEl) lastIsbnEl.textContent = cleanDigits;
+            if (lastTitleEl) lastTitleEl.textContent = 'Gegevens ophalen…';
+          }
+
+          addBookToImportQueue({ isbn: cleanDigits, source: 'camera' }, (addedBook) => {
+            if (lastTitleEl && addedBook){
+              lastTitleEl.textContent = addedBook.titel || '✓ Boek toegevoegd';
+            }
+          });
+        }
+      },
+      () => {}
+    );
+  } catch(err){
+    console.warn('Camera kon niet starten:', err);
+    cameraScanningActive = false;
+    updateCameraStatusUI();
+    const readerDiv = document.getElementById('import-camera-reader');
+    if (readerDiv){
+      readerDiv.innerHTML = `<div style="padding:24px; text-align:center; color:#fff; font-size:13px;">Camera niet beschikbaar of geen toestemming verleend.<br><br>Je kunt foto's uploaden via het tabblad 'Foto\\'s uploaden' of handmatig ISBN's invoeren.</div>`;
+    }
+  }
+}
+
+async function stopCameraScanner(){
+  cameraScanningActive = false;
+  updateCameraStatusUI();
+  const readerContainer = document.getElementById('import-camera-container');
+  if (readerContainer) readerContainer.style.display = 'none';
+
+  if (cameraScannerInstance){
+    try {
+      await cameraScannerInstance.stop();
+      cameraScannerInstance.clear();
+    } catch(e){}
+    cameraScannerInstance = null;
+  }
+}
+
+function updateCameraStatusUI(){
+  const toggleBtn = document.getElementById('btn-camera-toggle');
+  const badge = document.getElementById('camera-status-badge');
+  if (toggleBtn){
+    toggleBtn.textContent = cameraScanningActive ? '⏹ Stop Camera' : '▶ Start Camera';
+    toggleBtn.className = cameraScanningActive ? 'btn btn-danger btn-sm' : 'btn btn-secondary btn-sm';
+  }
+  if (badge){
+    badge.textContent = cameraScanningActive ? '● Camera actief (continu scannen)' : 'Camera staat uit';
+    badge.className = cameraScanningActive ? 'camera-status-badge active' : 'camera-status-badge idle';
+  }
+}
+
+document.getElementById('btn-camera-toggle')?.addEventListener('click', () => {
+  if (cameraScanningActive){
+    stopCameraScanner();
+  } else {
+    startCameraScanner();
+  }
+});
+
+// --- Foto's Uploaden (Bulk) ---
+async function handlePhotoFiles(files){
+  if (!files || !files.length) return;
+  if (typeof Html5Qrcode === 'undefined'){
+    alert('Barcode scanner bibliotheek is nog aan het laden. Probeer het over enkele seconden opnieuw.');
+    return;
+  }
+
+  const statusWrap = document.getElementById('photo-processing-status');
+  const progressFill = document.getElementById('photo-progress-fill');
+  const statusText = document.getElementById('photo-status-text');
+  const warningsEl = document.getElementById('photo-warnings');
+
+  if (statusWrap) statusWrap.style.display = 'block';
+  if (warningsEl) { warningsEl.style.display = 'none'; warningsEl.innerHTML = ''; }
+
+  const total = files.length;
+  let successCount = 0;
+  let failedFiles = [];
+
+  let fileScanner = null;
+  try {
+    fileScanner = new Html5Qrcode('import-camera-reader');
+  } catch(e){
+    fileScanner = cameraScannerInstance;
+  }
+
+  for (let i = 0; i < total; i++){
+    const file = files[i];
+    const pct = Math.round(((i + 1) / total) * 100);
+    if (progressFill) progressFill.style.width = pct + '%';
+    if (statusText) statusText.textContent = `Foto ${i + 1} van ${total} verwerken (${file.name})…`;
+
+    try {
+      const decodedText = await fileScanner.scanFile(file, false);
+      const cleanDigits = (decodedText || '').replace(/\D/g, '');
+      if (cleanDigits.length === 13 || cleanDigits.length === 10){
+        successCount++;
+        playBarcodeBeep();
+        addBookToImportQueue({ isbn: cleanDigits, source: file.name });
+      } else {
+        failedFiles.push(file.name + ' (geen geldig ISBN herkend)');
+      }
+    } catch(scanErr){
+      failedFiles.push(file.name);
+    }
+  }
+
+  if (statusText){
+    statusText.textContent = `✓ Klaar! ${successCount} van de ${total} foto('s) succesvol herkend.`;
+    statusText.style.color = 'var(--green)';
+  }
+
+  if (failedFiles.length > 0 && warningsEl){
+    warningsEl.innerHTML = `
+      <div style="background:#FFF3CD; border:1px solid #FFEEBA; color:#856404; padding:8px 12px; border-radius:var(--radius-md); font-size:12.5px;">
+        <strong>Let op:</strong> Bij ${failedFiles.length} foto('s) werd geen duidelijke barcode gevonden:
+        <ul style="margin:4px 0 0 16px; padding:0;">
+          ${failedFiles.map(f => `<li>${escapeHtml(f)}</li>`).join('')}
+        </ul>
+        <span style="display:block; margin-top:4px; font-size:11.5px;">Tip: zorg voor een goed verlichte, scherpe foto recht van voren, of voer het ISBN handmatig in.</span>
+      </div>
+    `;
+    warningsEl.style.display = 'block';
+  }
+}
+
+const photoDropzone = document.getElementById('photo-dropzone');
+const photoInput = document.getElementById('import-photos-input');
+document.getElementById('btn-select-photos')?.addEventListener('click', (e) => {
+  e.stopPropagation();
+  photoInput?.click();
+});
+photoDropzone?.addEventListener('click', () => photoInput?.click());
+photoDropzone?.addEventListener('dragover', e => { e.preventDefault(); photoDropzone.classList.add('drag-over'); });
+photoDropzone?.addEventListener('dragleave', () => photoDropzone.classList.remove('drag-over'));
+photoDropzone?.addEventListener('drop', e => {
+  e.preventDefault();
+  photoDropzone.classList.remove('drag-over');
+  if (e.dataTransfer?.files?.length) handlePhotoFiles(e.dataTransfer.files);
+});
+photoInput?.addEventListener('change', e => {
+  if (e.target.files?.length) handlePhotoFiles(e.target.files);
+});
+
+// --- Excel & CSV Importeren ---
+function handleExcelFile(file){
+  if (!file) return;
+  const statusEl = document.getElementById('excel-processing-status');
+  if (statusEl){
+    statusEl.style.display = 'block';
+    statusEl.textContent = `Bestand '${file.name}' inlezen…`;
+    statusEl.style.color = 'var(--ink-soft)';
+  }
+
+  const isCsv = file.name.toLowerCase().endsWith('.csv');
+  const reader = new FileReader();
+
+  if (isCsv){
+    reader.onload = function(e){
+      try {
+        parseCsvData(e.target.result, file.name);
+      } catch(err){
+        alert('Fout bij verwerken van CSV: ' + err.message);
+      }
+    };
+    reader.readAsText(file);
+  } else {
+    if (typeof XLSX === 'undefined'){
+      alert('Excel bibliotheek (SheetJS) is nog aan het laden. Probeer het over enkele seconden opnieuw.');
+      return;
+    }
+    reader.onload = function(e){
+      try {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const firstSheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[firstSheetName];
+        const jsonRows = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
+        processImportedRows(jsonRows, file.name);
+      } catch(err){
+        alert('Fout bij verwerken van Excel bestand: ' + err.message);
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  }
+}
+
+function parseCsvData(text, fileName){
+  const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+  if (!lines.length){
+    alert('Het CSV bestand is leeg.');
+    return;
+  }
+  const headerLine = lines[0];
+  let delimiter = ',';
+  if ((headerLine.match(/;/g) || []).length > (headerLine.match(/,/g) || []).length) delimiter = ';';
+  if ((headerLine.match(/\t/g) || []).length > (headerLine.match(/;/g) || []).length) delimiter = '\t';
+
+  function splitLine(line){
+    const result = [];
+    let cur = '';
+    let inQuotes = false;
+    for (let i = 0; i < line.length; i++){
+      const c = line[i];
+      if (c === '"'){
+        inQuotes = !inQuotes;
+      } else if (c === delimiter && !inQuotes){
+        result.push(cur.trim());
+        cur = '';
+      } else {
+        cur += c;
+      }
+    }
+    result.push(cur.trim());
+    return result.map(s => s.replace(/^"|"$/g, '').trim());
+  }
+
+  const headers = splitLine(lines[0]);
+  const rows = [];
+  for (let i = 1; i < lines.length; i++){
+    const cols = splitLine(lines[i]);
+    const row = {};
+    headers.forEach((h, idx) => {
+      row[h] = cols[idx] || '';
+    });
+    rows.push(row);
+  }
+  processImportedRows(rows, fileName);
+}
+
+function processImportedRows(rows, sourceName){
+  if (!rows || !rows.length){
+    alert('Geen rijen gevonden in ' + sourceName);
+    return;
+  }
+
+  let countAdded = 0;
+  rows.forEach(row => {
+    const keys = Object.keys(row);
+    function findVal(matchArr){
+      for (const m of matchArr){
+        const k = keys.find(k => k.toLowerCase().replace(/[^a-z0-9]/g, '') === m);
+        if (k && row[k] !== undefined && row[k] !== null && String(row[k]).trim() !== '') return String(row[k]).trim();
+      }
+      return null;
+    }
+
+    const rawIsbn = findVal(['isbn', 'ean', 'barcode', 'artikelnummer', 'code']);
+    const titel = findVal(['titel', 'title', 'naam', 'boek', 'boeknaam']);
+    const auteur = findVal(['auteur', 'author', 'schrijver']);
+    const rawPrijs = findVal(['prijs', 'price', 'bedrag', 'kosten']);
+    const categorie = findVal(['categorie', 'category', 'cat']);
+    const thema = findVal(['thema', 'theme', 'groep']);
+    const opmerking = findVal(['opmerking', 'opmerkingen', 'note', 'notes']);
+
+    const cleanIsbn = rawIsbn ? rawIsbn.replace(/\D/g, '') : '';
+    if (!titel && !cleanIsbn) return;
+
+    addBookToImportQueue({
+      isbn: cleanIsbn || null,
+      titel: titel || '',
+      auteur: auteur || '',
+      prijs: rawPrijs ? parsePrijs(rawPrijs) : null,
+      categorie: categorie || '',
+      thema: thema || '',
+      opmerking: opmerking || null,
+      source: sourceName
+    });
+    countAdded++;
+  });
+
+  const statusEl = document.getElementById('excel-processing-status');
+  if (statusEl){
+    statusEl.textContent = `✓ ${countAdded} boek(en) succesvol ingelezen uit '${sourceName}'!`;
+    statusEl.style.color = 'var(--green)';
+  }
+}
+
+function downloadSampleImportCsv(){
+  const sampleContent =
+`ISBN;Titel;Auteur;Prijs;Categorie;Thema;Opmerking
+9789043919678;Dolfje Weerwolfje;Paul van Loon;14,99;Groep;Groep 4;Favoriet van de klas
+9789025746353;Kikker is verliefd;Max Velthuijs;12,50;Kleuters;Kikker;Klassieker voor thema Kikker
+9789025875694;De Waanzinnige Boomhut van 13 Verdiepingen;Andy Griffiths;15,00;Groep;Groep 5;Populair leesboek
+9789047701234;Kleine IJsbeer;Hans de Beer;13,95;Kleuters;Dieren;Prentenboek winter`;
+
+  const blob = new Blob([sampleContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'voorbeeld_boeken_import.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+const excelDropzone = document.getElementById('excel-dropzone');
+const excelInput = document.getElementById('import-excel-input');
+document.getElementById('btn-select-excel')?.addEventListener('click', (e) => {
+  e.stopPropagation();
+  excelInput?.click();
+});
+document.getElementById('btn-download-sample-csv')?.addEventListener('click', (e) => {
+  e.stopPropagation();
+  downloadSampleImportCsv();
+});
+excelDropzone?.addEventListener('click', () => excelInput?.click());
+excelDropzone?.addEventListener('dragover', e => { e.preventDefault(); excelDropzone.classList.add('drag-over'); });
+excelDropzone?.addEventListener('dragleave', () => excelDropzone.classList.remove('drag-over'));
+excelDropzone?.addEventListener('drop', e => {
+  e.preventDefault();
+  excelDropzone.classList.remove('drag-over');
+  if (e.dataTransfer?.files?.length) handleExcelFile(e.dataTransfer.files[0]);
+});
+excelInput?.addEventListener('change', e => {
+  if (e.target.files?.length) handleExcelFile(e.target.files[0]);
+});
+
+// --- Los Toevoegen & Bulk Tekst Invoeren ---
+
+function addEmptyRowToImportQueue(){
+  const defaultStatus = document.getElementById('import-default-status')?.value || 'binnen';
+  const defaultCat = document.getElementById('import-default-cat')?.value || '';
+  const defaultThema = getSelectedDefaultThema();
+
+  const newBook = {
+    id: 'tmp_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6),
+    isbn: '',
+    titel: '',
+    auteur: '',
+    prijs: null,
+    categorie: defaultCat,
+    thema: defaultThema,
+    status: defaultStatus,
+    opmerking: null,
+    coverUrl: null,
+    isDuplicate: false,
+    lookupDone: true,
+    source: 'handmatig'
+  };
+
+  coordImportQueue.push(newBook);
+  renderImportQueue();
+
+  setTimeout(() => {
+    const inputs = document.querySelectorAll('#import-table-tbody input[data-field="titel"]');
+    if (inputs.length) inputs[inputs.length - 1].focus();
+  }, 60);
+}
+
+function addSingleManualBook(){
+  const isbnEl = document.getElementById('manual-quick-isbn');
+  const titelEl = document.getElementById('manual-quick-titel');
+  const auteurEl = document.getElementById('manual-quick-auteur');
+  const prijsEl = document.getElementById('manual-quick-prijs');
+
+  const titel = titelEl ? titelEl.value.trim() : '';
+  if (!titel){
+    alert('Vul a.u.b. minimaal de titel van het boek in.');
+    if (titelEl) titelEl.focus();
+    return;
+  }
+
+  const isbn = isbnEl ? isbnEl.value.trim() : '';
+  const auteur = auteurEl ? auteurEl.value.trim() : '';
+  const prijs = prijsEl && prijsEl.value ? parsePrijs(prijsEl.value) : null;
+
+  addBookToImportQueue({
+    isbn: isbn,
+    titel: titel,
+    auteur: auteur,
+    prijs: prijs,
+    source: 'handmatig'
+  });
+
+  if (isbnEl) isbnEl.value = '';
+  if (titelEl) titelEl.value = '';
+  if (auteurEl) auteurEl.value = '';
+  if (prijsEl) prijsEl.value = '';
+  const statusEl = document.getElementById('manual-quick-status');
+  if (statusEl) statusEl.style.display = 'none';
+
+  if (titelEl) titelEl.focus();
+}
+
+async function lookupQuickIsbn(){
+  const isbnEl = document.getElementById('manual-quick-isbn');
+  const statusEl = document.getElementById('manual-quick-status');
+  if (!isbnEl) return;
+  const isbn = isbnEl.value.trim().replace(/\D/g, '');
+  if (!isbn || (isbn.length !== 13 && isbn.length !== 10)){
+    alert('Voer een geldig 10- of 13-cijferig ISBN in.');
+    return;
+  }
+
+  if (statusEl){
+    statusEl.textContent = 'Gegevens ophalen online…';
+    statusEl.style.color = 'var(--ink-soft)';
+    statusEl.style.display = 'block';
+  }
+
+  const meta = await fetchBookMetadataOnline(isbn);
+  if (meta && meta.title){
+    const titelEl = document.getElementById('manual-quick-titel');
+    const auteurEl = document.getElementById('manual-quick-auteur');
+    if (titelEl && (!titelEl.value || titelEl.value.trim() === '')) titelEl.value = meta.title;
+    if (auteurEl && (!auteurEl.value || auteurEl.value.trim() === '') && meta.author) auteurEl.value = meta.author;
+    if (statusEl){
+      statusEl.textContent = `✓ Gevonden: "${meta.title}"` + (meta.author ? ` door ${meta.author}` : '');
+      statusEl.style.color = 'var(--green)';
+    }
+  } else {
+    if (statusEl){
+      statusEl.textContent = 'Geen online titel gevonden; vul zelf in.';
+      statusEl.style.color = 'var(--ink-soft)';
+    }
+  }
+}
+
+function processBulkLines(){
+  const textarea = document.getElementById('import-bulk-lines-text');
+  if (!textarea) return;
+  const text = textarea.value.trim();
+  if (!text){
+    alert('Plak of typ eerst minimaal één regel met een boektitel of ISBN.');
+    return;
+  }
+
+  const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+  if (!lines.length){
+    alert('Geen geldige regels gevonden.');
+    return;
+  }
+
+  let countAdded = 0;
+  lines.forEach(line => {
+    // 1. Is het puur een ISBN (10 of 13 cijfers)?
+    const cleanIsbnOnly = line.replace(/[\-\s]/g, '');
+    if (/^\d{10}$|^\d{13}$/.test(cleanIsbnOnly)){
+      addBookToImportQueue({ isbn: cleanIsbnOnly, source: 'bulk-tekst' });
+      countAdded++;
+      return;
+    }
+
+    // 2. Bevat de regel een ISBN ergens in de tekst?
+    let titel = line;
+    let auteur = '';
+    let isbn = null;
+
+    const isbnMatch = line.match(/\b(97[89][0-9\- ]{10,17})\b/);
+    if (isbnMatch){
+      isbn = isbnMatch[1].replace(/\D/g, '');
+      titel = line.replace(isbnMatch[0], '').replace(/[()\[\]]/g, '').trim();
+    }
+
+    if (titel.includes(' - ')){
+      const parts = titel.split(' - ');
+      titel = parts[0].trim();
+      auteur = parts.slice(1).join(' - ').trim();
+    } else if (titel.includes(' / ')){
+      const parts = titel.split(' / ');
+      titel = parts[0].trim();
+      auteur = parts.slice(1).join(' / ').trim();
+    } else if (titel.includes(';')){
+      const parts = titel.split(';');
+      titel = parts[0].trim();
+      auteur = parts.slice(1).join('; ').trim();
+    }
+
+    // Nummering aan het begin weghalen (bijv. "1. Boektitel" of "1) Boektitel")
+    titel = titel.replace(/^\d+[\.\)\-]\s*/, '').trim();
+
+    if (titel || isbn){
+      addBookToImportQueue({
+        isbn: isbn,
+        titel: titel || (isbn ? '' : 'Naamloos boek'),
+        auteur: auteur,
+        source: 'bulk-tekst'
+      });
+      countAdded++;
+    }
+  });
+
+  textarea.value = '';
+  alert(`✓ ${countAdded} ${countAdded === 1 ? 'boek' : 'boeken'} uit de tekst toegevoegd aan de tabel!`);
+}
+
+document.getElementById('btn-add-quick-book')?.addEventListener('click', addSingleManualBook);
+document.getElementById('btn-manual-quick-lookup')?.addEventListener('click', lookupQuickIsbn);
+document.getElementById('manual-quick-isbn')?.addEventListener('input', e => {
+  const cijfers = e.target.value.replace(/\D/g, '').slice(0, 13);
+  if (cijfers !== e.target.value) e.target.value = cijfers;
+  if (/^\d{13}$/.test(cijfers)){
+    lookupQuickIsbn();
+  }
+});
+document.getElementById('btn-process-bulk-lines')?.addEventListener('click', processBulkLines);
+document.getElementById('btn-add-table-row')?.addEventListener('click', addEmptyRowToImportQueue);
+document.getElementById('btn-add-blank-row')?.addEventListener('click', addEmptyRowToImportQueue);
+
+// --- Modal Openen & Sluiten ---
+function openCoordImportModal(){
+  const modal = document.getElementById('coord-import-modal');
   if (!modal) return;
   modal.classList.add('open');
   document.body.style.overflow = 'hidden';
 
-  if (typeof Html5Qrcode === 'undefined'){
-    alert('Barcode scanner bibliotheek is nog aan het laden. Probeer het over enkele seconden opnieuw.');
-    closeBarcodeScanner();
-    return;
-  }
+  setupCoordImportDefaults();
+  renderImportQueue();
+  updateCameraStatusUI();
 
-  const readerDiv = document.getElementById('scanner-reader');
-  if (!readerDiv) return;
-
-  try {
-    html5QrCodeScanner = new Html5Qrcode('scanner-reader');
-    const config = { fps: 10, qrbox: { width: 250, height: 160 } };
-
-    html5QrCodeScanner.start(
-      { facingMode: 'environment' },
-      config,
-      (decodedText) => {
-        // Barcode gevonden
-        const cleanDigits = decodedText.replace(/\D/g, '');
-        if (cleanDigits.length === 13){
-          const isbnInp = document.getElementById('isbn');
-          if (isbnInp){
-            isbnInp.value = cleanDigits;
-            isbnInp.dispatchEvent(new Event('input'));
-          }
-          closeBarcodeScanner();
-        }
-      },
-      (errorMessage) => {
-        // Scan poging zonder match (normaal bij continu scannen)
-      }
-    ).catch(err => {
-      console.warn('Camera kon niet starten:', err);
-      // Toon melding maar laat het dialoogvenster netjes open zodat de gebruiker zelf kan sluiten
-      const reader = document.getElementById('scanner-reader');
-      if (reader){
-        reader.innerHTML = `<div style="padding:20px; text-align:center; color:#fff; font-size:13px;">Camera niet beschikbaar of geen toestemming gegeven.<br><br>Sluit dit venster om het ISBN handmatig in te voeren.</div>`;
-      }
-    });
-  } catch(e) {
-    console.error('Fout bij initialiseren van scanner:', e);
-  }
+  // Zorg dat standaard de tab 'Los toevoegen & Bulk tekst' actief is
+  const manualTabBtn = document.querySelector('.import-tab-btn[data-import-tab="manual"]');
+  if (manualTabBtn) manualTabBtn.click();
 }
 
-function closeBarcodeScanner(){
-  // 1. Sluit altijd DIRECT het dialoogvenster
-  const modal = document.getElementById('scanner-modal');
+function closeCoordImportModal(){
+  const modal = document.getElementById('coord-import-modal');
   if (modal){
     modal.classList.remove('open');
     document.body.style.overflow = '';
   }
-
-  // 2. Stop en ruim de scanner veilig op
-  if (html5QrCodeScanner){
-    try {
-      html5QrCodeScanner.stop().catch(() => {}).finally(() => {
-        try { html5QrCodeScanner.clear(); } catch(e){}
-        html5QrCodeScanner = null;
-      });
-    } catch(err){
-      try { html5QrCodeScanner.clear(); } catch(e){}
-      html5QrCodeScanner = null;
-    }
-  }
+  stopCameraScanner();
 }
 
-document.getElementById('btn-scan-isbn')?.addEventListener('click', openBarcodeScanner);
-document.getElementById('scanner-close-btn')?.addEventListener('click', closeBarcodeScanner);
-document.getElementById('scanner-backdrop')?.addEventListener('click', closeBarcodeScanner);
-document.getElementById('scanner-cancel-btn')?.addEventListener('click', closeBarcodeScanner);
+// Subtab navigatie in de modal
+document.querySelectorAll('.import-tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.import-tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const tabName = btn.getAttribute('data-import-tab');
 
-// Sluiten via Escape-toets
+    document.querySelectorAll('.import-tab-panel').forEach(p => p.style.display = 'none');
+    const activePane = document.getElementById(`import-pane-${tabName}`);
+    if (activePane) activePane.style.display = 'block';
+
+    if (tabName === 'camera'){
+      // Start camera optioneel of laat gebruiker op start klikken
+    } else {
+      if (cameraScanningActive) stopCameraScanner();
+    }
+  });
+});
+
+document.getElementById('btn-open-coord-import')?.addEventListener('click', openCoordImportModal);
+document.getElementById('coord-import-close-btn')?.addEventListener('click', closeCoordImportModal);
+document.getElementById('btn-cancel-coord-import')?.addEventListener('click', closeCoordImportModal);
+document.getElementById('coord-import-backdrop')?.addEventListener('click', closeCoordImportModal);
+
+// Sluiten via Escape
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape'){
-    const scannerModal = document.getElementById('scanner-modal');
-    if (scannerModal && scannerModal.classList.contains('open')){
-      closeBarcodeScanner();
+    const importModal = document.getElementById('coord-import-modal');
+    if (importModal && importModal.classList.contains('open')){
+      closeCoordImportModal();
     }
   }
 });
+
+// --- Definitief Opslaan in Supabase ---
+async function submitCoordImportQueue(){
+  if (!coordImportQueue.length) return;
+
+  // Validatie: elk boek moet minimaal een titel hebben
+  const missingTitleIdx = coordImportQueue.findIndex(b => !b.titel || !b.titel.trim());
+  if (missingTitleIdx !== -1){
+    const missing = coordImportQueue[missingTitleIdx];
+    alert(`Boek #${missingTitleIdx + 1} (ISBN: ${missing.isbn || 'onbekend'}) heeft nog geen titel. Vul a.u.b. een titel in.`);
+    const input = document.querySelector(`input[data-idx="${missingTitleIdx}"][data-field="titel"]`);
+    if (input) input.focus();
+    return;
+  }
+
+  const submitBtn = document.getElementById('btn-submit-coord-import');
+  if (submitBtn){
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Bezig met opslaan…';
+  }
+
+  const now = new Date().toISOString();
+  const recordsToInsert = coordImportQueue.map(item => {
+    const cat = item.categorie || null;
+    let groep = null, jeelo = null, overig = null, kleuters = null;
+    if (cat === 'Groep') groep = item.thema || null;
+    if (cat === 'Kleuters') kleuters = item.thema || null;
+    if (cat === 'Jeelo') jeelo = item.thema || null;
+    if (cat === 'Overig') overig = item.thema || null;
+
+    const status = item.status || 'binnen';
+
+    return {
+      titel: item.titel.trim(),
+      auteur: item.auteur ? item.auteur.trim() : null,
+      isbn: item.isbn ? item.isbn.replace(/\D/g, '') : null,
+      prijs: item.prijs ? parsePrijs(item.prijs) : null,
+      categorie: cat,
+      groep: groep,
+      jeelo_thema: jeelo,
+      overig_thema: overig,
+      kleuters_thema: kleuters,
+      klas_of_kast: null,
+      aantal: 1,
+      naam_aanvrager: 'Coördinator',
+      status: status,
+      besteld_op: (status === 'besteld' || status === 'binnen') ? now : null,
+      binnen_op: status === 'binnen' ? now : null,
+      opmerking: item.opmerking || null
+    };
+  });
+
+  const { data, error } = await client.from('boeken').insert(recordsToInsert).select();
+
+  if (submitBtn){
+    submitBtn.disabled = false;
+    submitBtn.textContent = '✓ Boeken definitief toevoegen';
+  }
+
+  if (error){
+    alert('Opslaan van boeken is mislukt: ' + error.message);
+    return;
+  }
+
+  const totalCount = recordsToInsert.length;
+  if (Array.isArray(data) && data.length > 0){
+    allBooksCache = allBooksCache.concat(data);
+  } else {
+    const insertedWithIds = recordsToInsert.map(r => ({ ...r, id: 'bk_' + Math.random().toString(36).substr(2, 9) }));
+    allBooksCache = allBooksCache.concat(insertedWithIds);
+  }
+  saveCachedBooks(allBooksCache);
+
+  renderZoekLijst();
+  if (coordUnlocked) refreshCoordinatorData(true);
+
+  coordImportQueue = [];
+  renderImportQueue();
+  closeCoordImportModal();
+
+  alert(`✓ Succes! Er zijn ${totalCount} ${totalCount === 1 ? 'boek' : 'boeken'} succesvol toegevoegd aan de collectie.`);
+}
+
+document.getElementById('btn-submit-coord-import')?.addEventListener('click', submitCoordImportQueue);
 
 // ---------- Boek aanvragen & Groene Succesbanner ----------
 document.getElementById('book-form')?.addEventListener('submit', async e => {

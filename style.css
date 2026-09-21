@@ -1052,21 +1052,302 @@ textarea:focus {
 }
 
 /* --------------------------------------------------------------------------
-   10. CAMERA BARCODE SCANNER MODAL
+   10. COORDINATOR BOEKEN TOEVOEGEN & IMPORTEREN (Bulk, Scanner, Excel)
    -------------------------------------------------------------------------- */
-#scanner-modal .modal-window {
-  max-width: 480px;
+.coord-import-banner {
+  background: linear-gradient(135deg, #14213D 0%, #1c2e54 100%);
+  border: 1px solid rgba(212, 167, 44, 0.35);
+  box-shadow: var(--shadow-md);
+  margin-bottom: 20px;
+}
+.coord-import-banner-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+.coord-import-banner-text h3 {
+  color: #FFFFFF !important;
+}
+.coord-import-badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--gold);
+  margin-bottom: 2px;
 }
 
-#scanner-viewport {
-  width: 100%;
+.modal-window-wide {
+  max-width: 960px !important;
+  width: 96vw;
+}
+
+/* Invoermethode Tabs */
+.import-method-tabs {
+  display: flex;
+  gap: 6px;
+  border-bottom: 2px solid var(--line-soft);
+  margin-bottom: 16px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+.import-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 14px;
+  border: none;
+  background: transparent;
+  color: var(--ink-soft);
+  font-family: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -2px;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+.import-tab-btn:hover {
+  color: var(--ink);
+  background: var(--bg);
+}
+.import-tab-btn.active {
+  color: var(--ink);
+  border-bottom-color: var(--gold);
+  background: var(--gold-soft);
+}
+.import-tab-icon {
+  font-size: 16px;
+}
+.import-instruction {
+  font-size: 13.5px;
+  color: var(--ink-soft);
+  margin: 0 0 12px;
+  line-height: 1.45;
+}
+
+/* Dropzone voor Foto's en Excel */
+.upload-dropzone {
+  border: 2px dashed var(--line);
+  background: #FAFBFD;
+  border-radius: var(--radius-lg);
+  padding: 24px 16px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.upload-dropzone:hover,
+.upload-dropzone.drag-over {
+  border-color: var(--gold);
+  background: var(--gold-soft);
+}
+.dropzone-icon {
+  font-size: 32px;
+  margin-bottom: 6px;
+}
+.dropzone-title {
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--ink);
+}
+.dropzone-subtitle {
+  font-size: 12.5px;
+  color: var(--ink-soft);
+  margin-top: 3px;
+}
+
+/* Camera Scanner Paneel */
+.import-pane-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+.import-camera-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.camera-status-badge {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: var(--radius-pill);
+}
+.camera-status-badge.idle {
+  background: var(--line-soft);
+  color: var(--ink-soft);
+}
+.camera-status-badge.active {
+  background: var(--green-soft);
+  color: var(--green);
+}
+.import-scanned-notice {
+  background: var(--green-soft);
+  color: var(--green);
+  border: 1px solid rgba(30,107,71,0.25);
+  padding: 8px 12px;
   border-radius: var(--radius-md);
-  overflow: hidden;
-  background: #000;
-  min-height: 280px;
+  font-size: 13px;
+  margin-top: 8px;
+}
+
+/* Batch Standaardinstellingen */
+.import-batch-settings-card {
+  background: #F7F8FC;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  margin: 16px 0;
+}
+.batch-card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+.batch-card-title {
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--ink);
+}
+.batch-card-controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.batch-control-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.batch-control-item label {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  margin: 0;
+}
+.batch-control-item select,
+.batch-control-item input {
+  padding: 5px 8px;
+  font-size: 12.5px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line);
+  background: #fff;
+}
+
+/* Preview Queue & Tabel */
+.import-queue-section {
+  border-top: 1px solid var(--line-soft);
+  padding-top: 14px;
+}
+.import-queue-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.import-empty-state {
+  text-align: center;
+  padding: 30px 16px;
+  background: #FAFBFD;
+  border-radius: var(--radius-md);
+  border: 1px dashed var(--line);
+}
+.import-preview-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+}
+.import-preview-table th {
+  background: #F4F5F8;
+  padding: 8px 10px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  font-size: 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+}
+.import-preview-table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--line-soft);
+  vertical-align: middle;
+}
+.import-preview-table tr:hover {
+  background: #FDFEFE;
+}
+.import-preview-table input[type="text"],
+.import-preview-table select {
+  padding: 4px 6px;
+  font-size: 12.5px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  width: 100%;
+  box-sizing: border-box;
+}
+.import-thumb {
+  width: 32px;
+  height: 44px;
+  object-fit: cover;
+  border-radius: 3px;
+  box-shadow: var(--shadow-sm);
+  background: #eee;
+  display: block;
+}
+.import-thumb-placeholder {
+  width: 32px;
+  height: 44px;
+  background: var(--line-soft);
+  border-radius: 3px;
   display: flex;
   align-items: center;
   justify-content: center;
+  font-size: 14px;
+  color: var(--ink-soft);
+}
+.badge-duplicate {
+  display: inline-block;
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: var(--radius-pill);
+  background: #FFF3CD;
+  color: #856404;
+  border: 1px solid #FFEEBA;
+  white-space: nowrap;
+}
+.badge-online-ok {
+  display: inline-block;
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: var(--radius-pill);
+  background: var(--green-soft);
+  color: var(--green);
+}
+.progress-bar-wrap {
+  width: 100%;
+  height: 6px;
+  background: var(--line);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.progress-bar-fill {
+  height: 100%;
+  background: var(--gold);
+  transition: width 0.2s ease;
 }
 
 /* --------------------------------------------------------------------------
