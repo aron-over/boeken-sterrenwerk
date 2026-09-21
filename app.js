@@ -1497,9 +1497,6 @@ function renderZoekTags(b){
     html += `<span class="tag cat-tag cat-Zonder">Zonder categorie</span>`;
   }
 
-  if (b.isbn){
-    html += `<span class="tag tag-isbn">ISBN ${escapeHtml(b.isbn)}</span>`;
-  }
   if (b.opmerking){
     const clean = b.opmerking.trim();
     const shortOpm = clean.length > 40 ? clean.slice(0, 37) + '…' : clean;
