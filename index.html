@@ -312,11 +312,32 @@
     align-items:center;
     gap:10px;
   }
+  .boekentip-item.is-editing{align-items:flex-start;}
   .boekentip-item .tip-text{flex:1; word-break:break-word;}
   .boekentip-item .tip-actions{display:flex; gap:8px; align-items:center; flex-shrink:0;}
   .boekentip-item .link{flex-shrink:0;}
+  .boekentip-item .tip-edit-box{width:100%; display:flex; flex-direction:column; gap:4px;}
+  .boekentip-item textarea.tip-edit-input{
+    width:100%;
+    min-height:36px;
+    padding:6px 8px;
+    font-size:13px;
+    font-family:inherit;
+    line-height:1.45;
+    border-radius:6px;
+    border:1px solid var(--gold);
+    background:var(--surface);
+    color:var(--ink);
+    resize:none;
+    overflow-y:hidden;
+    box-sizing:border-box;
+  }
+  .boekentip-item textarea.tip-edit-input:focus{
+    outline:2px solid var(--gold);
+    outline-offset:0;
+  }
   .boekentip-add{display:flex; gap:8px; margin-top:8px;}
-  .boekentip-add input{flex:1; padding:7px 10px; font-size:13px;}
+  .boekentip-add input, .boekentip-add textarea{flex:1; padding:7px 10px; font-size:13px;}
   .tag{
     display:inline-block;
     font-size:12px;
@@ -2151,6 +2172,12 @@ function renderBookTipsUi(row, id, updateField){
   const book = allBooksCache.find(x => String(x.id) === String(id));
   if (!book) return;
 
+  function autoResize(el){
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = Math.max(34, el.scrollHeight) + 'px';
+  }
+
   const tips = (book.boekentip || '').split('\n').filter(Boolean);
 
   let html = `<div class="subsection-title" style="margin:0 0 6px;">Boekentips</div>`;
@@ -2171,9 +2198,9 @@ function renderBookTipsUi(row, id, updateField){
   }
 
   html += `
-    <div class="boekentip-add" style="display:flex; gap:8px; margin-top:6px;">
-      <input type="text" class="boekentip-new-input" placeholder="Nieuwe boekentip toevoegen…" style="flex:1; padding:6px 9px; font-size:13px; border-radius:6px; border:1px solid var(--line); background:var(--bg);">
-      <button type="button" class="tiny boekentip-add-btn" style="background:var(--ink); color:#fff; border-color:var(--ink); padding:6px 12px; border-radius:6px; font-weight:600;">+ Toevoegen</button>
+    <div class="boekentip-add" style="display:flex; gap:8px; margin-top:6px; align-items:flex-start;">
+      <textarea class="boekentip-new-input" rows="1" placeholder="Nieuwe boekentip toevoegen…" style="flex:1; min-height:34px; padding:6px 9px; font-size:13px; border-radius:6px; border:1px solid var(--line); background:var(--bg); color:var(--ink); font-family:inherit; line-height:1.4; resize:none; overflow-y:hidden; box-sizing:border-box;"></textarea>
+      <button type="button" class="tiny boekentip-add-btn" style="background:var(--ink); color:#fff; border-color:var(--ink); padding:6px 12px; border-radius:6px; font-weight:600; flex-shrink:0;">+ Toevoegen</button>
     </div>
   `;
 
@@ -2202,11 +2229,14 @@ function renderBookTipsUi(row, id, updateField){
       const currentTips = (book.boekentip || '').split('\n').filter(Boolean);
       const oldText = currentTips[idx] || '';
 
+      tipItem.classList.add('is-editing');
       tipItem.innerHTML = `
-        <div style="display:flex; gap:6px; width:100%; align-items:center;">
-          <input type="text" class="tip-edit-input" value="${escapeHtml(oldText)}" style="flex:1; padding:5px 8px; font-size:13px; border-radius:6px; border:1px solid var(--gold); outline:none; background:var(--surface);">
-          <button type="button" class="tiny tip-save-btn" style="background:var(--ink); color:#fff; border-color:var(--ink); padding:5px 10px; border-radius:6px; font-weight:600;">Opslaan</button>
-          <button type="button" class="link tip-cancel-btn" style="font-size:12px;">Annuleren</button>
+        <div class="tip-edit-box">
+          <textarea class="tip-edit-input" rows="1" placeholder="Boekentip bewerken…">${escapeHtml(oldText)}</textarea>
+          <div class="tip-edit-actions" style="display:flex; gap:8px; justify-content:flex-end; align-items:center; margin-top:4px;">
+            <button type="button" class="link tip-cancel-btn" style="font-size:12px;">Annuleren</button>
+            <button type="button" class="tiny tip-save-btn" style="background:var(--ink); color:#fff; border-color:var(--ink); padding:4px 12px; border-radius:6px; font-weight:600;">Opslaan</button>
+          </div>
         </div>
       `;
 
@@ -2214,11 +2244,15 @@ function renderBookTipsUi(row, id, updateField){
       const saveBtn = tipItem.querySelector('.tip-save-btn');
       const cancelBtn = tipItem.querySelector('.tip-cancel-btn');
 
+      autoResize(editInput);
+      requestAnimationFrame(() => autoResize(editInput));
+      editInput.addEventListener('input', () => autoResize(editInput));
+
       editInput.focus();
       editInput.select();
 
       async function saveEdit(){
-        const newText = editInput.value.trim();
+        const newText = editInput.value.replace(/\r?\n+/g, ' ').replace(/\s{2,}/g, ' ').trim();
         if (!newText){
           if (!confirm('Boekentip is leeg. Wil je deze boekentip verwijderen?')) return;
           currentTips.splice(idx, 1);
@@ -2232,7 +2266,7 @@ function renderBookTipsUi(row, id, updateField){
 
       saveBtn.addEventListener('click', saveEdit);
       editInput.addEventListener('keydown', e => {
-        if (e.key === 'Enter'){
+        if (e.key === 'Enter' && !e.shiftKey){
           e.preventDefault();
           saveEdit();
         } else if (e.key === 'Escape'){
@@ -2249,8 +2283,13 @@ function renderBookTipsUi(row, id, updateField){
   const newInp = container.querySelector('.boekentip-new-input');
   const addBtn = container.querySelector('.boekentip-add-btn');
 
+  if (newInp){
+    autoResize(newInp);
+    newInp.addEventListener('input', () => autoResize(newInp));
+  }
+
   async function addNewTip(){
-    const text = newInp.value.trim();
+    const text = newInp.value.replace(/\r?\n+/g, ' ').replace(/\s{2,}/g, ' ').trim();
     if (!text) return;
     const currentTips = (book.boekentip || '').split('\n').filter(Boolean);
     currentTips.push(text);
@@ -2261,7 +2300,7 @@ function renderBookTipsUi(row, id, updateField){
 
   addBtn.addEventListener('click', addNewTip);
   newInp.addEventListener('keydown', e => {
-    if (e.key === 'Enter'){
+    if (e.key === 'Enter' && !e.shiftKey){
       e.preventDefault();
       addNewTip();
     }
