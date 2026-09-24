@@ -1103,15 +1103,44 @@ const checkIsbnMatch = debounce(() => {
 }, 350);
 
 // Automatisch ISBN opzoeken via Google Books API (met Open Library fallback).
-// Bewust zonder API key: de publieke limiet volstaat en er staat zo geen sleutel in de broncode.
+// Hoofdroute: Edge Function "zoek-isbn", die Google Books aanroept met onze eigen API key
+// (als secret op Supabase, dus niet in de broncode). Keyless Google deelt één wereldwijd
+// dagquotum en geeft meestal 429; dat blijft alleen als noodroute over.
+
+// Bibliotheektitels opschonen: "Een vorig leven / druk 1" → "Een vorig leven",
+// "Dolfje Weerwolfje; Dolfje Weerwolfje 1" → "Dolfje Weerwolfje".
+function schoonTitelOp(titel){
+  return String(titel || '')
+    .split(/\s+\/\s+/)[0]
+    .split(/\s*;\s*/)[0]
+    .replace(/[\s.,:;]+$/, '')
+    .trim();
+}
 
 // Centrale functie om online metadata op te halen voor een ISBN
 async function fetchBookMetadataOnline(isbn){
+  const meta = await zoekBoekMetadataOnline(isbn);
+  if (meta) meta.title = schoonTitelOp(meta.title);
+  return meta && meta.title ? meta : null;
+}
+
+async function zoekBoekMetadataOnline(isbn){
   if (!isbn) return null;
   const cleanIsbn = String(isbn).replace(/\D/g, '');
   if (cleanIsbn.length !== 10 && cleanIsbn.length !== 13) return null;
 
-  // 1. Probeer Google Books
+  // 1. Edge Function met eigen Google Books key
+  try {
+    const { data, error } = await realClient.functions.invoke('zoek-isbn', { body: { isbn: cleanIsbn } });
+    if (!error && data){
+      if (data.gevonden) return { title: data.title, author: data.author, coverUrl: data.coverUrl, source: data.source };
+      return null; // Functie werkt, maar geen enkele bron kent dit ISBN
+    }
+  } catch(e){
+    console.warn('zoek-isbn functie niet bereikbaar:', e);
+  }
+
+  // 2. Noodroute: Google Books zonder key
   try {
     const res = await fetch(`https://www.googleapis.com/books/v1/volumes?q=isbn:${cleanIsbn}`);
     if (res.ok){
@@ -1136,22 +1165,15 @@ async function fetchBookMetadataOnline(isbn){
     console.warn('Google Books lookup fout:', e);
   }
 
-  // 2. Fallback: Open Library
+  // 3. Noodroute: Open Library
   try {
-    const olRes = await fetch(`https://openlibrary.org/search.json?isbn=${cleanIsbn}`);
+    const olRes = await fetch(`https://openlibrary.org/api/books?bibkeys=ISBN:${cleanIsbn}&jscmd=data&format=json`);
     if (olRes.ok){
-      const olData = await olRes.json();
-      if (olData.docs && olData.docs.length > 0){
-        const doc = olData.docs[0];
-        const title = doc.title || '';
-        const author = (doc.author_name && doc.author_name.length) ? doc.author_name.join(', ') : '';
-        let coverUrl = null;
-        if (doc.cover_i){
-          coverUrl = `https://covers.openlibrary.org/b/id/${doc.cover_i}-S.jpg`;
-        }
-        if (title){
-          return { title, author, coverUrl, source: 'openlibrary' };
-        }
+      const boek = (await olRes.json())[`ISBN:${cleanIsbn}`];
+      if (boek && boek.title){
+        const author = (boek.authors || []).map(a => a.name).join(', ');
+        const coverUrl = (boek.cover && (boek.cover.small || boek.cover.medium)) || null;
+        return { title: boek.title, author, coverUrl, source: 'openlibrary' };
       }
     }
   } catch(olErr){
