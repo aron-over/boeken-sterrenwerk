@@ -414,6 +414,7 @@ label:first-of-type {
 input[type=text],
 input[type=number],
 input[type=password],
+input[type=email],
 select,
 textarea {
   width: 100%;
@@ -2135,6 +2136,15 @@ textarea:focus {
   box-shadow: var(--shadow-sm);
 }
 .lock-screen p { color: var(--ink-soft); font-size: 14px; margin-bottom: 16px; }
+.coord-sessie {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+  font-size: 13px;
+  color: var(--ink-soft);
+}
 
 /* --------------------------------------------------------------------------
    12. RESPONSIVE DESIGN & MOBIELE OPTIMALISATIES (< 768px, < 640px, < 400px)
@@ -2226,6 +2236,7 @@ textarea:focus {
   input[type=text],
   input[type=number],
   input[type=password],
+  input[type=email],
   select,
   textarea {
     font-size: 16px !important;

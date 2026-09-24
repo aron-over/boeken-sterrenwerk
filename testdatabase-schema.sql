@@ -55,7 +55,8 @@ alter table scan_wachtrij enable row level security;
 
 -- De site werkt volledig client-side met de anon key, zonder login
 -- (het coördinator-wachtwoord is alleen een UI-drempel, geen echte auth).
--- Daarom mag de anon-rol hier alles: lezen/schrijven voor leraren en coördinator.
+-- LET OP: dit zijn de oude, open policies. Voer daarna migratie_beveiliging.sql uit
+-- voor de echte rechten (anon beperkt, coördinator via Supabase Auth).
 create policy "anon volledige toegang boeken" on boeken
   for all to anon using (true) with check (true);
 

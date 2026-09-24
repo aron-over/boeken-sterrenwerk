@@ -14,7 +14,7 @@
 <!-- SheetJS (Excel .xlsx en .xls parsing) -->
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <!-- NL Design System Stijlen voor Onderwijs -->
-<link rel="stylesheet" href="style.css?v=20260921_v5">
+<link rel="stylesheet" href="style.css?v=20260924_v1">
 </head>
 <body>
 
@@ -293,12 +293,17 @@
     <div id="coord-lock" class="lock-screen">
       <h2>Coördinator</h2>
       <p>Dit gedeelte is alleen voor de taalcoördinator.</p>
-      <input type="password" id="coord-password" placeholder="Wachtwoord">
-      <button class="btn btn-primary btn-block" id="coord-unlock" style="margin-top:12px;">Ontgrendel</button>
+      <input type="email" id="coord-email" placeholder="E-mailadres" autocomplete="username">
+      <input type="password" id="coord-password" placeholder="Wachtwoord" autocomplete="current-password" style="margin-top:8px;">
+      <button class="btn btn-primary btn-block" id="coord-unlock" style="margin-top:12px;">Inloggen</button>
       <div id="coord-lock-msg" style="margin-top:8px; font-size:13px; color:var(--red);"></div>
     </div>
 
     <div id="coord-content" style="display:none">
+      <div class="coord-sessie">
+        <span id="coord-ingelogd-als"></span>
+        <button type="button" class="btn btn-ghost btn-sm" id="coord-logout">Uitloggen</button>
+      </div>
       <div class="card budget-box">
         <h2>Uitgaven dit kalenderjaar</h2>
         <div class="budget-numbers">
@@ -893,7 +898,7 @@
 <div id="print-bestelbon-area" style="display:none;"></div>
 
 <!-- Applicatie Script -->
-<script src="app.js?v=20260921_v5"></script>
+<script src="app.js?v=20260924_v1"></script>
 
 </body>
 </html>

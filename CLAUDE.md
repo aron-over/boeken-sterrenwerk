@@ -52,9 +52,10 @@ huidige kalenderjaar.
 2. **Boeken zoeken** — toont alleen `status = binnen`. Pil-filters op categorie + dynamisch
    thema. Elk boek heeft een gedeeld "boekentip"-veld (lesideeën van leraren, stapelt op,
    overschrijft niet).
-3. **Coördinator** — achter een simpel wachtwoord (`COORD_PASSWORD` in de code — dit is puur
-   een drempel tegen per-ongeluk-klikken, GEEN echte beveiliging, de broncode is voor iedereen
-   leesbaar). Bevat: jaarbudget-balk, "Te bestellen" en "Onderweg" met bulk-acties +
+3. **Coördinator** — inloggen met e-mail + wachtwoord via Supabase Auth (lokaal/testomgeving:
+   geen login, één klik). De echte beveiliging zit in de database-RLS (`migratie_beveiliging.sql`):
+   anon mag alleen lezen, aanvragen indienen (status `aangevraagd`) en `boekentip` wijzigen;
+   alleen gebruikers in de tabel `coordinatoren` mogen de rest. Bevat: jaarbudget-balk, "Te bestellen" en "Onderweg" met bulk-acties +
    totaalbedrag van de selectie en inline bewerkbare velden, "Niet leverbaar" met een
    terugzet-knop, en "Alle boeken" als compacte inklapbare lijst (klik open om te bewerken,
    inclusief status handmatig wijzigen — handig als een boek kwijt/kapot is en opnieuw
@@ -81,6 +82,8 @@ Vóór elke `git commit`:
    en meld dat expliciet voordat je commit.
 2. Nooit een wachtwoord, personal access token, of database-connectiestring in een bestand
    zetten dat gecommit wordt. Die horen in een lokaal `.env`-bestand dat in `.gitignore` staat.
+   Ook geen API keys van andere diensten (bijv. Google): GitHub secret scanning slaat daarop aan.
+   De Google Books-lookup werkt bewust zonder key.
 
 Standaard commit-boodschappen: kort en in het Nederlands, beschrijf wat er functioneel
 verandert (bijv. "Boekentip-veld toevoegen aan zoekresultaten"), niet de technische details.

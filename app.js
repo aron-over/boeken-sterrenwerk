@@ -17,6 +17,7 @@ const SUPABASE_URL = IS_LOCAL ? TEST_URL : PROD_URL;
 const SUPABASE_ANON_KEY = IS_LOCAL ? TEST_KEY : PROD_KEY;
 const realClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+let coordUnlocked = false; // true zodra de coördinator is ingelogd (zie Tab 3)
 let allBooksCache = [];
 let pristineBaselineData = null;
 let initialBaselineLoaded = false;
@@ -214,8 +215,6 @@ if (IS_LOCAL){
   if (stijlgidsLink) stijlgidsLink.style.display = 'inline-flex';
   console.info('%c[Boeken Sterrenwerk] Actief in TESTOMGEVING (in-memory sandbox: mutaties worden niet opgeslagen in Supabase)', 'color: #A9821E; font-weight: bold;');
 }
-
-const COORD_PASSWORD = 'sterrenwerk2026';
 
 const GROEPEN = ['Groep 3','Groep 4','Groep 5','Groep 6','Groep 7','Groep 8'];
 const KLEUTERS_THEMAS = ['Baby familie','Beroepen','Boerderij','Bouwen','Carnaval','Dieren','Dikkie Dik',"Draken & Dino's",'Emoties','Gezondheid','Herfst','Jarig & Feest','Kermis','Kerst','Kikker','Koken en bakken','Koningshuis','Kunst','Lente','Liedjes & Versjes','Natuur','Pasen','Rekenen','Ruimte','Seizoenen','Sinterklaas','Sociaal emotioneel','Sporten','Sprookjes','Taal','Vakantie','Verkeer','Voorlezen','Vriendschap','Winter','Zoekboek'].sort((a, b) => a.localeCompare(b, 'nl'));
@@ -1097,8 +1096,8 @@ const checkIsbnMatch = debounce(() => {
   showMatches('isbn-match', allBooksCache.filter(b => b.isbn && b.isbn.toLowerCase().includes(val)));
 }, 350);
 
-// Automatisch ISBN opzoeken via Google Books API (met Open Library fallback)
-const GOOGLE_BOOKS_API_KEY = 'AIzaSyCbxR69LAkdar7fdAXphsg5vs9e_QxWBY0';
+// Automatisch ISBN opzoeken via Google Books API (met Open Library fallback).
+// Bewust zonder API key: de publieke limiet volstaat en er staat zo geen sleutel in de broncode.
 
 // Centrale functie om online metadata op te halen voor een ISBN
 async function fetchBookMetadataOnline(isbn){
@@ -1106,9 +1105,9 @@ async function fetchBookMetadataOnline(isbn){
   const cleanIsbn = String(isbn).replace(/\D/g, '');
   if (cleanIsbn.length !== 10 && cleanIsbn.length !== 13) return null;
 
-  // 1. Probeer Google Books met API key
+  // 1. Probeer Google Books
   try {
-    const res = await fetch(`https://www.googleapis.com/books/v1/volumes?q=isbn:${cleanIsbn}&key=${GOOGLE_BOOKS_API_KEY}`);
+    const res = await fetch(`https://www.googleapis.com/books/v1/volumes?q=isbn:${cleanIsbn}`);
     if (res.ok){
       const data = await res.json();
       if (data.items && data.items.length > 0){
@@ -1294,28 +1293,16 @@ let lastScannedIsbnTimes = {};
 let scanWachtrijTableExists = true;
 let scanWachtrijCache = [];
 let remoteUpdateTimer = null;
-const prodScanClient = supabase.createClient(PROD_URL, PROD_KEY);
+// Lokaal is er geen login, dus de (alleen voor de coördinator toegankelijke) wachtrij staat dan uit.
+if (IS_LOCAL) scanWachtrijTableExists = false;
 
 async function fetchScanWachtrij(){
+  if (!scanWachtrijTableExists || !coordUnlocked) return [];
   try {
-    let { data, error } = await realClient
+    const { data, error } = await realClient
       .from('scan_wachtrij')
       .select('*')
       .order('created_at', { ascending: true });
-
-    // Als we lokaal testen en testdb heeft geen rijen, controleer live prod database
-    if (IS_LOCAL && (!data || data.length === 0)){
-      try {
-        const prodRes = await prodScanClient
-          .from('scan_wachtrij')
-          .select('*')
-          .order('created_at', { ascending: true });
-        if (prodRes.data && prodRes.data.length > 0){
-          data = prodRes.data;
-          error = null;
-        }
-      } catch (e){}
-    }
 
     if (error){
       if (error.code === 'PGRST205' || String(error.message).includes('scan_wachtrij')){
@@ -1518,7 +1505,7 @@ async function syncImportQueueFromRemote(){
 
 async function loadScanQueueIntoImportModal(){
   if (!coordUnlocked){
-    const passInp = document.getElementById('coord-password');
+    const passInp = document.getElementById('coord-email');
     if (passInp){
       passInp.focus();
       passInp.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -3070,29 +3057,77 @@ function renderZoekLijst(resetCount = true){
 }
 
 // ---------- Tab 3: Coördinator ----------
-let coordUnlocked = sessionStorage.getItem('coord_ok') === '1';
-if (coordUnlocked){
-  document.getElementById('coord-lock').style.display = 'none';
-  document.getElementById('coord-content').style.display = '';
+// Inloggen via Supabase Auth. De rechten zelf worden in de database afgedwongen (RLS):
+// zonder login mag je alleen lezen, aanvragen indienen en boekentips toevoegen.
+// Lokaal (testomgeving) is er geen login nodig, want daar worden mutaties niet opgeslagen.
+
+function toonCoordinatorScherm(ingelogd, email){
+  coordUnlocked = ingelogd;
+  document.getElementById('coord-lock').style.display = ingelogd ? 'none' : '';
+  document.getElementById('coord-content').style.display = ingelogd ? '' : 'none';
+  const wie = document.getElementById('coord-ingelogd-als');
+  if (wie) wie.textContent = email ? `Ingelogd als ${email}` : 'Testomgeving: geen login nodig';
   updateScanQueueBanner();
 }
 
-document.getElementById('coord-password')?.addEventListener('keydown', e => {
-  if (e.key === 'Enter'){ e.preventDefault(); document.getElementById('coord-unlock').click(); }
-});
-document.getElementById('coord-unlock')?.addEventListener('click', () => {
-  const val = document.getElementById('coord-password').value;
-  if (val === COORD_PASSWORD){
-    coordUnlocked = true;
-    sessionStorage.setItem('coord_ok', '1');
-    document.getElementById('coord-lock').style.display = 'none';
-    document.getElementById('coord-content').style.display = '';
-    updateScanQueueBanner();
-    refreshCoordinatorData(true);
-    fetchAllBooks(false);
-  } else {
-    document.getElementById('coord-lock-msg').textContent = 'Onjuist wachtwoord.';
+async function ontgrendelCoordinator(email){
+  toonCoordinatorScherm(true, email);
+  refreshCoordinatorData(true);
+  fetchAllBooks(false);
+}
+
+(async () => {
+  if (IS_LOCAL){
+    if (sessionStorage.getItem('coord_ok') === '1') toonCoordinatorScherm(true, null);
+    return;
   }
+  const { data } = await realClient.auth.getSession();
+  if (data && data.session) toonCoordinatorScherm(true, data.session.user.email);
+})();
+
+realClient.auth.onAuthStateChange((event) => {
+  if (event === 'SIGNED_OUT' && !IS_LOCAL) toonCoordinatorScherm(false, null);
+});
+
+['coord-email', 'coord-password'].forEach(id => {
+  document.getElementById(id)?.addEventListener('keydown', e => {
+    if (e.key === 'Enter'){ e.preventDefault(); document.getElementById('coord-unlock').click(); }
+  });
+});
+document.getElementById('coord-unlock')?.addEventListener('click', async () => {
+  const msg = document.getElementById('coord-lock-msg');
+  const btn = document.getElementById('coord-unlock');
+  msg.textContent = '';
+  if (IS_LOCAL){
+    sessionStorage.setItem('coord_ok', '1');
+    ontgrendelCoordinator(null);
+    return;
+  }
+  const email = document.getElementById('coord-email').value.trim();
+  const password = document.getElementById('coord-password').value;
+  if (!email || !password){
+    msg.textContent = 'Vul je e-mailadres en wachtwoord in.';
+    return;
+  }
+  btn.disabled = true;
+  const { data, error } = await realClient.auth.signInWithPassword({ email, password });
+  btn.disabled = false;
+  if (error){
+    msg.textContent = 'Inloggen mislukt: controleer je e-mailadres en wachtwoord.';
+    return;
+  }
+  document.getElementById('coord-password').value = '';
+  ontgrendelCoordinator(data.user.email);
+});
+
+document.getElementById('coord-logout')?.addEventListener('click', async () => {
+  if (IS_LOCAL){
+    sessionStorage.removeItem('coord_ok');
+    toonCoordinatorScherm(false, null);
+    return;
+  }
+  await realClient.auth.signOut();
+  toonCoordinatorScherm(false, null);
 });
 
 async function refreshCoordinatorData(skipNetwork = false){
