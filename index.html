@@ -297,6 +297,16 @@
       <input type="password" id="coord-password" placeholder="Wachtwoord" autocomplete="current-password" style="margin-top:8px;">
       <button class="btn btn-primary btn-block" id="coord-unlock" style="margin-top:12px;">Inloggen</button>
       <div id="coord-lock-msg" style="margin-top:8px; font-size:13px; color:var(--red);"></div>
+      <button type="button" class="btn btn-ghost btn-sm" id="coord-vergeten" style="margin-top:8px;">Wachtwoord vergeten?</button>
+    </div>
+
+    <div id="coord-nieuw-wachtwoord" class="lock-screen" style="display:none">
+      <h2>Kies een wachtwoord</h2>
+      <p id="coord-nieuw-intro">Kies een wachtwoord waarmee je voortaan inlogt.</p>
+      <input type="password" id="coord-nieuw-1" placeholder="Nieuw wachtwoord (minimaal 8 tekens)" autocomplete="new-password">
+      <input type="password" id="coord-nieuw-2" placeholder="Herhaal wachtwoord" autocomplete="new-password" style="margin-top:8px;">
+      <button class="btn btn-primary btn-block" id="coord-nieuw-opslaan" style="margin-top:12px;">Wachtwoord opslaan</button>
+      <div id="coord-nieuw-msg" style="margin-top:8px; font-size:13px; color:var(--red);"></div>
     </div>
 
     <div id="coord-content" style="display:none">
@@ -898,7 +908,7 @@
 <div id="print-bestelbon-area" style="display:none;"></div>
 
 <!-- Applicatie Script -->
-<script src="app.js?v=20260924_v1"></script>
+<script src="app.js?v=20260924_v2"></script>
 
 </body>
 </html>

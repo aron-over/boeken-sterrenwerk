@@ -15,6 +15,12 @@ const TEST_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
 
 const SUPABASE_URL = IS_LOCAL ? TEST_URL : PROD_URL;
 const SUPABASE_ANON_KEY = IS_LOCAL ? TEST_KEY : PROD_KEY;
+// Komt de bezoeker binnen via een uitnodigings- of wachtwoord-resetlink uit een Supabase-mail?
+// Uitlezen vóór createClient, want die haalt de gegevens daarna uit de URL weg.
+const AUTH_LINK = (() => {
+  const params = new URLSearchParams(window.location.hash.slice(1));
+  return { type: params.get('type'), fout: params.get('error_description') };
+})();
 const realClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 let coordUnlocked = false; // true zodra de coördinator is ingelogd (zie Tab 3)
@@ -3063,6 +3069,7 @@ function renderZoekLijst(resetCount = true){
 
 function toonCoordinatorScherm(ingelogd, email){
   coordUnlocked = ingelogd;
+  document.getElementById('coord-nieuw-wachtwoord').style.display = 'none';
   document.getElementById('coord-lock').style.display = ingelogd ? 'none' : '';
   document.getElementById('coord-content').style.display = ingelogd ? '' : 'none';
   const wie = document.getElementById('coord-ingelogd-als');
@@ -3082,11 +3089,76 @@ async function ontgrendelCoordinator(email){
     return;
   }
   const { data } = await realClient.auth.getSession();
-  if (data && data.session) toonCoordinatorScherm(true, data.session.user.email);
+  const session = data && data.session;
+  if (AUTH_LINK.fout){
+    openCoordinatorTab();
+    document.getElementById('coord-lock-msg').textContent =
+      'Deze link werkt niet (meer). Vraag via "Wachtwoord vergeten?" een nieuwe aan.';
+  } else if (session && (AUTH_LINK.type === 'invite' || AUTH_LINK.type === 'recovery')){
+    toonNieuwWachtwoordScherm(AUTH_LINK.type);
+  } else if (session){
+    toonCoordinatorScherm(true, session.user.email);
+  }
 })();
 
 realClient.auth.onAuthStateChange((event) => {
   if (event === 'SIGNED_OUT' && !IS_LOCAL) toonCoordinatorScherm(false, null);
+});
+
+function openCoordinatorTab(){
+  document.querySelector('nav.tabs button[data-tab="coordinator"]')?.click();
+}
+
+function toonNieuwWachtwoordScherm(type){
+  openCoordinatorTab();
+  document.getElementById('coord-lock').style.display = 'none';
+  document.getElementById('coord-content').style.display = 'none';
+  document.getElementById('coord-nieuw-wachtwoord').style.display = '';
+  document.getElementById('coord-nieuw-intro').textContent = type === 'invite'
+    ? 'Welkom! Kies een wachtwoord waarmee je voortaan inlogt.'
+    : 'Kies een nieuw wachtwoord.';
+  document.getElementById('coord-nieuw-1').focus();
+}
+
+document.getElementById('coord-nieuw-opslaan')?.addEventListener('click', async () => {
+  const msg = document.getElementById('coord-nieuw-msg');
+  const btn = document.getElementById('coord-nieuw-opslaan');
+  const pw1 = document.getElementById('coord-nieuw-1').value;
+  const pw2 = document.getElementById('coord-nieuw-2').value;
+  msg.textContent = '';
+  if (pw1.length < 8){ msg.textContent = 'Kies een wachtwoord van minimaal 8 tekens.'; return; }
+  if (pw1 !== pw2){ msg.textContent = 'De twee wachtwoorden zijn niet gelijk.'; return; }
+  btn.disabled = true;
+  const { data, error } = await realClient.auth.updateUser({ password: pw1 });
+  btn.disabled = false;
+  if (error){
+    msg.textContent = 'Opslaan mislukt: ' + error.message;
+    return;
+  }
+  document.getElementById('coord-nieuw-1').value = '';
+  document.getElementById('coord-nieuw-2').value = '';
+  ontgrendelCoordinator(data.user.email);
+});
+document.getElementById('coord-nieuw-2')?.addEventListener('keydown', e => {
+  if (e.key === 'Enter'){ e.preventDefault(); document.getElementById('coord-nieuw-opslaan').click(); }
+});
+
+document.getElementById('coord-vergeten')?.addEventListener('click', async () => {
+  const msg = document.getElementById('coord-lock-msg');
+  const email = document.getElementById('coord-email').value.trim();
+  if (IS_LOCAL){ msg.textContent = 'In de testomgeving is er geen login.'; return; }
+  if (!email){
+    msg.textContent = 'Vul eerst je e-mailadres in.';
+    document.getElementById('coord-email').focus();
+    return;
+  }
+  const { error } = await realClient.auth.resetPasswordForEmail(email, {
+    redirectTo: window.location.origin + window.location.pathname
+  });
+  msg.style.color = error ? 'var(--red)' : 'var(--ink-soft)';
+  msg.textContent = error
+    ? 'Versturen mislukt: ' + error.message
+    : 'Als dit adres bekend is, staat er zo een mail met een link om een nieuw wachtwoord te kiezen.';
 });
 
 ['coord-email', 'coord-password'].forEach(id => {
@@ -3097,6 +3169,7 @@ realClient.auth.onAuthStateChange((event) => {
 document.getElementById('coord-unlock')?.addEventListener('click', async () => {
   const msg = document.getElementById('coord-lock-msg');
   const btn = document.getElementById('coord-unlock');
+  msg.style.color = 'var(--red)';
   msg.textContent = '';
   if (IS_LOCAL){
     sessionStorage.setItem('coord_ok', '1');
