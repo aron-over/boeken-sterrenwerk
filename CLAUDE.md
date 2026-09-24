@@ -55,7 +55,10 @@ huidige kalenderjaar.
 3. **Coördinator** — inloggen met e-mail + wachtwoord via Supabase Auth (lokaal/testomgeving:
    geen login, één klik). De echte beveiliging zit in de database-RLS (`migratie_beveiliging.sql`):
    anon mag alleen lezen, aanvragen indienen (status `aangevraagd`) en `boekentip` wijzigen;
-   alleen gebruikers in de tabel `coordinatoren` mogen de rest. Bevat: jaarbudget-balk, "Te bestellen" en "Onderweg" met bulk-acties +
+   alleen gebruikers in de tabel `coordinatoren` mogen de rest. Nieuwe coördinatoren uitnodigen
+   kan vanaf de site via de Edge Function `supabase/functions/nodig-coordinator-uit` (handmatig
+   gedeployed via het Supabase-dashboard; backup: uitnodigen in het dashboard + rij in
+   `coordinatoren` invoegen via de SQL-editor). Bevat: jaarbudget-balk, "Te bestellen" en "Onderweg" met bulk-acties +
    totaalbedrag van de selectie en inline bewerkbare velden, "Niet leverbaar" met een
    terugzet-knop, en "Alle boeken" als compacte inklapbare lijst (klik open om te bewerken,
    inclusief status handmatig wijzigen — handig als een boek kwijt/kapot is en opnieuw
