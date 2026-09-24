@@ -2136,6 +2136,13 @@ textarea:focus {
   box-shadow: var(--shadow-sm);
 }
 .lock-screen p { color: var(--ink-soft); font-size: 14px; margin-bottom: 16px; }
+.coord-uitnodigen h3 { margin: 0 0 4px; font-size: 16px; }
+.coord-uitnodigen p { margin: 0 0 12px; font-size: 13px; color: var(--ink-soft); }
+.coord-uitnodigen-rij { display: flex; gap: 8px; flex-wrap: wrap; }
+.coord-uitnodigen-rij input { flex: 1 1 220px; }
+.coord-uitnodigen-msg { margin-top: 8px; font-size: 13px; }
+.coord-uitnodigen-msg.fout { color: var(--red); }
+.coord-uitnodigen-msg.ok { color: var(--ink-soft); }
 .coord-sessie {
   display: flex;
   justify-content: flex-end;

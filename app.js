@@ -3143,6 +3143,12 @@ document.getElementById('coord-nieuw-2')?.addEventListener('keydown', e => {
   if (e.key === 'Enter'){ e.preventDefault(); document.getElementById('coord-nieuw-opslaan').click(); }
 });
 
+// Supabase's ingebouwde mailservice verstuurt maar een paar mails per uur (voor het hele project).
+const MAIL_LIMIET_MELDING = 'Er zijn het afgelopen uur te veel mails verstuurd. Probeer het over een uur opnieuw.';
+function isMailLimiet(tekst){
+  return /rate limit/i.test(String(tekst || ''));
+}
+
 document.getElementById('coord-vergeten')?.addEventListener('click', async () => {
   const msg = document.getElementById('coord-lock-msg');
   const email = document.getElementById('coord-email').value.trim();
@@ -3157,7 +3163,7 @@ document.getElementById('coord-vergeten')?.addEventListener('click', async () =>
   });
   msg.style.color = error ? 'var(--red)' : 'var(--ink-soft)';
   msg.textContent = error
-    ? 'Versturen mislukt: ' + error.message
+    ? (isMailLimiet(error.message) ? MAIL_LIMIET_MELDING : 'Versturen mislukt: ' + error.message)
     : 'Als dit adres bekend is, staat er zo een mail met een link om een nieuw wachtwoord te kiezen.';
 });
 
@@ -3191,6 +3197,51 @@ document.getElementById('coord-unlock')?.addEventListener('click', async () => {
   }
   document.getElementById('coord-password').value = '';
   ontgrendelCoordinator(data.user.email);
+});
+
+document.getElementById('coord-uitnodigen-toggle')?.addEventListener('click', () => {
+  const kaart = document.getElementById('coord-uitnodigen');
+  const open = kaart.style.display === 'none';
+  kaart.style.display = open ? '' : 'none';
+  if (open) document.getElementById('coord-uitnodigen-email').focus();
+});
+
+document.getElementById('coord-uitnodigen-email')?.addEventListener('keydown', e => {
+  if (e.key === 'Enter'){ e.preventDefault(); document.getElementById('coord-uitnodigen-verstuur').click(); }
+});
+
+// Uitnodigen gaat via de Edge Function "nodig-coordinator-uit" (zie supabase/functions/),
+// omdat daarvoor de service_role-sleutel nodig is die nooit in de browser mag staan.
+document.getElementById('coord-uitnodigen-verstuur')?.addEventListener('click', async () => {
+  const msg = document.getElementById('coord-uitnodigen-msg');
+  const btn = document.getElementById('coord-uitnodigen-verstuur');
+  const invoer = document.getElementById('coord-uitnodigen-email');
+  const email = invoer.value.trim();
+  const toon = (tekst, ok) => { msg.textContent = tekst; msg.className = 'coord-uitnodigen-msg ' + (ok ? 'ok' : 'fout'); };
+
+  if (IS_LOCAL){ toon('Uitnodigen kan alleen op de live site.', false); return; }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ toon('Vul een geldig e-mailadres in.', false); return; }
+
+  btn.disabled = true;
+  toon('Bezig met versturen…', true);
+  const { data, error } = await realClient.functions.invoke('nodig-coordinator-uit', {
+    body: { email, redirectTo: window.location.origin + window.location.pathname }
+  });
+  btn.disabled = false;
+
+  if (error){
+    let melding = 'Uitnodigen mislukt. Probeer het later opnieuw of nodig uit via het Supabase-dashboard.';
+    try {
+      const detail = await error.context.json();
+      if (detail && detail.error) melding = isMailLimiet(detail.error) ? MAIL_LIMIET_MELDING : detail.error;
+    } catch (e){}
+    toon(melding, false);
+    return;
+  }
+  invoer.value = '';
+  toon(data.bestaandAccount
+    ? `${data.email} had al een account en is nu coördinator.`
+    : `Uitnodiging verstuurd naar ${data.email}.`, true);
 });
 
 document.getElementById('coord-logout')?.addEventListener('click', async () => {
