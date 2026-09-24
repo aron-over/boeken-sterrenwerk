@@ -1064,14 +1064,45 @@ function debounce(fn, wait){
   return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), wait); };
 }
 
-function showMatches(containerId, matches){
+// Uitleg per status, zodat een leraar ziet wáár in het proces een bestaand boek zit.
+function matchStatusInfo(b){
+  const datum = d => d ? new Date(d).toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
+  switch (b.status){
+    case 'aangevraagd': return {
+      label: 'Al aangevraagd',
+      uitleg: `${b.naam_aanvrager ? 'door ' + b.naam_aanvrager + ', ' : ''}wacht op bestelling door de coördinator`
+    };
+    case 'besteld': return {
+      label: 'Besteld',
+      uitleg: `${b.besteld_op ? 'op ' + datum(b.besteld_op) + ', ' : ''}onderweg naar school`
+    };
+    case 'binnen': return {
+      label: 'Op school',
+      uitleg: 'bekijk het in Boeken zoeken'
+    };
+    case 'afgewezen': return {
+      label: 'Niet leverbaar',
+      uitleg: 'eerder aangevraagd, maar kon niet besteld worden'
+    };
+    default: return { label: b.status || 'Onbekend', uitleg: '' };
+  }
+}
+
+function showMatches(containerId, matches, kop = 'Lijkt al op de lijst te staan:'){
   const el = document.getElementById(containerId);
   if (!el) return;
   if (!matches.length){ el.style.display = 'none'; el.innerHTML = ''; return; }
   el.style.display = '';
-  el.innerHTML = 'Lijkt al op de lijst te staan:<br>' + matches.slice(0,4).map(b =>
-    `<div class="match-item match-item-link" data-titel="${escapeHtml(b.titel)}">• ${escapeHtml(b.titel)}</div>`
-  ).join('');
+  el.innerHTML = escapeHtml(kop) + matches.slice(0,4).map(b => {
+    const info = matchStatusInfo(b);
+    const statusTag = `<span class="tag status-${escapeHtml(b.status || '')}">${escapeHtml(info.label)}</span>`;
+    const uitleg = info.uitleg ? ` <span class="match-uitleg">— ${escapeHtml(info.uitleg)}</span>` : '';
+    // Alleen boeken die binnen zijn staan in Boeken zoeken, dus alleen die zijn klikbaar
+    const titel = b.status === 'binnen'
+      ? `<span class="match-item-link" data-titel="${escapeHtml(b.titel)}">${escapeHtml(b.titel)}</span>`
+      : `<strong>${escapeHtml(b.titel)}</strong>`;
+    return `<div class="match-item">${statusTag} ${titel}${uitleg}</div>`;
+  }).join('');
   el.querySelectorAll('.match-item-link').forEach(item => {
     item.addEventListener('click', () => goToZoekenMetTitel(item.dataset.titel));
   });
@@ -1086,21 +1117,26 @@ function goToZoekenMetTitel(titel){
   }
 }
 
-const checkTitelMatch = debounce(() => {
-  const el = document.getElementById('titel');
-  if (!el) return;
-  const val = el.value.trim().toLowerCase();
-  if (val.length < 3){ showMatches('titel-match', []); return; }
-  showMatches('titel-match', allBooksCache.filter(b => b.titel && b.titel.toLowerCase().includes(val)));
-}, 350);
+// ISBN- en titelcheck worden samen bijgewerkt: een boek dat al onder het ISBN
+// gemeld wordt, komt niet nog een keer onder de titel te staan.
+function updateMatches(){
+  const isbnVal = (document.getElementById('isbn')?.value || '').trim().toLowerCase();
+  const titelVal = (document.getElementById('titel')?.value || '').trim().toLowerCase();
 
-const checkIsbnMatch = debounce(() => {
-  const el = document.getElementById('isbn');
-  if (!el) return;
-  const val = el.value.trim().toLowerCase();
-  if (val.length < 3){ showMatches('isbn-match', []); return; }
-  showMatches('isbn-match', allBooksCache.filter(b => b.isbn && b.isbn.toLowerCase().includes(val)));
-}, 350);
+  const isbnMatches = isbnVal.length >= 3
+    ? allBooksCache.filter(b => b.isbn && b.isbn.toLowerCase().includes(isbnVal))
+    : [];
+  const alGemeld = new Set(isbnMatches.map(b => b.id));
+  const titelMatches = titelVal.length >= 3
+    ? allBooksCache.filter(b => b.titel && b.titel.toLowerCase().includes(titelVal) && !alGemeld.has(b.id))
+    : [];
+
+  showMatches('isbn-match', isbnMatches, 'Dit boek staat al in het systeem:');
+  showMatches('titel-match', titelMatches);
+}
+
+const checkTitelMatch = debounce(updateMatches, 350);
+const checkIsbnMatch = debounce(updateMatches, 350);
 
 // Automatisch ISBN opzoeken via Google Books API (met Open Library fallback).
 // Hoofdroute: Edge Function "zoek-isbn", die Google Books aanroept met onze eigen API key

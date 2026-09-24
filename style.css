@@ -578,6 +578,14 @@ textarea:focus {
 }
 .match-list .match-item {
   padding: 4px 0;
+  line-height: 1.6;
+}
+.match-list .match-item .tag {
+  font-size: 11px;
+  vertical-align: 1px;
+}
+.match-list .match-uitleg {
+  color: var(--ink-soft);
 }
 .match-list .match-item-link {
   cursor: pointer;
