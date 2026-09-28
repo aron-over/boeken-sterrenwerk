@@ -17,7 +17,13 @@ const cors = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
-type Resultaat = { title: string; author: string; coverUrl: string | null; source: string };
+type Resultaat = {
+  title: string;
+  author: string;
+  coverUrl: string | null;
+  source: string;
+  price?: number | null;
+};
 
 function antwoord(body: Record<string, unknown>, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -36,12 +42,63 @@ async function zoekGoogle(isbn: string, key?: string): Promise<Resultaat | null>
     return null;
   }
   const data = await res.json();
-  const info = data.items?.[0]?.volumeInfo;
+  const item = data.items?.[0];
+  const info = item?.volumeInfo;
   if (!info?.title) return null;
   const title = info.subtitle ? `${info.title}: ${info.subtitle}` : info.title;
   let coverUrl: string | null = info.imageLinks?.thumbnail ?? info.imageLinks?.smallThumbnail ?? null;
   if (coverUrl) coverUrl = coverUrl.replace(/^http:\/\//, 'https://');
-  return { title, author: (info.authors ?? []).join(', '), coverUrl, source: 'google' };
+
+  let price: number | null = null;
+  const sale = item?.saleInfo;
+  if (sale?.retailPrice?.amount) {
+    price = sale.retailPrice.amount;
+  } else if (sale?.listPrice?.amount) {
+    price = sale.listPrice.amount;
+  }
+
+  return { title, author: (info.authors ?? []).join(', '), coverUrl, source: 'google', price };
+}
+
+async function zoekEasyCB(isbn: string): Promise<{ title?: string; author?: string; price?: number } | null> {
+  try {
+    const res = await fetch(`https://easycbapi.nl/isbn/${isbn}`, {
+      headers: { 'User-Agent': 'BoekenSterrenwerk/1.0 (hetsterrenwerk@onderwijs)' },
+      signal: AbortSignal.timeout(4000),
+    });
+    if (!res.ok) return null;
+    const text = await res.text();
+    if (!text || text.trim().startsWith('Not found')) return null;
+
+    let title: string | undefined;
+    let author: string | undefined;
+    let price: number | undefined;
+
+    for (const rawLine of text.split('\n')) {
+      const line = rawLine.trim();
+      const idx = line.indexOf(':');
+      if (idx === -1) continue;
+      const key = line.slice(0, idx).trim().toLowerCase();
+      const val = line.slice(idx + 1).trim();
+
+      if (key === 'price' && val) {
+        const num = parseFloat(val.replace(',', '.'));
+        if (!isNaN(num) && num > 0) price = Math.round(num * 100) / 100;
+      } else if (key === 'title' && val && !title) {
+        title = val;
+      } else if (key === 'author' && val && !author) {
+        author = val;
+      }
+    }
+
+    if (title || price != null) {
+      return { title, author, price };
+    }
+    return null;
+  } catch (e) {
+    console.warn('EasyCB lookup fout:', e);
+    return null;
+  }
 }
 
 async function zoekOpenLibrary(isbn: string): Promise<Resultaat | null> {
@@ -71,14 +128,52 @@ Deno.serve(async (req) => {
   }
 
   const key = Deno.env.get('GOOGLE_BOOKS_API_KEY') || undefined;
-  const bronnen = [() => zoekGoogle(isbn, key), () => zoekOpenLibrary(isbn)];
-  for (const bron of bronnen) {
-    try {
-      const resultaat = await bron();
-      if (resultaat) return antwoord({ gevonden: true, ...resultaat });
-    } catch (e) {
-      console.warn('Opzoeken mislukt:', e);
-    }
+
+  // 1. Google Books raadplegen (titel, auteur, omslag)
+  let resultaat: Resultaat | null = null;
+  try {
+    resultaat = await zoekGoogle(isbn, key);
+  } catch (e) {
+    console.warn('Google Books mislukt:', e);
   }
+
+  // 2. Haal CB-data op (Centraal Boekhuis / vaste boekenprijs)
+  let cbData: { title?: string; author?: string; price?: number } | null = null;
+  try {
+    cbData = await zoekEasyCB(isbn);
+  } catch (e) {
+    console.warn('EasyCB mislukt:', e);
+  }
+
+  if (resultaat) {
+    if (resultaat.price == null && cbData?.price != null) {
+      resultaat.price = cbData.price;
+    }
+    return antwoord({ gevonden: true, ...resultaat });
+  }
+
+  // Als Google Books niets vond, maar CB wel:
+  if (cbData && cbData.title) {
+    return antwoord({
+      gevonden: true,
+      title: cbData.title,
+      author: cbData.author || '',
+      coverUrl: null,
+      source: 'centraal-boekhuis',
+      price: cbData.price ?? null,
+    });
+  }
+
+  // Fallback: Open Library
+  try {
+    const ol = await zoekOpenLibrary(isbn);
+    if (ol) {
+      if (cbData?.price != null) ol.price = cbData.price;
+      return antwoord({ gevonden: true, ...ol });
+    }
+  } catch (e) {
+    console.warn('Open Library mislukt:', e);
+  }
+
   return antwoord({ gevonden: false });
 });

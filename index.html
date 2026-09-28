@@ -209,10 +209,17 @@
           <input type="text" id="auteur" autocomplete="off" placeholder="Naam van de auteur">
 
           <label for="prijs">Prijs (€) <span style="color:var(--red);">*</span></label>
-          <div class="prijs-input-wrap">
-            <span class="currency-prefix">€</span>
-            <input type="text" inputmode="decimal" id="prijs" class="prijs-input" placeholder="0,00" autocomplete="off" required>
+          <div class="prijs-input-row">
+            <div class="prijs-input-wrap">
+              <span class="currency-prefix">€</span>
+              <input type="text" inputmode="decimal" id="prijs" class="prijs-input" placeholder="0,00" autocomplete="off" required>
+            </div>
+            <a id="btn-bol-prijs" href="#" target="_blank" rel="noopener noreferrer" class="btn btn-neutral btn-sm btn-bol" style="display:none;" title="Bekijk dit boek op bol.com voor de actuele prijs">
+              <span class="bol-tag">bol.</span>
+              <span>Bekijk prijs ↗</span>
+            </a>
           </div>
+          <div id="prijs-richtprijs-hint" class="prijs-hint" style="display:none;"></div>
         </div>
 
         <!-- Sectie 3: Categorie & Locatie -->

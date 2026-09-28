@@ -1179,7 +1179,15 @@ async function zoekBoekMetadataOnline(isbn){
   try {
     const { data, error } = await realClient.functions.invoke('zoek-isbn', { body: { isbn: cleanIsbn } });
     if (!error && data){
-      if (data.gevonden) return { title: data.title, author: data.author, coverUrl: data.coverUrl, source: data.source };
+      if (data.gevonden) {
+        return {
+          title: data.title,
+          author: data.author,
+          coverUrl: data.coverUrl,
+          source: data.source,
+          price: data.price != null ? Number(data.price) : null
+        };
+      }
       return null; // Functie werkt, maar geen enkele bron kent dit ISBN
     }
   } catch(e){
@@ -1192,7 +1200,8 @@ async function zoekBoekMetadataOnline(isbn){
     if (res.ok){
       const data = await res.json();
       if (data.items && data.items.length > 0){
-        const info = data.items[0].volumeInfo;
+        const item = data.items[0];
+        const info = item.volumeInfo || {};
         const title = info.title || '';
         const author = (info.authors && info.authors.length) ? info.authors.join(', ') : '';
         let coverUrl = null;
@@ -1202,8 +1211,13 @@ async function zoekBoekMetadataOnline(isbn){
             coverUrl = coverUrl.replace('http://', 'https://');
           }
         }
+        let price = null;
+        const sale = item.saleInfo;
+        if (sale?.retailPrice?.amount) price = Number(sale.retailPrice.amount);
+        else if (sale?.listPrice?.amount) price = Number(sale.listPrice.amount);
+
         if (title){
-          return { title, author, coverUrl, source: 'google' };
+          return { title, author, coverUrl, source: 'google', price };
         }
       }
     }
@@ -1219,7 +1233,7 @@ async function zoekBoekMetadataOnline(isbn){
       if (boek && boek.title){
         const author = (boek.authors || []).map(a => a.name).join(', ');
         const coverUrl = (boek.cover && (boek.cover.small || boek.cover.medium)) || null;
-        return { title: boek.title, author, coverUrl, source: 'openlibrary' };
+        return { title: boek.title, author, coverUrl, source: 'openlibrary', price: null };
       }
     }
   } catch(olErr){
@@ -1229,8 +1243,22 @@ async function zoekBoekMetadataOnline(isbn){
   return null;
 }
 
+function updateBolButton(isbn){
+  const btn = document.getElementById('btn-bol-prijs');
+  if (!btn) return;
+  const cijfers = String(isbn || '').replace(/\D/g, '');
+  if (cijfers.length === 13){
+    btn.href = `https://www.bol.com/nl/nl/s/?searchtext=${cijfers}`;
+    btn.style.display = 'inline-flex';
+  } else {
+    btn.style.display = 'none';
+  }
+}
+
 async function lookupIsbnGoogleBooks(isbn){
   if (!isbn || isbn.length !== 13) return;
+  updateBolButton(isbn);
+
   const statusEl = document.getElementById('isbn-lookup-status');
   if (statusEl){
     statusEl.textContent = 'Gegevens ophalen voor ISBN ' + isbn + '…';
@@ -1242,6 +1270,9 @@ async function lookupIsbnGoogleBooks(isbn){
   if (meta && meta.title){
     const titelInput = document.getElementById('titel');
     const auteurInput = document.getElementById('auteur');
+    const prijsInput = document.getElementById('prijs');
+    const hintEl = document.getElementById('prijs-richtprijs-hint');
+
     if (titelInput && (!titelInput.value || titelInput.value.trim() === '')){
       titelInput.value = meta.title;
       checkTitelMatch();
@@ -1249,10 +1280,22 @@ async function lookupIsbnGoogleBooks(isbn){
     if (auteurInput && (!auteurInput.value || auteurInput.value.trim() === '') && meta.author){
       auteurInput.value = meta.author;
     }
+    if (prijsInput && meta.price != null && (!prijsInput.value || prijsInput.value.trim() === '')){
+      prijsInput.value = formatBedrag(meta.price);
+      if (hintEl){
+        hintEl.textContent = `💡 Richtprijs automatisch ingevuld op basis van de vaste boekenprijs (€ ${formatBedrag(meta.price)}). Pas gerust aan indien nodig.`;
+        hintEl.style.display = 'block';
+      }
+    }
+
     if (statusEl){
-      statusEl.textContent = `✓ Boek gevonden: "${meta.title}"` + (meta.author ? ` door ${meta.author}` : '');
+      let statusTekst = `✓ Boek gevonden: "${meta.title}"` + (meta.author ? ` door ${meta.author}` : '');
+      if (meta.price != null){
+        statusTekst += ` · Richtprijs: € ${formatBedrag(meta.price)}`;
+      }
+      statusEl.textContent = statusTekst;
       statusEl.style.color = 'var(--green)';
-      setTimeout(() => { statusEl.style.display = 'none'; }, 6000);
+      setTimeout(() => { statusEl.style.display = 'none'; }, 7000);
     }
   } else {
     if (statusEl){
@@ -1266,6 +1309,11 @@ async function lookupIsbnGoogleBooks(isbn){
 document.getElementById('isbn')?.addEventListener('input', e => {
   const cijfers = e.target.value.replace(/\D/g, '').slice(0, 13);
   if (cijfers !== e.target.value) e.target.value = cijfers;
+  updateBolButton(cijfers);
+  if (cijfers.length < 13){
+    const hintEl = document.getElementById('prijs-richtprijs-hint');
+    if (hintEl && !cijfers) hintEl.style.display = 'none';
+  }
   if (/^\d{13}$/.test(cijfers)){
     document.getElementById('isbn-error').style.display = 'none';
     lookupIsbnGoogleBooks(cijfers);
@@ -1768,6 +1816,7 @@ function addBookToImportQueue(data, onDoneCallback){
         if (meta.title && !newBook.titel) newBook.titel = meta.title;
         if (meta.author && !newBook.auteur) newBook.auteur = meta.author;
         if (meta.coverUrl) newBook.coverUrl = meta.coverUrl;
+        if (meta.price != null && !newBook.prijs) newBook.prijs = meta.price;
         newBook.lookupDone = true;
         newBook.isDuplicate = checkBookExistsInDatabase(cleanIsbn, newBook.titel);
         renderImportQueue();
@@ -2414,10 +2463,14 @@ async function lookupQuickIsbn(){
   if (meta && meta.title){
     const titelEl = document.getElementById('manual-quick-titel');
     const auteurEl = document.getElementById('manual-quick-auteur');
+    const prijsEl = document.getElementById('manual-quick-prijs');
     if (titelEl && (!titelEl.value || titelEl.value.trim() === '')) titelEl.value = meta.title;
     if (auteurEl && (!auteurEl.value || auteurEl.value.trim() === '') && meta.author) auteurEl.value = meta.author;
+    if (prijsEl && (!prijsEl.value || prijsEl.value.trim() === '') && meta.price != null) prijsEl.value = formatBedrag(meta.price);
     if (statusEl){
-      statusEl.textContent = `✓ Gevonden: "${meta.title}"` + (meta.author ? ` door ${meta.author}` : '');
+      let statusTekst = `✓ Gevonden: "${meta.title}"` + (meta.author ? ` door ${meta.author}` : '');
+      if (meta.price != null) statusTekst += ` (€ ${formatBedrag(meta.price)})`;
+      statusEl.textContent = statusTekst;
       statusEl.style.color = 'var(--green)';
     }
   } else {
@@ -2786,6 +2839,9 @@ document.getElementById('book-form')?.addEventListener('submit', async e => {
   document.getElementById('overig_thema_anders').style.display = 'none';
   document.getElementById('kleuters_thema_anders').style.display = 'none';
   document.getElementById('kleuters_thema_suggesties').style.display = 'none';
+  updateBolButton('');
+  const hintEl = document.getElementById('prijs-richtprijs-hint');
+  if (hintEl) hintEl.style.display = 'none';
   showMatches('titel-match', []);
   showMatches('isbn-match', []);
 
@@ -2799,6 +2855,9 @@ document.getElementById('btn-reset-form')?.addEventListener('click', () => {
   const formEl = document.getElementById('book-form');
   if (formEl){
     formEl.style.display = 'block';
+    updateBolButton('');
+    const hEl = document.getElementById('prijs-richtprijs-hint');
+    if (hEl) hEl.style.display = 'none';
     document.getElementById('isbn').focus();
   }
 });
