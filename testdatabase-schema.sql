@@ -23,7 +23,9 @@ create table if not exists boeken (
   status text default 'aangevraagd' check (status in ('aangevraagd', 'besteld', 'binnen', 'afgewezen')),
   besteld_op timestamptz,
   binnen_op timestamptz,
-  boekentip text
+  boekentip text,
+  afwijs_reden text,
+  afwijs_toelichting text
 );
 
 create table if not exists instellingen (

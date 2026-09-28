@@ -33,17 +33,19 @@ In alle HTML en dynamische templates gebruiken we de gestandaardiseerde `.btn`-k
 Tabel **boeken**:
 `id, titel, auteur, isbn, prijs, categorie, groep, jeelo_thema, overig_thema, klas_of_kast
 (ongebruikt, locatie volgt nu uit categorie/thema), aantal (altijd 1), besteld (oude ongebruikte
-kolom, genegeerd), opmerking, naam_aanvrager, status, besteld_op, binnen_op, boekentip`
+kolom, genegeerd), opmerking, naam_aanvrager, status, besteld_op, binnen_op, boekentip,
+afwijs_reden, afwijs_toelichting`
 
 Tabel **instellingen**: `id, jaarbudget` (één rij, het jaarbudget van de coördinator)
 
-`categorie` is altijd een van `Groep` / `Jeelo` / `Overig`, met het bijbehorende thema-veld
-ingevuld (groep, jeelo_thema, of overig_thema — de andere twee blijven leeg). Vaste lijsten
-staan als `GROEPEN`, `JEELO_THEMAS`, `OVERIGE_THEMAS` bovenin het `<script>` van `index.html`.
+`categorie` is altijd een van `Groep` / `Jeelo` / `Overig` / `Kleuters`, met het bijbehorende thema-veld
+ingevuld (groep, jeelo_thema, overig_thema, of kleuters_thema). Vaste lijsten
+staan als `GROEPEN`, `JEELO_THEMAS`, `OVERIGE_THEMAS`, `KLEUTERS_THEMAS` bovenin het `<script>` van `index.html`.
 
 `status` doorloopt: `aangevraagd` → `besteld` → `binnen`, met een aparte tak `afgewezen`
 (kan terug naar `aangevraagd`). Budget wordt berekend over boeken met `besteld_op` in het
-huidige kalenderjaar.
+huidige kalenderjaar. `afgewezen` bevat uitgestelde en afgewezen boeken met een reden (`afwijs_reden`:
+geen budget dit jaar, niet leverbaar, afgewezen, reeds aanwezig, anders) en optionele toelichting.
 
 ## Structuur van de site (3 tabbladen)
 1. **Boek aanvragen** — open voor iedereen, geen wachtwoord. Verplicht: naam, titel, ISBN
@@ -59,8 +61,8 @@ huidige kalenderjaar.
    kan vanaf de site via de Edge Function `supabase/functions/nodig-coordinator-uit` (handmatig
    gedeployed via het Supabase-dashboard; backup: uitnodigen in het dashboard + rij in
    `coordinatoren` invoegen via de SQL-editor). Bevat: jaarbudget-balk, "Te bestellen" en "Onderweg" met bulk-acties +
-   totaalbedrag van de selectie en inline bewerkbare velden, "Niet leverbaar" met een
-   terugzet-knop, en "Alle boeken" als compacte inklapbare lijst (klik open om te bewerken,
+   totaalbedrag van de selectie en inline bewerkbare velden, "Afgewezen / Uitgesteld" met reden-filtering en
+   terugzet-knop (ideaal voor geen budget dit jaar / volgend jaar bestellen), en "Alle boeken" als compacte inklapbare lijst (klik open om te bewerken,
    inclusief status handmatig wijzigen — handig als een boek kwijt/kapot is en opnieuw
    aangevraagd moet worden).
 

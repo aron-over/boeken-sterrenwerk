@@ -395,9 +395,10 @@
         <div id="lijst-besteld"></div>
       </div>
 
-      <!-- Niet leverbaar -->
+      <!-- Afgewezen / Uitgesteld -->
       <div class="card">
-        <h2>Niet leverbaar</h2>
+        <h2>Afgewezen / Uitgesteld</h2>
+        <div class="filter-pills" id="afgewezen-reden-pills" style="margin-bottom:12px;"></div>
         <div id="lijst-afgewezen"></div>
       </div>
 
@@ -411,8 +412,8 @@
             <option value="aangevraagd">Alleen Aangevraagd (te bestellen)</option>
             <option value="besteld">Alleen Besteld (onderweg)</option>
             <option value="binnen">Alleen Binnen (op school)</option>
-            <option value="afgewezen">Alleen Niet leverbaar</option>
-            <option value="__alle__">Alles tonen (inclusief niet leverbaar)</option>
+            <option value="afgewezen">Alleen Afgewezen / Uitgesteld</option>
+            <option value="__alle__">Alles tonen (inclusief afgewezen / uitgesteld)</option>
           </select>
         </div>
 
@@ -914,11 +915,80 @@
   </div>
 </div>
 
+<!-- Afwijzen / Uitstellen Modal -->
+<div id="afwijzen-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="afwijzen-modal-title">
+  <div class="modal-backdrop" id="afwijzen-backdrop"></div>
+  <div class="modal-window" style="max-width:540px;">
+    <div class="modal-header">
+      <div>
+        <div class="modal-subtitle">Aanvraag beoordelen</div>
+        <h2 class="modal-title" id="afwijzen-modal-title">Afwijzen of uitstellen</h2>
+      </div>
+      <button type="button" class="modal-close-btn" id="afwijzen-close-btn" title="Sluiten (Esc)">&times;</button>
+    </div>
+    <div class="modal-body" style="padding:16px 20px;">
+      <div id="afwijzen-book-info" class="afwijzen-book-preview"></div>
+      <label style="display:block; font-weight:600; font-size:13px; margin-bottom:10px; color:var(--ink);">Kies een reden:</label>
+      <div class="afwijzen-reasons-list">
+        <label class="afwijzen-reason-opt">
+          <input type="radio" name="afwijs-reden-radio" value="Geen budget dit jaar (uitgesteld)">
+          <div class="afwijzen-reason-text">
+            <strong>⏳ Geen budget dit jaar (uitgesteld)</strong>
+            <span>Nu geen budget meer; kan bijvoorbeeld volgend schooljaar alsnog besteld worden</span>
+          </div>
+        </label>
+        <label class="afwijzen-reason-opt">
+          <input type="radio" name="afwijs-reden-radio" value="Niet leverbaar">
+          <div class="afwijzen-reason-text">
+            <strong>🛑 Niet leverbaar</strong>
+            <span>Uitverkocht bij uitgever of groothandel, niet meer verkrijgbaar</span>
+          </div>
+        </label>
+        <label class="afwijzen-reason-opt">
+          <input type="radio" name="afwijs-reden-radio" value="Afgewezen">
+          <div class="afwijzen-reason-text">
+            <strong>❌ Afgewezen</strong>
+            <span>Bijvoorbeeld te veel exemplaren, past niet bij leerdoelen of niet noodzakelijk</span>
+          </div>
+        </label>
+        <label class="afwijzen-reason-opt">
+          <input type="radio" name="afwijs-reden-radio" value="Reeds aanwezig op school">
+          <div class="afwijzen-reason-text">
+            <strong>📚 Reeds aanwezig op school</strong>
+            <span>Staat al in de schoolbibliotheek, leerkamer of een andere klas</span>
+          </div>
+        </label>
+        <label class="afwijzen-reason-opt">
+          <input type="radio" name="afwijs-reden-radio" value="Anders">
+          <div class="afwijzen-reason-text">
+            <strong>✏️ Anders...</strong>
+            <span>Een andere reden die je zelf invult</span>
+          </div>
+        </label>
+      </div>
+
+      <div id="afwijzen-anders-wrap" style="display:none; margin-top:12px;">
+        <label for="afwijzen-anders-input" style="display:block; font-size:12px; font-weight:600; margin-bottom:4px; color:var(--ink);">Vul eigen reden in:</label>
+        <input type="text" id="afwijzen-anders-input" placeholder="Bijv. Wachten op herziene druk…" style="width:100%;">
+      </div>
+
+      <div style="margin-top:14px;">
+        <label for="afwijzen-toelichting-input" style="display:block; font-size:12px; font-weight:600; margin-bottom:4px; color:var(--ink);">Toelichting (optioneel):</label>
+        <textarea id="afwijzen-toelichting-input" rows="2" placeholder="Bijv. Volgend jaar september bestellen voor groep 4…" style="width:100%; border:1px solid var(--line); border-radius:6px; padding:8px; font-family:inherit; font-size:13px; resize:vertical;"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer" style="display:flex; justify-content:space-between; align-items:center;">
+      <button type="button" class="btn btn-ghost" id="afwijzen-cancel-btn">Annuleren</button>
+      <button type="button" class="btn btn-primary" id="afwijzen-save-btn">Opslaan</button>
+    </div>
+  </div>
+</div>
+
 <!-- Print-gebied voor Bestelbon / PDF -->
 <div id="print-bestelbon-area" style="display:none;"></div>
 
 <!-- Applicatie Script -->
-<script src="app.js?v=20260924_v4"></script>
+<script src="app.js?v=20260928_v1"></script>
 
 </body>
 </html>

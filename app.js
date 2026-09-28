@@ -891,7 +891,17 @@ function boekZoekTekst(b){
 }
 
 async function dbUpdate(id, fields){
-  const { error } = await client.from('boeken').update(fields).eq('id', id);
+  let { error } = await client.from('boeken').update(fields).eq('id', id);
+  if (error && (fields.afwijs_reden !== undefined || fields.afwijs_toelichting !== undefined)){
+    if (error.message && (error.message.includes('afwijs_reden') || error.message.includes('afwijs_toelichting'))){
+      console.warn('Kolom afwijs_reden of afwijs_toelichting ontbreekt in database, fallback update uitgevoerd', error);
+      const fallbackFields = { ...fields };
+      delete fallbackFields.afwijs_reden;
+      delete fallbackFields.afwijs_toelichting;
+      const res = await client.from('boeken').update(fallbackFields).eq('id', id);
+      error = res.error;
+    }
+  }
   if (error){
     console.error('Update mislukt', error);
     alert('Opslaan is mislukt: ' + error.message);
@@ -3391,6 +3401,19 @@ function renderSummaryMeta(b){
   return metaParts.join(' &middot; ');
 }
 
+function getNormalizedReden(b){
+  return (b && b.afwijs_reden) ? b.afwijs_reden : 'Niet leverbaar';
+}
+
+function getRedenTagClass(reden){
+  if (!reden) return 'tag-reden-leverbaar';
+  if (reden.startsWith('Geen budget')) return 'tag-reden-budget';
+  if (reden.startsWith('Niet leverbaar')) return 'tag-reden-leverbaar';
+  if (reden.startsWith('Afgewezen')) return 'tag-reden-afgewezen';
+  if (reden.startsWith('Reeds aanwezig')) return 'tag-reden-aanwezig';
+  return 'tag-reden-anders';
+}
+
 function updateSummaryHeader(row, b){
   const titelEl = row.querySelector('.summary-titel');
   if (titelEl) titelEl.textContent = b.titel;
@@ -3403,11 +3426,20 @@ function updateSummaryHeader(row, b){
       statusEl.className = 'tag summary-status';
     } else {
       statusEl.style.display = '';
-      statusEl.className = `tag status-${s} summary-status`;
-      if (s === 'aangevraagd') statusEl.textContent = 'te bestellen';
-      else if (s === 'besteld') statusEl.textContent = 'onderweg';
-      else if (s === 'afgewezen') statusEl.textContent = 'niet leverbaar';
-      else statusEl.textContent = s;
+      if (s === 'aangevraagd'){
+        statusEl.className = 'tag status-aangevraagd summary-status';
+        statusEl.textContent = 'te bestellen';
+      } else if (s === 'besteld'){
+        statusEl.className = 'tag status-besteld summary-status';
+        statusEl.textContent = 'onderweg';
+      } else if (s === 'afgewezen'){
+        const reden = getNormalizedReden(b);
+        statusEl.className = `tag ${getRedenTagClass(reden)} summary-status`;
+        statusEl.textContent = reden;
+      } else {
+        statusEl.className = `tag status-${s} summary-status`;
+        statusEl.textContent = s;
+      }
     }
   }
   const metaEl = row.querySelector('.summary-meta');
@@ -3492,7 +3524,7 @@ function editableRowHtml(b, checkboxClass){
         </div>
       </div>
       <div class="row-actions">
-        <button class="btn btn-danger btn-sm reject" data-reject="${b.id}">Niet leverbaar</button>
+        <button class="btn btn-danger btn-sm reject" data-reject="${b.id}">Afwijzen / Uitstellen</button>
         <button class="btn btn-ghost btn-sm" data-delete="${b.id}" style="color:var(--red);">Verwijderen</button>
       </div>
     </div>
@@ -3663,9 +3695,8 @@ function wireEditableRow(row){
 
   // Knoppen voor acties
   const rejectBtn = row.querySelector('[data-reject]');
-  if (rejectBtn) rejectBtn.addEventListener('click', async () => {
-    const ok = await dbUpdate(id, { status: 'afgewezen' });
-    if (ok) await refreshCoordinatorData(true);
+  if (rejectBtn) rejectBtn.addEventListener('click', () => {
+    openAfwijzenModal(id);
   });
 
   row.querySelector('[data-delete]')?.addEventListener('click', async () => {
@@ -3707,34 +3738,261 @@ function renderOnderweg(){
   updateBulkInfo('besteld');
 }
 
+// ---------- Afwijzen / Uitstellen Modal Logica & Filters ----------
+let activeAfwijzenBookId = null;
+let activeAfgewezenRedenFilter = '__alle__';
+
+function openAfwijzenModal(bookId, isEdit = false){
+  const b = allBooksCache.find(x => String(x.id) === String(bookId));
+  if (!b) return;
+  activeAfwijzenBookId = bookId;
+
+  const modal = document.getElementById('afwijzen-modal');
+  if (!modal) return;
+
+  const titleEl = document.getElementById('afwijzen-modal-title');
+  if (titleEl){
+    titleEl.textContent = isEdit ? 'Reden of toelichting aanpassen' : 'Aanvraag afwijzen of uitstellen';
+  }
+
+  const infoEl = document.getElementById('afwijzen-book-info');
+  if (infoEl){
+    infoEl.innerHTML = `
+      <div class="preview-title">${escapeHtml(b.titel)}</div>
+      <div class="preview-meta">
+        ${b.auteur ? `<span>${escapeHtml(b.auteur)}</span>` : ''}
+        <span class="tag">${escapeHtml(b.categorie || '')}${themaVan(b) ? ' · ' + escapeHtml(themaVan(b)) : ''}</span>
+        ${b.prijs != null && b.prijs !== '' ? `<span class="tag tag-prijs">${formatBedrag(b.prijs)}</span>` : ''}
+        ${b.naam_aanvrager ? `<span>Aangevraagd door <strong>${escapeHtml(b.naam_aanvrager)}</strong></span>` : ''}
+      </div>
+    `;
+  }
+
+  const currentReden = b.afwijs_reden || (b.status === 'afgewezen' ? 'Niet leverbaar' : 'Geen budget dit jaar (uitgesteld)');
+  const radios = modal.querySelectorAll('input[name="afwijs-reden-radio"]');
+  const andersWrap = document.getElementById('afwijzen-anders-wrap');
+  const andersInput = document.getElementById('afwijzen-anders-input');
+  const toelichtingInput = document.getElementById('afwijzen-toelichting-input');
+
+  const knownRedenen = [
+    'Geen budget dit jaar (uitgesteld)',
+    'Niet leverbaar',
+    'Afgewezen',
+    'Reeds aanwezig op school'
+  ];
+
+  let matched = false;
+  radios.forEach(r => {
+    if (r.value === currentReden){
+      r.checked = true;
+      matched = true;
+    } else {
+      r.checked = false;
+    }
+  });
+
+  if (!matched){
+    const andersRadio = modal.querySelector('input[name="afwijs-reden-radio"][value="Anders"]');
+    if (andersRadio) andersRadio.checked = true;
+    if (andersWrap) andersWrap.style.display = 'block';
+    if (andersInput) andersInput.value = currentReden === 'Anders' ? '' : currentReden;
+  } else {
+    if (andersWrap) andersWrap.style.display = 'none';
+    if (andersInput) andersInput.value = '';
+  }
+
+  if (toelichtingInput){
+    toelichtingInput.value = b.afwijs_toelichting || '';
+  }
+
+  modal.classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeAfwijzenModal(){
+  const modal = document.getElementById('afwijzen-modal');
+  if (modal){
+    modal.classList.remove('open');
+    document.body.style.overflow = '';
+  }
+  activeAfwijzenBookId = null;
+}
+
+function initAfwijzenModal(){
+  const modal = document.getElementById('afwijzen-modal');
+  if (!modal) return;
+
+  const backdrop = document.getElementById('afwijzen-backdrop');
+  const closeBtn = document.getElementById('afwijzen-close-btn');
+  const cancelBtn = document.getElementById('afwijzen-cancel-btn');
+  const saveBtn = document.getElementById('afwijzen-save-btn');
+  const andersWrap = document.getElementById('afwijzen-anders-wrap');
+  const andersInput = document.getElementById('afwijzen-anders-input');
+  const toelichtingInput = document.getElementById('afwijzen-toelichting-input');
+
+  [backdrop, closeBtn, cancelBtn].forEach(el => {
+    el?.addEventListener('click', closeAfwijzenModal);
+  });
+
+  modal.querySelectorAll('input[name="afwijs-reden-radio"]').forEach(radio => {
+    radio.addEventListener('change', () => {
+      if (radio.value === 'Anders'){
+        if (andersWrap) andersWrap.style.display = 'block';
+        if (andersInput) andersInput.focus();
+      } else {
+        if (andersWrap) andersWrap.style.display = 'none';
+      }
+    });
+  });
+
+  saveBtn?.addEventListener('click', async () => {
+    if (!activeAfwijzenBookId) return;
+    const selectedRadio = modal.querySelector('input[name="afwijs-reden-radio"]:checked');
+    let reden = selectedRadio ? selectedRadio.value : 'Geen budget dit jaar (uitgesteld)';
+
+    if (reden === 'Anders'){
+      const custom = (andersInput?.value || '').trim();
+      reden = custom || 'Anders';
+    }
+
+    const toelichting = (toelichtingInput?.value || '').trim();
+
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Opslaan…';
+
+    try {
+      const ok = await dbUpdate(activeAfwijzenBookId, {
+        status: 'afgewezen',
+        afwijs_reden: reden,
+        afwijs_toelichting: toelichting || null
+      });
+
+      if (ok){
+        closeAfwijzenModal();
+        await refreshCoordinatorData(true);
+      }
+    } finally {
+      saveBtn.disabled = false;
+      saveBtn.textContent = 'Opslaan';
+    }
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && modal.classList.contains('open')){
+      closeAfwijzenModal();
+    }
+  });
+}
+initAfwijzenModal();
+
 function renderAfgewezen(){
-  const lijst = allBooksCache.filter(b => b.status === 'afgewezen');
+  const allAfgewezen = allBooksCache.filter(b => b.status === 'afgewezen');
   const container = document.getElementById('lijst-afgewezen');
+  const pillsContainer = document.getElementById('afgewezen-reden-pills');
   if (!container) return;
-  if (!lijst.length){
-    container.innerHTML = `<div class="empty-state">Geen niet leverbare boeken.</div>`;
+
+  if (!allAfgewezen.length){
+    if (pillsContainer) pillsContainer.innerHTML = '';
+    container.innerHTML = `<div class="empty-state">Geen afgewezen of uitgestelde boeken.</div>`;
     return;
   }
-  container.innerHTML = lijst.map(b => `
-    <div class="book-row" style="grid-template-columns:1fr auto;">
-      <div>
-        <div style="font-weight:600; font-size:14px;">${escapeHtml(b.titel)}</div>
-        <div class="row-meta">
-          <span class="tag">${escapeHtml(b.categorie || '')}${themaVan(b) ? ' · ' + escapeHtml(themaVan(b)) : ''}</span>
-          ${b.naam_aanvrager ? 'aangevraagd door ' + escapeHtml(b.naam_aanvrager) : ''}
-          ${b.opmerking ? '<br>' + escapeHtml(b.opmerking) : ''}
+
+  // Tellingen per reden
+  const counts = {
+    '__alle__': allAfgewezen.length,
+    'Geen budget dit jaar (uitgesteld)': 0,
+    'Niet leverbaar': 0,
+    'Afgewezen': 0,
+    'Reeds aanwezig op school': 0,
+    'Anders': 0
+  };
+
+  allAfgewezen.forEach(b => {
+    const r = getNormalizedReden(b);
+    if (counts[r] !== undefined){
+      counts[r]++;
+    } else {
+      counts['Anders']++;
+    }
+  });
+
+  // Render filter pills
+  if (pillsContainer){
+    const pills = [
+      { key: '__alle__', label: `Alles tonen (${counts['__alle__']})` },
+      { key: 'Geen budget dit jaar (uitgesteld)', label: `⏳ Geen budget (${counts['Geen budget dit jaar (uitgesteld)']})`, count: counts['Geen budget dit jaar (uitgesteld)'] },
+      { key: 'Niet leverbaar', label: `🛑 Niet leverbaar (${counts['Niet leverbaar']})`, count: counts['Niet leverbaar'] },
+      { key: 'Afgewezen', label: `❌ Afgewezen (${counts['Afgewezen']})`, count: counts['Afgewezen'] },
+      { key: 'Reeds aanwezig op school', label: `📚 Reeds aanwezig (${counts['Reeds aanwezig op school']})`, count: counts['Reeds aanwezig op school'] },
+      { key: 'Anders', label: `✏️ Anders (${counts['Anders']})`, count: counts['Anders'] },
+    ];
+
+    pillsContainer.innerHTML = pills
+      .filter(p => p.key === '__alle__' || p.count > 0)
+      .map(p => `
+        <button type="button" class="pill ${activeAfgewezenRedenFilter === p.key ? 'active' : ''}" data-afwijs-filter="${escapeHtml(p.key)}">
+          ${escapeHtml(p.label)}
+        </button>
+      `).join('');
+
+    pillsContainer.querySelectorAll('[data-afwijs-filter]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        activeAfgewezenRedenFilter = btn.dataset.afwijsFilter;
+        renderAfgewezen();
+      });
+    });
+  }
+
+  // Filter de lijst op actieve pil
+  let filtered = allAfgewezen;
+  if (activeAfgewezenRedenFilter !== '__alle__'){
+    if (activeAfgewezenRedenFilter === 'Anders'){
+      const standard = ['Geen budget dit jaar (uitgesteld)', 'Niet leverbaar', 'Afgewezen', 'Reeds aanwezig op school'];
+      filtered = allAfgewezen.filter(b => !standard.includes(getNormalizedReden(b)));
+    } else {
+      filtered = allAfgewezen.filter(b => getNormalizedReden(b) === activeAfgewezenRedenFilter);
+    }
+  }
+
+  if (!filtered.length){
+    container.innerHTML = `<div class="empty-state">Geen boeken met deze reden.</div>`;
+    return;
+  }
+
+  container.innerHTML = filtered.map(b => {
+    const reden = getNormalizedReden(b);
+    const tagCls = getRedenTagClass(reden);
+    return `
+      <div class="book-row" style="grid-template-columns:1fr auto;">
+        <div>
+          <div style="font-weight:600; font-size:14px; color:var(--ink);">${escapeHtml(b.titel)}</div>
+          <div class="row-meta" style="margin-top:4px; display:flex; flex-wrap:wrap; gap:6px; align-items:center;">
+            <span class="tag ${tagCls}">${escapeHtml(reden)}</span>
+            <span class="tag">${escapeHtml(b.categorie || '')}${themaVan(b) ? ' · ' + escapeHtml(themaVan(b)) : ''}</span>
+            ${b.prijs != null && b.prijs !== '' ? `<span class="tag tag-prijs">${formatBedrag(b.prijs)}</span>` : ''}
+            ${b.naam_aanvrager ? `<span style="font-size:12px; color:var(--ink-soft);">aangevraagd door <strong>${escapeHtml(b.naam_aanvrager)}</strong></span>` : ''}
+          </div>
+          ${b.afwijs_toelichting ? `<div style="margin-top:6px; font-size:12px; color:var(--ink); background:var(--bg); border-left:3px solid var(--gold-dark); padding:4px 8px; border-radius:0 4px 4px 0;"><strong>Toelichting:</strong> ${escapeHtml(b.afwijs_toelichting)}</div>` : ''}
+          ${b.opmerking ? `<div style="margin-top:4px; font-size:12px; color:var(--ink-soft);"><em>Opmerking:</em> ${escapeHtml(b.opmerking)}</div>` : ''}
+        </div>
+        <div class="row-actions" style="display:flex; flex-direction:row; gap:8px; align-items:center; flex-wrap:wrap;">
+          <button class="btn btn-secondary btn-sm restore" data-restore="${b.id}" title="Plaats terug in de 'Te bestellen'-lijst">Terug naar Te bestellen</button>
+          <button class="btn btn-neutral btn-sm edit-reject" data-edit-reject="${b.id}" title="Reden of toelichting aanpassen">Reden bewerken</button>
+          <button class="btn btn-ghost btn-sm" data-delete="${b.id}" style="color:var(--red);">Verwijderen</button>
         </div>
       </div>
-      <div class="row-actions">
-        <button class="btn btn-secondary btn-sm restore" data-restore="${b.id}">Terug naar Te bestellen</button>
-        <button class="btn btn-ghost btn-sm" data-delete="${b.id}" style="color:var(--red);">Verwijderen</button>
-      </div>
-    </div>
-  `).join('');
+    `;
+  }).join('');
+
   container.querySelectorAll('[data-restore]').forEach(btn => btn.addEventListener('click', async () => {
     const ok = await dbUpdate(btn.dataset.restore, { status: 'aangevraagd', besteld_op: null });
     if (ok) await refreshCoordinatorData(true);
   }));
+
+  container.querySelectorAll('[data-edit-reject]').forEach(btn => btn.addEventListener('click', () => {
+    openAfwijzenModal(btn.dataset.editReject, true);
+  }));
+
   container.querySelectorAll('[data-delete]').forEach(btn => btn.addEventListener('click', async () => {
     const boek = allBooksCache.find(x => String(x.id) === String(btn.dataset.delete));
     if (!bevestigVerwijderen(boek && boek.titel)) return;
@@ -3746,13 +4004,18 @@ function renderAfgewezen(){
   }));
 }
 
-function coordinatorStatusHtml(status){
+function coordinatorStatusHtml(status, b){
   if (!status || status === 'binnen') return '<span class="tag summary-status" style="display:none;"></span>';
   let label = status;
+  let tagCls = `status-${escapeHtml(status)}`;
   if (status === 'aangevraagd') label = 'te bestellen';
   else if (status === 'besteld') label = 'onderweg';
-  else if (status === 'afgewezen') label = 'niet leverbaar';
-  return `<span class="tag status-${escapeHtml(status)} summary-status">${escapeHtml(label)}</span>`;
+  else if (status === 'afgewezen'){
+    const reden = b ? getNormalizedReden(b) : 'afgewezen / uitgesteld';
+    label = reden;
+    tagCls = getRedenTagClass(reden);
+  }
+  return `<span class="tag ${tagCls} summary-status">${escapeHtml(label)}</span>`;
 }
 
 function fullRowHtml(b){
@@ -3767,7 +4030,7 @@ function fullRowHtml(b){
           <input type="checkbox" class="sel-alle" data-id="${b.id}">
           <div class="summary-text">
             <span class="summary-titel">${escapeHtml(b.titel)}</span>
-            ${coordinatorStatusHtml(b.status || 'aangevraagd')}
+            ${coordinatorStatusHtml(b.status || 'aangevraagd', b)}
             <span class="summary-meta">${renderSummaryMeta(b)}</span>
           </div>
         </div>
@@ -3829,8 +4092,24 @@ function fullRowHtml(b){
               <option value="aangevraagd" ${b.status==='aangevraagd'||!b.status?'selected':''}>Aangevraagd (te bestellen)</option>
               <option value="besteld" ${b.status==='besteld'?'selected':''}>Besteld (onderweg)</option>
               <option value="binnen" ${b.status==='binnen'?'selected':''}>Binnen (ontvangen)</option>
-              <option value="afgewezen" ${b.status==='afgewezen'?'selected':''}>Niet leverbaar</option>
+              <option value="afgewezen" ${b.status==='afgewezen'?'selected':''}>Afgewezen / Uitgesteld</option>
             </select>
+          </div>
+
+          <div class="edit-field" id="edit-afwijs-reden-wrap-${b.id}" style="${b.status==='afgewezen'?'':'display:none;'}">
+            <label>Reden afwijzing / uitstel</label>
+            <select data-field="afwijs_reden" data-id="${b.id}">
+              <option value="Geen budget dit jaar (uitgesteld)" ${b.afwijs_reden==='Geen budget dit jaar (uitgesteld)'?'selected':''}>Geen budget dit jaar (uitgesteld)</option>
+              <option value="Niet leverbaar" ${b.afwijs_reden==='Niet leverbaar'||(!b.afwijs_reden&&b.status==='afgewezen')?'selected':''}>Niet leverbaar</option>
+              <option value="Afgewezen" ${b.afwijs_reden==='Afgewezen'?'selected':''}>Afgewezen</option>
+              <option value="Reeds aanwezig op school" ${b.afwijs_reden==='Reeds aanwezig op school'?'selected':''}>Reeds aanwezig op school</option>
+              <option value="Anders" ${b.afwijs_reden && !['Geen budget dit jaar (uitgesteld)','Niet leverbaar','Afgewezen','Reeds aanwezig op school'].includes(b.afwijs_reden)?'selected':''}>Anders...</option>
+            </select>
+          </div>
+
+          <div class="edit-field full-width" id="edit-afwijs-toelichting-wrap-${b.id}" style="${b.status==='afgewezen'?'':'display:none;'}">
+            <label>Toelichting afwijzing / uitstel</label>
+            <input type="text" data-field="afwijs_toelichting" data-id="${b.id}" value="${escapeHtml(b.afwijs_toelichting || '')}" placeholder="Optionele toelichting voor de coördinator">
           </div>
 
           <div class="edit-field full-width">
@@ -3890,6 +4169,10 @@ function wireFullRow(row){
   const themaSelect = row.querySelector('[data-field="thema"]');
   const andersInp = row.querySelector('.thema-anders-input');
   const statusSelect = row.querySelector('[data-field="status"]');
+  const afwijsRedenSelect = row.querySelector('[data-field="afwijs_reden"]');
+  const afwijsToelichtingInp = row.querySelector('[data-field="afwijs_toelichting"]');
+  const afwijsRedenWrap = row.querySelector(`#edit-afwijs-reden-wrap-${id}`);
+  const afwijsToelichtingWrap = row.querySelector(`#edit-afwijs-toelichting-wrap-${id}`);
   const opmerkingInp = row.querySelector('[data-field="opmerking"]');
 
   function markDirty(){
@@ -3921,6 +4204,10 @@ function wireFullRow(row){
     }
 
     if (statusSelect) statusSelect.value = currentBook.status || 'aangevraagd';
+    if (afwijsRedenSelect) afwijsRedenSelect.value = currentBook.afwijs_reden || 'Geen budget dit jaar (uitgesteld)';
+    if (afwijsToelichtingInp) afwijsToelichtingInp.value = currentBook.afwijs_toelichting || '';
+    if (afwijsRedenWrap) afwijsRedenWrap.style.display = currentBook.status === 'afgewezen' ? '' : 'none';
+    if (afwijsToelichtingWrap) afwijsToelichtingWrap.style.display = currentBook.status === 'afgewezen' ? '' : 'none';
     if (opmerkingInp) opmerkingInp.value = currentBook.opmerking || '';
 
     if (saveBar) saveBar.style.display = 'none';
@@ -3932,7 +4219,13 @@ function wireFullRow(row){
   auteurInp?.addEventListener('input', markDirty);
   isbnInp?.addEventListener('input', markDirty);
   naamInp?.addEventListener('input', markDirty);
-  statusSelect?.addEventListener('change', markDirty);
+  statusSelect?.addEventListener('change', () => {
+    if (afwijsRedenWrap) afwijsRedenWrap.style.display = statusSelect.value === 'afgewezen' ? '' : 'none';
+    if (afwijsToelichtingWrap) afwijsToelichtingWrap.style.display = statusSelect.value === 'afgewezen' ? '' : 'none';
+    markDirty();
+  });
+  afwijsRedenSelect?.addEventListener('change', markDirty);
+  afwijsToelichtingInp?.addEventListener('input', markDirty);
   opmerkingInp?.addEventListener('input', markDirty);
   andersInp?.addEventListener('input', markDirty);
 
@@ -4016,6 +4309,14 @@ function wireFullRow(row){
     };
     if (newThema){
       updates[veld] = newThema;
+    }
+
+    if (newStatus === 'afgewezen'){
+      updates.afwijs_reden = afwijsRedenSelect ? afwijsRedenSelect.value : (currentBook.afwijs_reden || 'Niet leverbaar');
+      updates.afwijs_toelichting = afwijsToelichtingInp ? (afwijsToelichtingInp.value.trim() || null) : null;
+    } else {
+      updates.afwijs_reden = null;
+      updates.afwijs_toelichting = null;
     }
 
     if (newStatus !== currentBook.status){

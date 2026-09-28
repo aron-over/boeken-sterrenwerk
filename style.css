@@ -652,6 +652,13 @@ textarea:focus {
 .tag.status-afgewezen   { background: var(--red-soft); color: var(--red); border-color: rgba(184, 50, 40, 0.3); }
 .tag.tag-prijs          { background: var(--surface); border: 1px solid var(--line); color: var(--ink); }
 
+/* Afwijsredenen tags */
+.tag.tag-reden-budget    { background: var(--gold-soft); color: var(--gold-dark); border-color: var(--gold); }
+.tag.tag-reden-leverbaar { background: var(--red-soft); color: var(--red); border-color: rgba(184, 50, 40, 0.3); }
+.tag.tag-reden-afgewezen { background: rgba(184, 50, 40, 0.08); color: var(--red); border-color: rgba(184, 50, 40, 0.25); }
+.tag.tag-reden-aanwezig  { background: var(--blue-soft); color: var(--blue); border-color: rgba(29, 78, 216, 0.3); }
+.tag.tag-reden-anders    { background: var(--bg); color: var(--ink); border-color: var(--line); }
+
 /* --------------------------------------------------------------------------
    9. CATALOGUS WEERGAVES & ZOEKBALK (Kaarten, Lijst, Tabel)
    -------------------------------------------------------------------------- */
@@ -1846,6 +1853,73 @@ textarea:focus {
   font-family: inherit;
   color: var(--ink);
   box-shadow: 0 1px 1px rgba(0,0,0,0.06);
+}
+
+/* Afwijzen / Uitstellen modal & styling */
+.afwijzen-book-preview {
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin-bottom: 16px;
+}
+.afwijzen-book-preview .preview-title {
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--ink);
+}
+.afwijzen-book-preview .preview-meta {
+  font-size: 12px;
+  color: var(--ink-soft);
+  margin-top: 3px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+.afwijzen-reasons-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.afwijzen-reason-opt {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.afwijzen-reason-opt:hover {
+  background: var(--bg);
+  border-color: var(--gold);
+}
+.afwijzen-reason-opt.selected,
+.afwijzen-reason-opt:has(input:checked) {
+  background: #FFFDF8;
+  border-color: var(--gold-dark);
+  box-shadow: 0 0 0 1px var(--gold-dark);
+}
+.afwijzen-reason-opt input[type="radio"] {
+  margin-top: 3px;
+  accent-color: var(--gold-dark);
+  cursor: pointer;
+  width: auto;
+}
+.afwijzen-reason-text strong {
+  display: block;
+  font-size: 13px;
+  color: var(--ink);
+}
+.afwijzen-reason-text span {
+  display: block;
+  font-size: 12px;
+  color: var(--ink-soft);
+  margin-top: 2px;
+  line-height: 1.35;
 }
 
 /* Coördinator tabellen & bulk bar */
