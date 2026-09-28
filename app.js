@@ -1156,11 +1156,13 @@ const checkIsbnMatch = debounce(updateMatches, 350);
 // Bibliotheektitels opschonen: "Een vorig leven / druk 1" → "Een vorig leven",
 // "Dolfje Weerwolfje; Dolfje Weerwolfje 1" → "Dolfje Weerwolfje".
 function schoonTitelOp(titel){
-  return String(titel || '')
+  const clean = String(titel || '')
     .split(/\s+\/\s+/)[0]
     .split(/\s*;\s*/)[0]
     .replace(/[\s.,:;]+$/, '')
     .trim();
+  if (!clean) return '';
+  return clean.charAt(0).toUpperCase() + clean.slice(1);
 }
 
 // Centrale functie om online metadata op te halen voor een ISBN

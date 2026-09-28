@@ -42,7 +42,10 @@ async function zoekGoogle(isbn: string, key?: string): Promise<Resultaat | null>
     return null;
   }
   const data = await res.json();
-  const item = data.items?.[0];
+  if (!data.items || data.items.length === 0) return null;
+
+  // Zoek bij voorkeur een Nederlandstalige editie binnen de resultaten
+  const item = data.items.find((it: { volumeInfo?: { language?: string } }) => it.volumeInfo?.language === 'nl') || data.items[0];
   const info = item?.volumeInfo;
   if (!info?.title) return null;
   const title = info.subtitle ? `${info.title}: ${info.subtitle}` : info.title;
@@ -129,15 +132,7 @@ Deno.serve(async (req) => {
 
   const key = Deno.env.get('GOOGLE_BOOKS_API_KEY') || undefined;
 
-  // 1. Google Books raadplegen (titel, auteur, omslag)
-  let resultaat: Resultaat | null = null;
-  try {
-    resultaat = await zoekGoogle(isbn, key);
-  } catch (e) {
-    console.warn('Google Books mislukt:', e);
-  }
-
-  // 2. Haal CB-data op (Centraal Boekhuis / vaste boekenprijs)
+  // 1. Haal CB-data op (Centraal Boekhuis / TitelBank: officiële NL uitgeverstitel, auteur en vaste boekenprijs)
   let cbData: { title?: string; author?: string; price?: number } | null = null;
   try {
     cbData = await zoekEasyCB(isbn);
@@ -145,26 +140,36 @@ Deno.serve(async (req) => {
     console.warn('EasyCB mislukt:', e);
   }
 
-  if (resultaat) {
-    if (resultaat.price == null && cbData?.price != null) {
-      resultaat.price = cbData.price;
-    }
-    return antwoord({ gevonden: true, ...resultaat });
+  // 2. Google Books raadplegen (voor omslagafbeelding en aanvulling)
+  let googleResult: Resultaat | null = null;
+  try {
+    googleResult = await zoekGoogle(isbn, key);
+  } catch (e) {
+    console.warn('Google Books mislukt:', e);
   }
 
-  // Als Google Books niets vond, maar CB wel:
+  // Centraal Boekhuis is de officiële Nederlandse uitgeversbron en heeft altijd voorrang op titel & auteur!
+  // Dit voorkomt dat een buitenlandse editie of foute vertaling uit Google Books wordt overgenomen.
   if (cbData && cbData.title) {
     return antwoord({
       gevonden: true,
       title: cbData.title,
-      author: cbData.author || '',
-      coverUrl: null,
+      author: cbData.author || googleResult?.author || '',
+      coverUrl: googleResult?.coverUrl || null,
       source: 'centraal-boekhuis',
-      price: cbData.price ?? null,
+      price: cbData.price ?? googleResult?.price ?? null,
     });
   }
 
-  // Fallback: Open Library
+  // Als Centraal Boekhuis het boek niet kent (bijv. buitenlandse uitgave):
+  if (googleResult) {
+    if (googleResult.price == null && cbData?.price != null) {
+      googleResult.price = cbData.price;
+    }
+    return antwoord({ gevonden: true, ...googleResult });
+  }
+
+  // 3. Fallback: Open Library
   try {
     const ol = await zoekOpenLibrary(isbn);
     if (ol) {
