@@ -50,20 +50,11 @@ goud (`--gold`) — bewust gekozen bij de naam "Sterrenwerk" (sterren tegen een 
 hemel). Het logo laadt rechtstreeks van de officiële schoolwebsite. Mobielvriendelijk, geen
 frameworks — alles is vanilla HTML/CSS/JS in dat ene bestand.
 
-## Testworkflow — BELANGRIJK, altijd zo werken
-Er is (of komt) een **los Supabase-testproject** met hetzelfde schema (zie
-`testdatabase-schema.sql` als die in deze map staat) en nepdata (`boeken_testdata.csv`,
-rijen herkenbaar aan "TESTDATA" in de opmerking).
-
-Vaste regel: **verander nooit rechtstreeks iets aan de productie-Supabase-database
-(schema, rijen, of instellingen) tenzij daar expliciet om gevraagd wordt.** Schema-
-experimenten en losse tests horen in het testproject.
+## Veiligheid & Omgeving
+De website is rechtstreeks verbonden met de Supabase productiedatabase (`ggdosqodohmvxselzxtv`).
 
 Vóór elke `git commit`:
-1. Controleer met `grep` dat `SUPABASE_URL` en `SUPABASE_ANON_KEY` in `index.html` de
-   **productie**-waarden zijn, niet de testproject-waarden. Als dat niet zo is: zet ze terug
-   en meld dat expliciet voordat je commit.
-2. Nooit een wachtwoord, personal access token, of database-connectiestring in een bestand
+1. Nooit een wachtwoord, personal access token, of database-connectiestring in een bestand
    zetten dat gecommit wordt. Die horen in een lokaal `.env`-bestand dat in `.gitignore` staat.
 
 Standaard commit-boodschappen: kort en in het Nederlands, beschrijf wat er functioneel

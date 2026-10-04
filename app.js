@@ -2,35 +2,31 @@
 // Boeken Sterrenwerk — Applicatielogica & Supabase Koppeling
 // ==========================================================================
 
-// Omgeving detecteren: lokaal (localhost/127.0.0.1) gebruikt de testdatabase, elders productie
-const IS_LOCAL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+// Supabase productiedatabase
+const SUPABASE_URL = 'https://ggdosqodohmvxselzxtv.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdnZG9zcW9kb2htdnhzZWx6eHR2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk0MDE1MjksImV4cCI6MjEwNDk3NzUyOX0.ypQXHhp6emH_o84eWwHNtumd2Q7oa2bIut46bvVQ8s0';
 
-// Productie-database (GitHub Pages)
-const PROD_URL = 'https://ggdosqodohmvxselzxtv.supabase.co';
-const PROD_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdnZG9zcW9kb2htdnhzZWx6eHR2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk0MDE1MjksImV4cCI6MjEwNDk3NzUyOX0.ypQXHhp6emH_o84eWwHNtumd2Q7oa2bIut46bvVQ8s0';
-
-// Test-database (lokaal)
-const TEST_URL = 'https://avhssvksvuebmhufmrzq.supabase.co';
-const TEST_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF2aHNzdmtzdnVlYm1odWZtcnpxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk0Nzc5ODAsImV4cCI6MjEwNTA1Mzk4MH0.jme6g6w5QDbPF4H07fhFQctOuN7EfnLAmic9n4Sj3yQ';
-
-const SUPABASE_URL = IS_LOCAL ? TEST_URL : PROD_URL;
-const SUPABASE_ANON_KEY = IS_LOCAL ? TEST_KEY : PROD_KEY;
 // Komt de bezoeker binnen via een uitnodigings- of wachtwoord-resetlink uit een Supabase-mail?
 // Uitlezen vóór createClient, want die haalt de gegevens daarna uit de URL weg.
 const AUTH_LINK = (() => {
   const params = new URLSearchParams(window.location.hash.slice(1));
   return { type: params.get('type'), fout: params.get('error_description') };
 })();
-const realClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const client = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const realClient = client;
 
 let coordUnlocked = false; // true zodra de coördinator is ingelogd (zie Tab 3)
 let allBooksCache = [];
-let pristineBaselineData = null;
-let initialBaselineLoaded = false;
 
 // Lokale cache (Stale-While-Revalidate) voor directe weergave (< 20ms) bij paginabezoek
-const CACHE_KEY = IS_LOCAL ? 'boeken_cache_test_v1' : 'boeken_cache_prod_v1';
-const CACHE_TIME_KEY = IS_LOCAL ? 'boeken_cache_test_time' : 'boeken_cache_prod_time';
+const CACHE_KEY = 'boeken_cache_prod_v1';
+const CACHE_TIME_KEY = 'boeken_cache_prod_time';
+
+// Oude testcache eventueel opruimen
+try {
+  localStorage.removeItem('boeken_cache_test_v1');
+  localStorage.removeItem('boeken_cache_test_time');
+} catch (e) {}
 
 function loadCachedBooks(){
   try {
@@ -63,7 +59,7 @@ function saveCachedBooks(books){
 const FETCH_PAGE_SIZE = 1000;
 async function fetchAllRows(table, orderCol = 'titel', ascending = true){
   // 1. Eerste pagina en exact totaalaantal tegelijk ophalen
-  const { data: firstPage, count, error: firstErr } = await realClient
+  const { data: firstPage, count, error: firstErr } = await client
     .from(table)
     .select('*', { count: 'exact' })
     .order(orderCol, { ascending })
@@ -84,7 +80,7 @@ async function fetchAllRows(table, orderCol = 'titel', ascending = true){
   }
 
   const pagePromises = remainingRanges.map(([from, to]) =>
-    realClient
+    client
       .from(table)
       .select('*')
       .order(orderCol, { ascending })
@@ -98,128 +94,6 @@ async function fetchAllRows(table, orderCol = 'titel', ascending = true){
     if (res.data) allRows = allRows.concat(res.data);
   }
   return { data: allRows, error: null };
-}
-
-function resetTestData(){
-  if (!pristineBaselineData) return;
-  allBooksCache = JSON.parse(JSON.stringify(pristineBaselineData));
-  saveCachedBooks(allBooksCache);
-  const activeBtn = document.querySelector('nav.tabs button.active');
-  const activeTab = activeBtn ? activeBtn.dataset.tab : 'zoeken';
-  if (activeTab === 'zoeken') renderZoekLijst();
-  if (activeTab === 'coordinator' && coordUnlocked) refreshCoordinatorData(true);
-  const infoEl = document.getElementById('test-reset-info');
-  if (infoEl){
-    infoEl.textContent = 'Data hersteld!';
-    setTimeout(() => { infoEl.textContent = ''; }, 2500);
-  }
-}
-
-// In de testomgeving vangen we alle mutaties in-memory op zodat Supabase nooit gewijzigd wordt:
-const client = (!IS_LOCAL) ? realClient : {
-  from(table){
-    if (table !== 'boeken'){
-      return realClient.from(table);
-    }
-    return {
-      select(columns = '*'){
-        const executeSelect = async (orderCol = 'titel', ascending = true) => {
-          if (!initialBaselineLoaded){
-            const res = await fetchAllRows('boeken', orderCol, ascending);
-            if (!res.error && res.data){
-              pristineBaselineData = JSON.parse(JSON.stringify(res.data));
-              allBooksCache = JSON.parse(JSON.stringify(res.data));
-              initialBaselineLoaded = true;
-            }
-            return res;
-          }
-          const sorted = [...allBooksCache].sort((a, b) => {
-            const va = a[orderCol] || '';
-            const vb = b[orderCol] || '';
-            return ascending ? String(va).localeCompare(String(vb)) : String(vb).localeCompare(String(va));
-          });
-          return { data: sorted, error: null };
-        };
-        return {
-          order(col = 'titel', { ascending = true } = {}){
-            return executeSelect(col, ascending);
-          },
-          then(resolve, reject){
-            return executeSelect().then(resolve, reject);
-          }
-        };
-      },
-      insert(rows){
-        return (async () => {
-          const arr = Array.isArray(rows) ? rows : [rows];
-          arr.forEach(row => {
-            const copy = Object.assign({}, row);
-            if (!copy.id){
-              copy.id = (typeof crypto !== 'undefined' && crypto.randomUUID)
-                ? crypto.randomUUID()
-                : 'test_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7);
-            }
-            allBooksCache.push(copy);
-          });
-          allBooksCache.sort((a, b) => (a.titel || '').localeCompare(b.titel || ''));
-          return { data: arr, error: null };
-        })();
-      },
-      update(fields){
-        return {
-          eq(col, val){
-            return (async () => {
-              if (col === 'id'){
-                const book = allBooksCache.find(b => String(b.id) === String(val));
-                if (book) Object.assign(book, fields);
-                return { data: book ? [book] : [], error: null };
-              }
-              allBooksCache.forEach(b => {
-                if (String(b[col]) === String(val)) Object.assign(b, fields);
-              });
-              return { data: [], error: null };
-            })();
-          },
-          in(col, vals){
-            return (async () => {
-              const strVals = vals.map(String);
-              const updated = [];
-              allBooksCache.forEach(b => {
-                if (strVals.includes(String(b[col]))){
-                  Object.assign(b, fields);
-                  updated.push(b);
-                }
-              });
-              return { data: updated, error: null };
-            })();
-          }
-        };
-      },
-      delete(){
-        return {
-          eq(col, val){
-            return (async () => {
-              allBooksCache = allBooksCache.filter(b => String(b[col]) !== String(val));
-              return { data: null, error: null };
-            })();
-          }
-        };
-      }
-    };
-  }
-};
-
-if (IS_LOCAL){
-  const badge = document.getElementById('test-badge');
-  if (badge) badge.style.display = 'inline-block';
-  const resetBtn = document.getElementById('test-reset-btn');
-  if (resetBtn){
-    resetBtn.style.display = 'inline-block';
-    resetBtn.addEventListener('click', resetTestData);
-  }
-  const stijlgidsLink = document.getElementById('stijlgids-link');
-  if (stijlgidsLink) stijlgidsLink.style.display = 'inline-flex';
-  console.info('%c[Boeken Sterrenwerk] Actief in TESTOMGEVING (in-memory sandbox: mutaties worden niet opgeslagen in Supabase)', 'color: #A9821E; font-weight: bold;');
 }
 
 const GROEPEN = ['Groep 3','Groep 4','Groep 5','Groep 6','Groep 7','Groep 8'];
@@ -1024,16 +898,11 @@ if (kleuterZoekInput && kleuterSuggesties){
 // ---------- Dubbele-aanvraag check & Boeken laden ----------
 let isFetchingBooks = false;
 async function fetchAllBooks(forceReload = false){
-  if (IS_LOCAL && initialBaselineLoaded && !forceReload){
-    return true;
-  }
   if (isFetchingBooks) return true;
   isFetchingBooks = true;
 
   try {
-    const { data, error } = IS_LOCAL
-      ? await client.from('boeken').select('*').order('titel', { ascending: true })
-      : await fetchAllRows('boeken', 'titel', true);
+    const { data, error } = await fetchAllRows('boeken', 'titel', true);
 
     if (!error && data){
       // Snelle controle of de ontvangen data verschilt van wat we in het geheugen hebben
@@ -1047,11 +916,6 @@ async function fetchAllBooks(forceReload = false){
 
       allBooksCache = data;
       saveCachedBooks(data);
-
-      if (IS_LOCAL && !pristineBaselineData){
-        pristineBaselineData = JSON.parse(JSON.stringify(data));
-        initialBaselineLoaded = true;
-      }
 
       // Indien de data gewijzigd is (bijv. op achtergrond gesynchroniseerd), update de actieve weergave
       if (isDifferent){
@@ -1417,8 +1281,6 @@ let lastScannedIsbnTimes = {};
 let scanWachtrijTableExists = true;
 let scanWachtrijCache = [];
 let remoteUpdateTimer = null;
-// Lokaal is er geen login, dus de (alleen voor de coördinator toegankelijke) wachtrij staat dan uit.
-if (IS_LOCAL) scanWachtrijTableExists = false;
 
 async function fetchScanWachtrij(){
   if (!scanWachtrijTableExists || !coordUnlocked) return [];
@@ -3194,7 +3056,6 @@ function renderZoekLijst(resetCount = true){
 // ---------- Tab 3: Coördinator ----------
 // Inloggen via Supabase Auth. De rechten zelf worden in de database afgedwongen (RLS):
 // zonder login mag je alleen lezen, aanvragen indienen en boekentips toevoegen.
-// Lokaal (testomgeving) is er geen login nodig, want daar worden mutaties niet opgeslagen.
 
 function toonCoordinatorScherm(ingelogd, email){
   coordUnlocked = ingelogd;
@@ -3202,7 +3063,7 @@ function toonCoordinatorScherm(ingelogd, email){
   document.getElementById('coord-lock').style.display = ingelogd ? 'none' : '';
   document.getElementById('coord-content').style.display = ingelogd ? '' : 'none';
   const wie = document.getElementById('coord-ingelogd-als');
-  if (wie) wie.textContent = email ? `Ingelogd als ${email}` : 'Testomgeving: geen login nodig';
+  if (wie) wie.textContent = email ? `Ingelogd als ${email}` : '';
   updateScanQueueBanner();
 }
 
@@ -3213,10 +3074,6 @@ async function ontgrendelCoordinator(email){
 }
 
 (async () => {
-  if (IS_LOCAL){
-    if (sessionStorage.getItem('coord_ok') === '1') toonCoordinatorScherm(true, null);
-    return;
-  }
   const { data } = await realClient.auth.getSession();
   const session = data && data.session;
   if (AUTH_LINK.fout){
@@ -3231,7 +3088,7 @@ async function ontgrendelCoordinator(email){
 })();
 
 realClient.auth.onAuthStateChange((event) => {
-  if (event === 'SIGNED_OUT' && !IS_LOCAL) toonCoordinatorScherm(false, null);
+  if (event === 'SIGNED_OUT') toonCoordinatorScherm(false, null);
 });
 
 function openCoordinatorTab(){
@@ -3281,7 +3138,6 @@ function isMailLimiet(tekst){
 document.getElementById('coord-vergeten')?.addEventListener('click', async () => {
   const msg = document.getElementById('coord-lock-msg');
   const email = document.getElementById('coord-email').value.trim();
-  if (IS_LOCAL){ msg.textContent = 'In de testomgeving is er geen login.'; return; }
   if (!email){
     msg.textContent = 'Vul eerst je e-mailadres in.';
     document.getElementById('coord-email').focus();
@@ -3306,11 +3162,6 @@ document.getElementById('coord-unlock')?.addEventListener('click', async () => {
   const btn = document.getElementById('coord-unlock');
   msg.style.color = 'var(--red)';
   msg.textContent = '';
-  if (IS_LOCAL){
-    sessionStorage.setItem('coord_ok', '1');
-    ontgrendelCoordinator(null);
-    return;
-  }
   const email = document.getElementById('coord-email').value.trim();
   const password = document.getElementById('coord-password').value;
   if (!email || !password){
@@ -3348,7 +3199,6 @@ document.getElementById('coord-uitnodigen-verstuur')?.addEventListener('click', 
   const email = invoer.value.trim();
   const toon = (tekst, ok) => { msg.textContent = tekst; msg.className = 'coord-uitnodigen-msg ' + (ok ? 'ok' : 'fout'); };
 
-  if (IS_LOCAL){ toon('Uitnodigen kan alleen op de live site.', false); return; }
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ toon('Vul een geldig e-mailadres in.', false); return; }
 
   btn.disabled = true;
@@ -3374,11 +3224,6 @@ document.getElementById('coord-uitnodigen-verstuur')?.addEventListener('click', 
 });
 
 document.getElementById('coord-logout')?.addEventListener('click', async () => {
-  if (IS_LOCAL){
-    sessionStorage.removeItem('coord_ok');
-    toonCoordinatorScherm(false, null);
-    return;
-  }
   await realClient.auth.signOut();
   toonCoordinatorScherm(false, null);
 });

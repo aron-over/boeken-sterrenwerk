@@ -15,7 +15,7 @@ ontvangst-workflow door de taalcoördinator, en een doorzoekbare catalogus.
 ## Bestandsstructuur
 - `index.html`: Semantische HTML-structuur van de 3 tabbladen, modals en navigatie.
 - `style.css`: Centraal Design System conform NL Design System voor Onderwijs (design tokens, `.btn` knoppensysteem, WCAG AA contrast, kaarten, tabellen en print-stylesheet voor bestelbonnen).
-- `app.js`: Alle client-side logica, Supabase koppeling (inclusief in-memory testomgeving), Google Books ISBN auto-lookup, barcode camera-scanner, en exportfuncties.
+- `app.js`: Alle client-side logica, Supabase koppeling, Google Books ISBN auto-lookup, barcode camera-scanner, en exportfuncties.
 - `stijlgids.html`: Levende stijlgids en documentatie van alle visuele elementen en interactieregels.
 
 ## NL Design System Knoppenstandaard (.btn)
@@ -54,8 +54,7 @@ geen budget dit jaar, niet leverbaar, afgewezen, reeds aanwezig, anders) en opti
 2. **Boeken zoeken** — toont alleen `status = binnen`. Pil-filters op categorie + dynamisch
    thema. Elk boek heeft een gedeeld "boekentip"-veld (lesideeën van leraren, stapelt op,
    overschrijft niet).
-3. **Coördinator** — inloggen met e-mail + wachtwoord via Supabase Auth (lokaal/testomgeving:
-   geen login, één klik). De echte beveiliging zit in de database-RLS (`migratie_beveiliging.sql`):
+3. **Coördinator** — inloggen met e-mail + wachtwoord via Supabase Auth. De echte beveiliging zit in de database-RLS (`migratie_beveiliging.sql`):
    anon mag alleen lezen, aanvragen indienen (status `aangevraagd`) en `boekentip` wijzigen;
    alleen gebruikers in de tabel `coordinatoren` mogen de rest. Nieuwe coördinatoren uitnodigen
    kan vanaf de site via de Edge Function `supabase/functions/nodig-coordinator-uit` (handmatig
@@ -72,20 +71,11 @@ goud (`--gold`) — bewust gekozen bij de naam "Sterrenwerk" (sterren tegen een 
 hemel). Het logo laadt rechtstreeks van de officiële schoolwebsite. Mobielvriendelijk, geen
 frameworks — alles is vanilla HTML/CSS/JS in dat ene bestand.
 
-## Testworkflow — BELANGRIJK, altijd zo werken
-Er is (of komt) een **los Supabase-testproject** met hetzelfde schema (zie
-`testdatabase-schema.sql` als die in deze map staat) en nepdata (`boeken_testdata.csv`,
-rijen herkenbaar aan "TESTDATA" in de opmerking).
-
-Vaste regel: **verander nooit rechtstreeks iets aan de productie-Supabase-database
-(schema, rijen, of instellingen) tenzij daar expliciet om gevraagd wordt.** Schema-
-experimenten en losse tests horen in het testproject.
+## Veiligheid & Omgeving
+De website is rechtstreeks verbonden met de Supabase productiedatabase (`ggdosqodohmvxselzxtv`).
 
 Vóór elke `git commit`:
-1. Controleer met `grep` dat `SUPABASE_URL` en `SUPABASE_ANON_KEY` in `index.html` de
-   **productie**-waarden zijn, niet de testproject-waarden. Als dat niet zo is: zet ze terug
-   en meld dat expliciet voordat je commit.
-2. Nooit een wachtwoord, personal access token, of database-connectiestring in een bestand
+1. Nooit een wachtwoord, personal access token, of database-connectiestring in een bestand
    zetten dat gecommit wordt. Die horen in een lokaal `.env`-bestand dat in `.gitignore` staat.
    Ook geen API keys van andere diensten (bijv. Google): GitHub secret scanning slaat daarop aan.
    De Google Books-lookup werkt bewust zonder key.
