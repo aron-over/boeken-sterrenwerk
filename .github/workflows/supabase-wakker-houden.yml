@@ -6,6 +6,9 @@ on:
     - cron: '0 6 */3 * *'   # elke 3 dagen
   workflow_dispatch:
 
+permissions:
+  actions: write
+
 jobs:
   ping:
     runs-on: ubuntu-latest
@@ -17,3 +20,9 @@ jobs:
           KEY=$(grep -oP "SUPABASE_ANON_KEY = '\K[^']+" app.js)
           curl -fsS "$URL/rest/v1/boeken?select=id&limit=1" \
             -H "apikey: $KEY" -H "Authorization: Bearer $KEY"
+      # GitHub zet geplande workflows uit na 60 dagen zonder commits. Zichzelf opnieuw
+      # inschakelen telt als activiteit, zodat een nep-commit niet nodig is.
+      - name: Workflow actief houden
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow enable supabase-wakker-houden.yml --repo "$GITHUB_REPOSITORY"
