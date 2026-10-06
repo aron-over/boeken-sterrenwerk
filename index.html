@@ -224,6 +224,7 @@
           <div class="form-section-title">3. Categorie &amp; Standplaats</div>
           <label for="categorie">Voor een groep, Kleuters, Jeelo of overig thema?</label>
           <select id="categorie">
+            <option value="">(geen categorie)</option>
             <option value="Groep">Groep</option>
             <option value="Kleuters">Kleuters</option>
             <option value="Jeelo">Jeelo</option>
@@ -497,8 +498,9 @@
               <span class="bulk-control-label">Categorie &amp; thema toewijzen</span>
               <div class="bulk-action-group">
                 <select id="alle-bulk-cat" title="Categorie">
-                  <option value="Kleuters">Kleuters</option>
+                  <option value="__geen__">(geen categorie)</option>
                   <option value="Groep">Groep</option>
+                  <option value="Kleuters">Kleuters</option>
                   <option value="Jeelo">Jeelo</option>
                   <option value="Overig">Overige thema's</option>
                 </select>

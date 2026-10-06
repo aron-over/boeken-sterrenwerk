@@ -106,7 +106,8 @@ function veldVoorCategorie(cat){
   if (cat === 'Groep') return 'groep';
   if (cat === 'Kleuters') return 'kleuters_thema';
   if (cat === 'Jeelo') return 'jeelo_thema';
-  return 'overig_thema';
+  if (cat === 'Overig') return 'overig_thema';
+  return null;
 }
 
 function fillSelect(id, options){
@@ -164,15 +165,22 @@ function formatBedrag(n){
   return num.toLocaleString('nl-NL', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
+function formatPrijs(n){
+  return formatBedrag(n);
+}
+
 function euro(n){
   return '€ ' + formatBedrag(n);
 }
 
 function themaVan(b){
-  return b[veldVoorCategorie(b.categorie)];
+  if (!b || !b.categorie) return '';
+  const veld = veldVoorCategorie(b.categorie);
+  return veld ? (b[veld] || '') : '';
 }
 
 function themaLabel(b){
+  if (!b || !b.categorie) return '(geen categorie)';
   const thema = themaVan(b);
   if (b.categorie === 'Groep') return thema || 'Groep';
   return thema ? (b.categorie || '') + ' · ' + thema : (b.categorie || '');
@@ -1044,17 +1052,14 @@ async function zoekBoekMetadataOnline(isbn){
   // 1. Edge Function met eigen Google Books key
   try {
     const { data, error } = await realClient.functions.invoke('zoek-isbn', { body: { isbn: cleanIsbn } });
-    if (!error && data){
-      if (data.gevonden) {
-        return {
-          title: data.title,
-          author: data.author,
-          coverUrl: data.coverUrl,
-          source: data.source,
-          price: data.price != null ? Number(data.price) : null
-        };
-      }
-      return null; // Functie werkt, maar geen enkele bron kent dit ISBN
+    if (!error && data && data.gevonden){
+      return {
+        title: data.title,
+        author: data.author,
+        coverUrl: data.coverUrl,
+        source: data.source,
+        price: data.price != null ? Number(data.price) : null
+      };
     }
   } catch(e){
     console.warn('zoek-isbn functie niet bereikbaar:', e);
@@ -1650,6 +1655,8 @@ function addBookToImportQueue(data, onDoneCallback){
 
   const isDuplicate = checkBookExistsInDatabase(cleanIsbn, data.titel);
 
+  const shouldLookup = cleanIsbn && (cleanIsbn.length === 13 || cleanIsbn.length === 10) && (!data.titel || !data.auteur || data.prijs == null);
+
   const newBook = {
     id: 'tmp_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6),
     isbn: cleanIsbn,
@@ -1662,7 +1669,9 @@ function addBookToImportQueue(data, onDoneCallback){
     opmerking: data.opmerking || null,
     coverUrl: data.coverUrl || null,
     isDuplicate: isDuplicate,
-    lookupDone: Boolean(data.titel),
+    lookupDone: !shouldLookup,
+    isSearching: !!shouldLookup,
+    lookupFailed: false,
     source: data.source || null
   };
 
@@ -1673,27 +1682,71 @@ function addBookToImportQueue(data, onDoneCallback){
   // Bewaar direct in de centrale scan-wachtrij in Supabase
   syncAddBookToRemoteQueue(newBook);
 
-  // Als er wel een ISBN is maar nog geen titel: haal online op
-  if (!newBook.titel && cleanIsbn && (cleanIsbn.length === 13 || cleanIsbn.length === 10)){
+  // Als er wel een ISBN is: haal online metadata op
+  if (shouldLookup){
     fetchBookMetadataOnline(cleanIsbn).then(meta => {
+      newBook.isSearching = false;
+      newBook.lookupDone = true;
       if (meta){
-        if (meta.title && !newBook.titel) newBook.titel = meta.title;
+        if (meta.title && (!newBook.titel || newBook.titel === 'Naamloos boek')) newBook.titel = meta.title;
         if (meta.author && !newBook.auteur) newBook.auteur = meta.author;
-        if (meta.coverUrl) newBook.coverUrl = meta.coverUrl;
+        if (meta.coverUrl && !newBook.coverUrl) newBook.coverUrl = meta.coverUrl;
         if (meta.price != null && !newBook.prijs) newBook.prijs = meta.price;
-        newBook.lookupDone = true;
         newBook.isDuplicate = checkBookExistsInDatabase(cleanIsbn, newBook.titel);
-        renderImportQueue();
-        updateCameraSessionSummary();
         syncUpdateBookInRemoteQueue(newBook);
+      } else {
+        newBook.lookupFailed = true;
       }
+      renderImportQueue();
+      updateCameraSessionSummary();
       if (onDoneCallback) onDoneCallback(newBook);
     }).catch(() => {
+      newBook.isSearching = false;
+      newBook.lookupDone = true;
+      newBook.lookupFailed = true;
+      renderImportQueue();
       if (onDoneCallback) onDoneCallback(newBook);
     });
   } else {
     if (onDoneCallback) onDoneCallback(newBook);
   }
+}
+
+async function lookupQueueRowIsbn(idx){
+  if (isNaN(idx) || !coordImportQueue[idx]) return;
+  const item = coordImportQueue[idx];
+  const cleanIsbn = String(item.isbn || '').replace(/\D/g, '');
+  if (cleanIsbn.length !== 10 && cleanIsbn.length !== 13){
+    alert('Voer eerst een geldig 10- of 13-cijferig ISBN in.');
+    return;
+  }
+  item.isbn = cleanIsbn;
+  item.isSearching = true;
+  item.lookupFailed = false;
+  renderImportQueue();
+
+  try {
+    const meta = await fetchBookMetadataOnline(cleanIsbn);
+    item.isSearching = false;
+    item.lookupDone = true;
+    if (meta){
+      if (meta.title) item.titel = meta.title;
+      if (meta.author) item.auteur = meta.author;
+      if (meta.coverUrl) item.coverUrl = meta.coverUrl;
+      if (meta.price != null) item.prijs = meta.price;
+      item.isDuplicate = checkBookExistsInDatabase(cleanIsbn, item.titel);
+      syncUpdateBookInRemoteQueue(item);
+    } else {
+      item.lookupFailed = true;
+    }
+  } catch(e){
+    console.warn('Fout bij tabel lookup:', e);
+    item.isSearching = false;
+    item.lookupDone = true;
+    item.lookupFailed = true;
+  }
+  renderImportQueue();
+  updateCameraSessionSummary();
 }
 
 function renderImportQueue(){
@@ -1755,24 +1808,34 @@ function renderImportQueue(){
          </select>`
       : `<input type="text" data-idx="${index}" data-field="thema" placeholder="Thema..." value="${escapeHtml(item.thema || '')}" style="margin-top:4px;">`;
 
+    let statusHint = '';
+    if (item.isSearching){
+      statusHint = '<span style="font-size:11px; color:var(--ink-soft); display:block; margin-top:2px;">⏳ Gegevens ophalen…</span>';
+    } else if (item.lookupFailed && !item.titel){
+      statusHint = '<span style="font-size:11px; color:var(--ink-soft); display:block; margin-top:2px;">(Geen online titel gevonden)</span>';
+    }
+
     return `
       <tr data-book-id="${item.id}">
         <td style="color:var(--ink-soft); font-size:11px; text-align:center;">${index + 1}</td>
         <td>${coverHtml}</td>
         <td>
-          <input type="text" data-idx="${index}" data-field="isbn" value="${escapeHtml(item.isbn || '')}" placeholder="ISBN..." style="font-family:monospace; font-size:12px;">
+          <div style="display:flex; gap:3px; align-items:center;">
+            <input type="text" data-idx="${index}" data-field="isbn" value="${escapeHtml(item.isbn || '')}" placeholder="ISBN..." style="font-family:monospace; font-size:12px; flex:1; min-width:105px;">
+            <button type="button" class="btn btn-neutral btn-sm btn-row-lookup" data-lookup-idx="${index}" title="Zoek gegevens online op voor dit ISBN" style="padding:4px 6px; font-size:11px; flex-shrink:0;">🔍</button>
+          </div>
           ${dupBadge}
         </td>
         <td>
           <input type="text" data-idx="${index}" data-field="titel" value="${escapeHtml(item.titel || '')}" placeholder="Titel van het boek *" required style="font-weight:600;">
-          ${!item.titel && item.isbn ? '<span style="font-size:11px; color:var(--ink-soft); display:block; margin-top:2px;">Gegevens ophalen…</span>' : ''}
+          ${statusHint}
         </td>
         <td>
           <input type="text" data-idx="${index}" data-field="auteur" value="${escapeHtml(item.auteur || '')}" placeholder="Auteur...">
         </td>
         <td>
           <select data-idx="${index}" data-field="categorie">
-            <option value="" ${!item.categorie ? 'selected' : ''}>Geen categorie</option>
+            <option value="" ${!item.categorie ? 'selected' : ''}>(geen categorie)</option>
             ${catOptions}
           </select>
           ${item.categorie ? themaSelectHtml : ''}
@@ -1808,6 +1871,14 @@ document.getElementById('import-table-tbody')?.addEventListener('input', e => {
   if (field === 'isbn' || field === 'titel'){
     coordImportQueue[idx].isDuplicate = checkBookExistsInDatabase(coordImportQueue[idx].isbn, coordImportQueue[idx].titel);
   }
+  if (field === 'isbn'){
+    const digits = target.value.replace(/\D/g, '');
+    if ((/^\d{13}$/.test(digits) || (/^\d{10}$/.test(digits) && !digits.startsWith('978') && !digits.startsWith('979'))) && !coordImportQueue[idx].isSearching){
+      coordImportQueue[idx].isbn = digits;
+      lookupQueueRowIsbn(idx);
+      return;
+    }
+  }
   debouncedSyncUpdateRemoteBook(coordImportQueue[idx]);
 });
 
@@ -1822,11 +1893,25 @@ document.getElementById('import-table-tbody')?.addEventListener('change', e => {
     // Her-render zodat thema opties direct mee veranderen
     coordImportQueue[idx].thema = '';
     renderImportQueue();
+  } else if (field === 'isbn'){
+    const digits = target.value.replace(/\D/g, '');
+    if ((digits.length === 10 || digits.length === 13) && !coordImportQueue[idx].isSearching && !coordImportQueue[idx].titel){
+      coordImportQueue[idx].isbn = digits;
+      lookupQueueRowIsbn(idx);
+      return;
+    }
   }
   debouncedSyncUpdateRemoteBook(coordImportQueue[idx]);
 });
 
 document.getElementById('import-table-tbody')?.addEventListener('click', e => {
+  const lookupBtn = e.target.closest('[data-lookup-idx]');
+  if (lookupBtn){
+    const idx = parseInt(lookupBtn.getAttribute('data-lookup-idx'), 10);
+    lookupQueueRowIsbn(idx);
+    return;
+  }
+
   const btn = e.target.closest('[data-remove-idx]');
   if (!btn) return;
   const idx = parseInt(btn.getAttribute('data-remove-idx'), 10);
@@ -2260,6 +2345,8 @@ function addEmptyRowToImportQueue(){
     coverUrl: null,
     isDuplicate: false,
     lookupDone: true,
+    isSearching: false,
+    lookupFailed: false,
     source: 'handmatig'
   };
 
@@ -2307,6 +2394,7 @@ function addSingleManualBook(){
   if (titelEl) titelEl.focus();
 }
 
+let quickLookupTimer = null;
 async function lookupQuickIsbn(){
   const isbnEl = document.getElementById('manual-quick-isbn');
   const statusEl = document.getElementById('manual-quick-status');
@@ -2317,8 +2405,10 @@ async function lookupQuickIsbn(){
     return;
   }
 
+  if (quickLookupTimer) clearTimeout(quickLookupTimer);
+
   if (statusEl){
-    statusEl.textContent = 'Gegevens ophalen online…';
+    statusEl.textContent = 'Gegevens ophalen voor ISBN ' + isbn + '…';
     statusEl.style.color = 'var(--ink-soft)';
     statusEl.style.display = 'block';
   }
@@ -2328,19 +2418,28 @@ async function lookupQuickIsbn(){
     const titelEl = document.getElementById('manual-quick-titel');
     const auteurEl = document.getElementById('manual-quick-auteur');
     const prijsEl = document.getElementById('manual-quick-prijs');
-    if (titelEl && (!titelEl.value || titelEl.value.trim() === '')) titelEl.value = meta.title;
-    if (auteurEl && (!auteurEl.value || auteurEl.value.trim() === '') && meta.author) auteurEl.value = meta.author;
-    if (prijsEl && (!prijsEl.value || prijsEl.value.trim() === '') && meta.price != null) prijsEl.value = formatBedrag(meta.price);
+    if (titelEl) titelEl.value = meta.title;
+    if (auteurEl && meta.author) auteurEl.value = meta.author;
+    if (prijsEl && meta.price != null) prijsEl.value = formatBedrag(meta.price);
+
+    const isDup = checkBookExistsInDatabase(isbn, meta.title);
     if (statusEl){
-      let statusTekst = `✓ Gevonden: "${meta.title}"` + (meta.author ? ` door ${meta.author}` : '');
-      if (meta.price != null) statusTekst += ` (€ ${formatBedrag(meta.price)})`;
+      let statusTekst = `✓ Boek gevonden: "${meta.title}"` + (meta.author ? ` door ${meta.author}` : '');
+      if (meta.price != null) statusTekst += ` · Richtprijs: € ${formatBedrag(meta.price)}`;
+      if (isDup){
+        statusTekst += ` · ⚠️ Al in catalogus`;
+        statusEl.style.color = 'var(--red, #b91c1c)';
+      } else {
+        statusEl.style.color = 'var(--green)';
+      }
       statusEl.textContent = statusTekst;
-      statusEl.style.color = 'var(--green)';
+      quickLookupTimer = setTimeout(() => { if (statusEl) statusEl.style.display = 'none'; }, 7000);
     }
   } else {
     if (statusEl){
-      statusEl.textContent = 'Geen online titel gevonden; vul zelf in.';
+      statusEl.textContent = 'Geen online titel gevonden voor dit ISBN; vul titel en auteur handmatig in.';
       statusEl.style.color = 'var(--ink-soft)';
+      quickLookupTimer = setTimeout(() => { if (statusEl) statusEl.style.display = 'none'; }, 5000);
     }
   }
 }
@@ -2362,8 +2461,9 @@ function processBulkLines(){
 
   let countAdded = 0;
   lines.forEach(line => {
-    // 1. Is het puur een ISBN (10 of 13 cijfers)?
-    const cleanIsbnOnly = line.replace(/[\-\s]/g, '');
+    // 1. Is het puur een ISBN (eventueel voorafgegaan door 'ISBN', 'ISBN-13', 'EAN', etc.)?
+    const strippedPrefix = line.replace(/^(isbn(-?1[03])?|ean)[\s:\-]+/i, '').trim();
+    const cleanIsbnOnly = strippedPrefix.replace(/[\-\s]/g, '');
     if (/^\d{10}$|^\d{13}$/.test(cleanIsbnOnly)){
       addBookToImportQueue({ isbn: cleanIsbnOnly, source: 'bulk-tekst' });
       countAdded++;
@@ -2375,33 +2475,54 @@ function processBulkLines(){
     let auteur = '';
     let isbn = null;
 
-    const isbnMatch = line.match(/\b(97[89][0-9\- ]{10,17})\b/);
+    // Zoek 13-cijferig (978/979) of 10-cijferig ISBN
+    const isbnMatch = line.match(/\b(97[89][0-9\- ]{10,17})\b/) || line.match(/(?:isbn(?:-?1[03])?[:\s]*)?([0-9Xx\-]{10,17})\b/i);
     if (isbnMatch){
-      isbn = isbnMatch[1].replace(/\D/g, '');
-      titel = line.replace(isbnMatch[0], '').replace(/[()\[\]]/g, '').trim();
+      const cand = (isbnMatch[1] || isbnMatch[0]).replace(/\D/g, '');
+      if (cand.length === 10 || cand.length === 13){
+        isbn = cand;
+        // Verwijder het ISBN en eventuele tags zoals 'ISBN:' uit de tekst
+        titel = line.replace(isbnMatch[0], '')
+          .replace(/\b(isbn(-?1[03])?|ean)[:\s\-]*/gi, '')
+          .replace(/[()\[\]]/g, ' ')
+          .trim();
+      }
     }
 
+    // Auteur en titel scheiden bij ' - ', ' / ', of ';'
     if (titel.includes(' - ')){
-      const parts = titel.split(' - ');
-      titel = parts[0].trim();
-      auteur = parts.slice(1).join(' - ').trim();
+      const parts = titel.split(' - ').map(p => p.trim()).filter(Boolean);
+      if (parts.length >= 2){
+        titel = parts[0];
+        auteur = parts.slice(1).join(' - ');
+      }
     } else if (titel.includes(' / ')){
-      const parts = titel.split(' / ');
-      titel = parts[0].trim();
-      auteur = parts.slice(1).join(' / ').trim();
+      const parts = titel.split(' / ').map(p => p.trim()).filter(Boolean);
+      if (parts.length >= 2){
+        titel = parts[0];
+        auteur = parts.slice(1).join(' / ');
+      }
     } else if (titel.includes(';')){
-      const parts = titel.split(';');
-      titel = parts[0].trim();
-      auteur = parts.slice(1).join('; ').trim();
+      const parts = titel.split(';').map(p => p.trim()).filter(Boolean);
+      if (parts.length >= 2){
+        titel = parts[0];
+        auteur = parts.slice(1).join('; ');
+      }
     }
 
-    // Nummering aan het begin weghalen (bijv. "1. Boektitel" of "1) Boektitel")
-    titel = titel.replace(/^\d+[\.\)\-]\s*/, '').trim();
+    // Nummering en overtollige leestekens aan begin/einde opschonen
+    titel = titel.replace(/^\d+[\.\)\-]\s*/, '').replace(/^[\s\-–—/;:.,]+|[\s\-–—/;:.,]+$/g, '').trim();
+    if (auteur) auteur = auteur.replace(/^[\s\-–—/;:.,]+|[\s\-–—/;:.,]+$/g, '').trim();
+
+    // Als er na opschoning alleen loze tekens overblijven, leegmaken zodat lookup werkt
+    if (titel.toLowerCase() === 'isbn' || /^[0-9\-–—/;:.,\s]+$/.test(titel)){
+      titel = '';
+    }
 
     if (titel || isbn){
       addBookToImportQueue({
         isbn: isbn,
-        titel: titel || (isbn ? '' : 'Naamloos boek'),
+        titel: titel || '',
         auteur: auteur,
         source: 'bulk-tekst'
       });
@@ -2418,7 +2539,13 @@ document.getElementById('btn-manual-quick-lookup')?.addEventListener('click', lo
 document.getElementById('manual-quick-isbn')?.addEventListener('input', e => {
   const cijfers = e.target.value.replace(/\D/g, '').slice(0, 13);
   if (cijfers !== e.target.value) e.target.value = cijfers;
-  if (/^\d{13}$/.test(cijfers)){
+  if (/^\d{13}$/.test(cijfers) || (/^\d{10}$/.test(cijfers) && !cijfers.startsWith('978') && !cijfers.startsWith('979'))){
+    lookupQuickIsbn();
+  }
+});
+document.getElementById('manual-quick-isbn')?.addEventListener('keydown', e => {
+  if (e.key === 'Enter'){
+    e.preventDefault();
     lookupQuickIsbn();
   }
 });
@@ -2655,7 +2782,7 @@ document.getElementById('book-form')?.addEventListener('submit', async e => {
     auteur: ingediendeAuteur,
     isbn: isbnWaarde,
     prijs: document.getElementById('prijs').value ? parsePrijs(document.getElementById('prijs').value) : null,
-    categorie: categorie,
+    categorie: categorie || null,
     groep: categorie === 'Groep' ? document.getElementById('groep').value : null,
     jeelo_thema: categorie === 'Jeelo' ? document.getElementById('jeelo_thema').value : null,
     overig_thema: categorie === 'Overig' ? overigWaarde : null,
@@ -2691,7 +2818,7 @@ document.getElementById('book-form')?.addEventListener('submit', async e => {
       ingediendeAuteur,
       `Aangevraagd door ${ingediendeAanvrager}`,
       `ISBN ${isbnWaarde}`,
-      `Categorie: ${categorie}`
+      `Categorie: ${categorie || '(geen categorie)'}`
     ].filter(Boolean).join(' · ');
     bannerEl.style.display = 'block';
     document.getElementById('book-form').style.display = 'none';
@@ -2840,7 +2967,7 @@ function renderZoekTags(b){
       html += `<span class="tag tag-subthema">${escapeHtml(b.overig_thema.trim())}</span>`;
     }
   } else {
-    html += `<span class="tag cat-tag cat-Zonder">Zonder categorie</span>`;
+    html += `<span class="tag cat-tag cat-Zonder">(geen categorie)</span>`;
   }
 
   if (b.opmerking){
@@ -3386,13 +3513,14 @@ function themaSelectHtml(b, idPrefix){
     html += `<option value="${ANDERS}" ${(!isKnown && current) ? 'selected' : ''}>${(!isKnown && current) ? escapeHtml(current) + ' (eigen thema)' : 'Anders, namelijk…'}</option>`;
     return html;
   }
-  return `<option value="" selected>(Kies eerst categorie)</option>`;
+  return `<option value="" selected>(geen thema)</option>`;
 }
 
 function editableRowHtml(b, checkboxClass){
   const prijsVal = b.prijs != null && b.prijs !== '' ? formatBedrag(b.prijs) : '';
-  const isCustom = !isBekendThema(b.categorie, b[veldVoorCategorie(b.categorie)]);
-  const customVal = isCustom ? (b[veldVoorCategorie(b.categorie)] || '') : '';
+  const veld = veldVoorCategorie(b.categorie);
+  const isCustom = veld ? !isBekendThema(b.categorie, b[veld]) : false;
+  const customVal = (isCustom && veld) ? (b[veld] || '') : '';
   return `
     <div class="book-row" data-id="${b.id}">
       <input type="checkbox" class="${checkboxClass}" data-id="${b.id}">
@@ -3412,6 +3540,7 @@ function editableRowHtml(b, checkboxClass){
         </div>
         <div class="field-line">
           <select data-field="categorie" data-id="${b.id}">
+            <option value="" ${!b.categorie ? 'selected' : ''}>(geen categorie)</option>
             <option value="Groep" ${b.categorie==='Groep'?'selected':''}>Groep</option>
             <option value="Kleuters" ${b.categorie==='Kleuters'?'selected':''}>Kleuters</option>
             <option value="Jeelo" ${b.categorie==='Jeelo'?'selected':''}>Jeelo</option>
@@ -3473,11 +3602,12 @@ function wireEditableRow(row){
     if (auteurInp) auteurInp.value = currentBook.auteur || '';
     if (isbnInp) isbnInp.value = currentBook.isbn || '';
     if (naamInp) naamInp.value = currentBook.naam_aanvrager || '';
-    if (catSelect) catSelect.value = currentBook.categorie || 'Groep';
+    if (catSelect) catSelect.value = currentBook.categorie || '';
     if (themaSelect) themaSelect.innerHTML = themaSelectHtml(currentBook, id);
 
-    const isCustom = !isBekendThema(currentBook.categorie, currentBook[veldVoorCategorie(currentBook.categorie)]);
-    const customVal = isCustom ? (currentBook[veldVoorCategorie(currentBook.categorie)] || '') : '';
+    const veld = veldVoorCategorie(currentBook.categorie);
+    const isCustom = veld ? !isBekendThema(currentBook.categorie, currentBook[veld]) : false;
+    const customVal = (isCustom && veld) ? (currentBook[veld] || '') : '';
     if (andersInp){
       andersInp.value = customVal;
       andersInp.style.display = (isCustom && customVal) ? '' : 'none';
@@ -3558,21 +3688,21 @@ function wireEditableRow(row){
 
     const newOpmerking = opmerkingInp ? (opmerkingInp.value.trim() || null) : null;
 
-    const veld = veldVoorCategorie(newCat);
+    const veld = newCat ? veldVoorCategorie(newCat) : null;
     const updates = {
       titel: newTitel,
       auteur: newAuteur,
       prijs: newPrijs,
       isbn: newIsbn,
       naam_aanvrager: newNaam,
-      categorie: newCat,
+      categorie: newCat || null,
       groep: null,
       jeelo_thema: null,
       overig_thema: null,
       kleuters_thema: null,
       opmerking: newOpmerking
     };
-    if (newThema){
+    if (newThema && veld){
       updates[veld] = newThema;
     }
 
@@ -3667,7 +3797,7 @@ function openAfwijzenModal(bookId, isEdit = false){
       <div class="preview-title">${escapeHtml(b.titel)}</div>
       <div class="preview-meta">
         ${b.auteur ? `<span>${escapeHtml(b.auteur)}</span>` : ''}
-        <span class="tag">${escapeHtml(b.categorie || '')}${themaVan(b) ? ' · ' + escapeHtml(themaVan(b)) : ''}</span>
+        <span class="tag">${escapeHtml(themaLabel(b))}</span>
         ${b.prijs != null && b.prijs !== '' ? `<span class="tag tag-prijs">${formatBedrag(b.prijs)}</span>` : ''}
         ${b.naam_aanvrager ? `<span>Aangevraagd door <strong>${escapeHtml(b.naam_aanvrager)}</strong></span>` : ''}
       </div>
@@ -3874,7 +4004,7 @@ function renderAfgewezen(){
           <div style="font-weight:600; font-size:14px; color:var(--ink);">${escapeHtml(b.titel)}</div>
           <div class="row-meta" style="margin-top:4px; display:flex; flex-wrap:wrap; gap:6px; align-items:center;">
             <span class="tag ${tagCls}">${escapeHtml(reden)}</span>
-            <span class="tag">${escapeHtml(b.categorie || '')}${themaVan(b) ? ' · ' + escapeHtml(themaVan(b)) : ''}</span>
+            <span class="tag">${escapeHtml(themaLabel(b))}</span>
             ${b.prijs != null && b.prijs !== '' ? `<span class="tag tag-prijs">${formatBedrag(b.prijs)}</span>` : ''}
             ${b.naam_aanvrager ? `<span style="font-size:12px; color:var(--ink-soft);">aangevraagd door <strong>${escapeHtml(b.naam_aanvrager)}</strong></span>` : ''}
           </div>
@@ -3926,8 +4056,9 @@ function coordinatorStatusHtml(status, b){
 
 function fullRowHtml(b){
   const prijsVal = b.prijs != null && b.prijs !== '' ? formatBedrag(b.prijs) : '';
-  const isCustom = !isBekendThema(b.categorie, b[veldVoorCategorie(b.categorie)]);
-  const customVal = isCustom ? (b[veldVoorCategorie(b.categorie)] || '') : '';
+  const veld = veldVoorCategorie(b.categorie);
+  const isCustom = veld ? !isBekendThema(b.categorie, b[veld]) : false;
+  const customVal = (isCustom && veld) ? (b[veld] || '') : '';
 
   return `
     <details class="book-details" data-id="${b.id}">
@@ -3979,6 +4110,7 @@ function fullRowHtml(b){
           <div class="edit-field">
             <label>Categorie</label>
             <select data-field="categorie" data-id="${b.id}">
+              <option value="" ${!b.categorie ? 'selected' : ''}>(geen categorie)</option>
               <option value="Groep" ${b.categorie==='Groep'?'selected':''}>Groep</option>
               <option value="Kleuters" ${b.categorie==='Kleuters'?'selected':''}>Kleuters</option>
               <option value="Jeelo" ${b.categorie==='Jeelo'?'selected':''}>Jeelo</option>
@@ -4099,11 +4231,12 @@ function wireFullRow(row){
     if (fullPrijsInp) fullPrijsInp.value = currentBook.prijs != null && currentBook.prijs !== '' ? formatBedrag(currentBook.prijs) : '';
     if (isbnInp) isbnInp.value = currentBook.isbn || '';
     if (naamInp) naamInp.value = currentBook.naam_aanvrager || '';
-    if (catSelect) catSelect.value = currentBook.categorie || 'Groep';
+    if (catSelect) catSelect.value = currentBook.categorie || '';
     if (themaSelect) themaSelect.innerHTML = themaSelectHtml(currentBook, id);
 
-    const isCustom = !isBekendThema(currentBook.categorie, currentBook[veldVoorCategorie(currentBook.categorie)]);
-    const customVal = isCustom ? (currentBook[veldVoorCategorie(currentBook.categorie)] || '') : '';
+    const veld = veldVoorCategorie(currentBook.categorie);
+    const isCustom = veld ? !isBekendThema(currentBook.categorie, currentBook[veld]) : false;
+    const customVal = (isCustom && veld) ? (currentBook[veld] || '') : '';
     if (andersInp){
       andersInp.value = customVal;
       andersInp.style.display = (isCustom && customVal) ? '' : 'none';
@@ -4198,14 +4331,14 @@ function wireFullRow(row){
     const newStatus = statusSelect ? statusSelect.value : (currentBook.status || 'aangevraagd');
     const newOpmerking = opmerkingInp ? (opmerkingInp.value.trim() || null) : null;
 
-    const veld = veldVoorCategorie(newCat);
+    const veld = newCat ? veldVoorCategorie(newCat) : null;
     const updates = {
       titel: newTitel,
       auteur: newAuteur,
       prijs: newPrijs,
       isbn: newIsbn,
       naam_aanvrager: newNaam,
-      categorie: newCat,
+      categorie: newCat || null,
       groep: null,
       jeelo_thema: null,
       overig_thema: null,
@@ -4213,7 +4346,7 @@ function wireFullRow(row){
       status: newStatus,
       opmerking: newOpmerking
     };
-    if (newThema){
+    if (newThema && veld){
       updates[veld] = newThema;
     }
 
@@ -4587,7 +4720,9 @@ function updateAlleBulkInfo(){
 
 function populateBulkThemaSelect(cat, themaEl){
   let html = '';
-  if (cat === 'Groep'){
+  if (cat === '__geen__' || !cat){
+    html = `<option value="" selected>(geen thema)</option>`;
+  } else if (cat === 'Groep'){
     html = `<option value="" disabled selected>Kies groep…</option>`
       + `<option value="__leeg__">(Geen groep)</option>`
       + GROEPEN.map(o => `<option value="${escapeHtml(o)}">${escapeHtml(o)}</option>`).join('');
@@ -4662,6 +4797,23 @@ document.getElementById('alle-bulk-thema-apply')?.addEventListener('click', asyn
   const ids = [...document.querySelectorAll('.sel-alle:checked')].map(cb => cb.dataset.id);
   if (!ids.length) return;
   const cat = document.getElementById('alle-bulk-cat').value;
+  if (cat === '__geen__' || !cat){
+    const updates = {
+      categorie: null,
+      groep: null,
+      jeelo_thema: null,
+      overig_thema: null,
+      kleuters_thema: null
+    };
+    const { error } = await client.from('boeken').update(updates).in('id', ids);
+    if (error){ alert('Bulk-wijziging categorie mislukt: ' + error.message); return; }
+    allBooksCache.forEach(b => {
+      if (ids.includes(String(b.id))) Object.assign(b, updates);
+    });
+    saveCachedBooks(allBooksCache);
+    await refreshCoordinatorData(true);
+    return;
+  }
   const rawThema = document.getElementById('alle-bulk-thema').value;
   if (!rawThema){
     alert('Kies eerst een thema of groep uit de lijst.');
