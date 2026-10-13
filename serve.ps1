@@ -25,9 +25,13 @@ try {
             }
 
             $relPath = $localPath.TrimStart('/').Replace('/', [System.IO.Path]::DirectorySeparatorChar)
-            $filePath = [System.IO.Path]::Combine($baseDir, $relPath)
+            $filePath = [System.IO.Path]::GetFullPath([System.IO.Path]::Combine($baseDir, $relPath))
+            $baseFull = [System.IO.Path]::GetFullPath($baseDir)
 
-            if ([System.IO.File]::Exists($filePath)) {
+            $isAllowed = $filePath.StartsWith($baseFull, [System.StringComparison]::OrdinalIgnoreCase) -and
+                         -not ([System.IO.Path]::GetFileName($filePath).StartsWith("."))
+
+            if ($isAllowed -and [System.IO.File]::Exists($filePath)) {
                 $ext = [System.IO.Path]::GetExtension($filePath).ToLower()
                 $contentType = switch ($ext) {
                     ".html" { "text/html; charset=utf-8" }

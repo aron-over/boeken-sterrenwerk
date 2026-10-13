@@ -131,9 +131,13 @@ if (overigEl){
 }
 
 function escapeHtml(str){
-  const div = document.createElement('div');
-  div.textContent = str == null ? '' : str;
-  return div.innerHTML;
+  if (str == null) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 function bevestigVerwijderen(titel){
@@ -1542,7 +1546,7 @@ function updateCameraSessionSummary(){
         ${coverHtml}
         <div class="scan-info">
           <div class="scan-title">${escapeHtml(item.titel || 'Gegevens ophalen…')}</div>
-          <div class="scan-meta">${item.isbn || 'Geen ISBN'}${item.auteur ? ' · ' + escapeHtml(item.auteur) : ''}</div>
+          <div class="scan-meta">${escapeHtml(item.isbn || 'Geen ISBN')}${item.auteur ? ' · ' + escapeHtml(item.auteur) : ''}</div>
         </div>
         <button type="button" class="btn btn-ghost btn-sm" data-remove-idx="${origIdx}" style="color:var(--red); padding:2px 6px;" title="Verwijderen">✕</button>
       </div>
