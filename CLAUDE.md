@@ -10,6 +10,9 @@ ontvangst-workflow door de taalcoördinator, en een doorzoekbare catalogus.
 - **Database**: Supabase (Postgres), rechtstreeks vanuit de browser via `@supabase/supabase-js`
   met de **anon key** — die staat bewust in de broncode, dat hoort zo bij Supabase.
 - **Geen build/deploy-stap**: directe koppeling naar `style.css` en `app.js` in `index.html`. Wat op de `main`-branch staat, is direct live via GitHub Pages.
+- **Externe bibliotheken** (`<head>` van `index.html`): supabase-js en html5-qrcode staan op een vaste versie met
+  een `integrity`-controlegetal. Bij een versie-update moet dat controlegetal mee veranderen, anders laadt de
+  bibliotheek niet. SheetJS komt bewust van `cdn.sheetjs.com` (de npm-versie is verouderd en onveilig).
 - **Stijlgids & Componentenbibliotheek**: `stijlgids.html` toont alle componenten, knoppen, statussen en de 5 NL Design System huisregels interactief.
 
 ## Bestandsstructuur
@@ -55,7 +58,8 @@ geen budget dit jaar, niet leverbaar, afgewezen, reeds aanwezig, anders) en opti
    thema. Elk boek heeft een gedeeld "boekentip"-veld (lesideeën van leraren, stapelt op,
    overschrijft niet).
 3. **Coördinator** — inloggen met e-mail + wachtwoord via Supabase Auth. De echte beveiliging zit in de database-RLS (`migratie_beveiliging.sql`):
-   anon mag alleen lezen, aanvragen indienen (status `aangevraagd`) en `boekentip` wijzigen;
+   anon mag alleen lezen, aanvragen indienen (status `aangevraagd`) en een boekentip toevoegen
+   (via de databasefunctie `voeg_boekentip_toe`; wijzigen/wissen van tips kan alleen de coördinator);
    alleen gebruikers in de tabel `coordinatoren` mogen de rest. Nieuwe coördinatoren uitnodigen
    kan vanaf de site via de Edge Function `supabase/functions/nodig-coordinator-uit` (handmatig
    gedeployed via het Supabase-dashboard; backup: uitnodigen in het dashboard + rij in

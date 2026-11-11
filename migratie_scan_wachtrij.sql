@@ -23,14 +23,17 @@ create table if not exists scan_wachtrij (
 -- RLS inschakelen
 alter table scan_wachtrij enable row level security;
 
--- Anon toegangspolicy (gelijk aan de boeken-tabel in dit project)
+-- Alleen de ingelogde coördinator mag bij de scan-wachtrij (zelfde regel als in
+-- migratie_beveiliging.sql). Een eventuele oude "iedereen mag alles"-policy wordt weggehaald,
+-- zodat dit bestand opnieuw uitvoeren de beveiliging nooit kan terugdraaien.
+-- Is migratie_beveiliging.sql nog niet uitgevoerd (functie is_coordinator() ontbreekt), dan
+-- krijgt voorlopig niemand toegang; migratie_beveiliging.sql maakt de regel daarna alsnog aan.
+drop policy if exists "anon volledige toegang scan_wachtrij" on scan_wachtrij;
+drop policy if exists "coordinator mag alles met scan_wachtrij" on scan_wachtrij;
 do $$
 begin
-  if not exists (
-    select 1 from pg_policies 
-    where tablename = 'scan_wachtrij' and policyname = 'anon volledige toegang scan_wachtrij'
-  ) then
-    create policy "anon volledige toegang scan_wachtrij" on scan_wachtrij
-      for all to anon using (true) with check (true);
+  if to_regprocedure('public.is_coordinator()') is not null then
+    create policy "coordinator mag alles met scan_wachtrij" on scan_wachtrij
+      for all to authenticated using (is_coordinator()) with check (is_coordinator());
   end if;
 end $$;
