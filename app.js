@@ -509,7 +509,7 @@ function renderModalTipsList(bookId, openTargetTipId = null){
           </div>
         </div>
         <div class="modal-tip-body">
-          ${tip.html}
+          ${sanitizeTipHtml(tip.html)}
         </div>
       </div>
     `;
@@ -561,7 +561,7 @@ function renderModalTipsList(bookId, openTargetTipId = null){
 
         const editor = document.getElementById('modal-rich-editor');
         if (editor){
-          editor.innerHTML = tip.html;
+          editor.innerHTML = sanitizeTipHtml(tip.html);
         }
 
         showModalEditor(true);
@@ -733,6 +733,19 @@ function initBoekentipModal(){
       try { localStorage.setItem('boeken_leerkracht_naam', author); } catch(e){}
     }
 
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Opslaan…';
+
+    // Eerst de nieuwste tips uit de database ophalen: een collega kan intussen ook een tip
+    // hebben toegevoegd, en die mag niet overschreven worden door onze (oudere) lokale kopie.
+    try {
+      const { data: vers, error: versError } = await client
+        .from('boeken').select('boekentip').eq('id', activeModalBookId).maybeSingle();
+      if (!versError && vers) book.boekentip = vers.boekentip;
+    } catch (e){
+      console.warn('Nieuwste boekentips ophalen mislukt, lokale kopie gebruikt', e);
+    }
+
     const currentTips = parseBoekentips(book.boekentip);
     let savedTipId = null;
 
@@ -755,8 +768,6 @@ function initBoekentipModal(){
     }
 
     const serialized = serializeBoekentips(currentTips);
-    saveBtn.disabled = true;
-    saveBtn.textContent = 'Opslaan…';
 
     const ok = await dbUpdate(activeModalBookId, { boekentip: serialized });
     saveBtn.disabled = false;
@@ -2028,7 +2039,7 @@ async function startCameraScanner(){
     updateCameraStatusUI();
     const readerDiv = document.getElementById('import-camera-reader');
     if (readerDiv){
-      readerDiv.innerHTML = `<div style="padding:24px; text-align:center; color:#fff; font-size:13px;">Camera niet beschikbaar of geen toestemming verleend.<br><br>Je kunt foto's uploaden via het tabblad 'Foto\\'s uploaden' of handmatig ISBN's invoeren.</div>`;
+      readerDiv.innerHTML = `<div style="padding:24px; text-align:center; color:#fff; font-size:13px;">Camera niet beschikbaar of geen toestemming verleend.<br><br>Je kunt foto's uploaden via het tabblad "Foto's uploaden" of handmatig ISBN's invoeren.</div>`;
     }
   }
 }
@@ -2984,7 +2995,7 @@ function renderZoekTags(b){
 
 // Ophalen van boekomslag (cover) via OpenLibrary / Google Books
 function getCoverImgTag(isbn, titel){
-  if (!isbn || isbn.length !== 13){
+  if (!/^\d{13}$/.test(String(isbn || ''))){
     return `<div class="book-card-cover-placeholder">📖</div>`;
   }
   const openLibUrl = `https://covers.openlibrary.org/b/isbn/${isbn}-M.jpg?default=false`;
@@ -3437,6 +3448,8 @@ function renderSummaryMeta(b){
   }
   return metaParts.join(' &middot; ');
 }
+
+const STANDAARD_AFWIJS_REDENEN = ['Geen budget dit jaar (uitgesteld)', 'Niet leverbaar', 'Afgewezen', 'Reeds aanwezig op school'];
 
 function getNormalizedReden(b){
   return (b && b.afwijs_reden) ? b.afwijs_reden : 'Niet leverbaar';
@@ -4247,7 +4260,10 @@ function wireFullRow(row){
     }
 
     if (statusSelect) statusSelect.value = currentBook.status || 'aangevraagd';
-    if (afwijsRedenSelect) afwijsRedenSelect.value = currentBook.afwijs_reden || 'Geen budget dit jaar (uitgesteld)';
+    if (afwijsRedenSelect){
+      const reden = currentBook.afwijs_reden || 'Geen budget dit jaar (uitgesteld)';
+      afwijsRedenSelect.value = STANDAARD_AFWIJS_REDENEN.includes(reden) ? reden : 'Anders';
+    }
     if (afwijsToelichtingInp) afwijsToelichtingInp.value = currentBook.afwijs_toelichting || '';
     if (afwijsRedenWrap) afwijsRedenWrap.style.display = currentBook.status === 'afgewezen' ? '' : 'none';
     if (afwijsToelichtingWrap) afwijsToelichtingWrap.style.display = currentBook.status === 'afgewezen' ? '' : 'none';
@@ -4355,7 +4371,13 @@ function wireFullRow(row){
     }
 
     if (newStatus === 'afgewezen'){
-      updates.afwijs_reden = afwijsRedenSelect ? afwijsRedenSelect.value : (currentBook.afwijs_reden || 'Niet leverbaar');
+      let nieuweReden = afwijsRedenSelect ? afwijsRedenSelect.value : (currentBook.afwijs_reden || 'Niet leverbaar');
+      // "Anders..." staat voor een zelf ingevulde reden: die tekst behouden in plaats van
+      // hem te overschrijven met het woord "Anders".
+      if (nieuweReden === 'Anders' && currentBook.afwijs_reden && !STANDAARD_AFWIJS_REDENEN.includes(currentBook.afwijs_reden)){
+        nieuweReden = currentBook.afwijs_reden;
+      }
+      updates.afwijs_reden = nieuweReden;
       updates.afwijs_toelichting = afwijsToelichtingInp ? (afwijsToelichtingInp.value.trim() || null) : null;
     } else {
       updates.afwijs_reden = null;
@@ -4900,9 +4922,8 @@ document.getElementById('alle-bulk-delete')?.addEventListener('click', async () 
   if (!ids.length) return;
   if (!confirm(`${ids.length} boek(en) definitief verwijderen?\n\nDit kan NIET ongedaan worden gemaakt (geen back-up).`)) return;
   const resultaten = await Promise.all(ids.map(id => client.from('boeken').delete().eq('id', id)));
-  const mislukt = resultaten.filter(r => r.error).length;
-  if (mislukt) alert(`Verwijderen van ${mislukt} boek(en) mislukt.`);
-  const mislukteIds = resultaten.filter(r => r.error).map((r, i) => ids[i]);
+  const mislukteIds = ids.filter((id, i) => resultaten[i].error);
+  if (mislukteIds.length) alert(`Verwijderen van ${mislukteIds.length} boek(en) mislukt.`);
   allBooksCache = allBooksCache.filter(b => !ids.includes(String(b.id)) || mislukteIds.includes(String(b.id)));
   saveCachedBooks(allBooksCache);
   await refreshCoordinatorData(true);
@@ -4990,16 +5011,23 @@ function exportBestellingenCsv(){
     return;
   }
 
+  // Tekst die iemand in het aanvraagformulier typt kan met = + - of @ beginnen; Excel zou dat
+  // als formule uitvoeren. Een apostrof ervoor maakt er gewone tekst van.
+  const cel = waarde => {
+    let tekst = String(waarde == null ? '' : waarde);
+    if (/^[=+\-@\t\r]/.test(tekst)) tekst = "'" + tekst;
+    return `"${tekst.replace(/"/g, '""')}"`;
+  };
   const header = ['Titel', 'Auteur', 'ISBN', 'Prijs', 'Categorie', 'Thema of Groep', 'Aanvrager', 'Opmerking'];
   const rows = boeken.map(b => [
-    `"${(b.titel || '').replace(/"/g, '""')}"`,
-    `"${(b.auteur || '').replace(/"/g, '""')}"`,
-    `"${(b.isbn || '').replace(/"/g, '""')}"`,
+    cel(b.titel),
+    cel(b.auteur),
+    cel(b.isbn),
     `"${formatBedrag(b.prijs || 0)}"`,
-    `"${(b.categorie || '').replace(/"/g, '""')}"`,
-    `"${(themaVan(b) || '').replace(/"/g, '""')}"`,
-    `"${(b.naam_aanvrager || '').replace(/"/g, '""')}"`,
-    `"${(b.opmerking || '').replace(/"/g, '""')}"`
+    cel(b.categorie),
+    cel(themaVan(b)),
+    cel(b.naam_aanvrager),
+    cel(b.opmerking)
   ]);
 
   const csvContent = '\uFEFF' + [header.join(';'), ...rows.map(r => r.join(';'))].join('\r\n');

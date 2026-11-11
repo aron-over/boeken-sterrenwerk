@@ -8,11 +8,12 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <!-- Supabase JS Library -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.0/dist/umd/supabase.js" integrity="sha384-uteMfOloLDGt042uDz+xHGF3ym63/WQ6rFq7murQRG8Ih7QrXGEGNtWd8688sb4O" crossorigin="anonymous"></script>
 <!-- HTML5 Barcode QR Code Scanner -->
-<script src="https://unpkg.com/html5-qrcode"></script>
-<!-- SheetJS (Excel .xlsx en .xls parsing) -->
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js" integrity="sha384-c9d8RFSL+u3exBOJ4Yp3HUJXS4znl9f+z66d1y54ig+ea249SpqR+w1wyvXz/lk+" crossorigin="anonymous"></script>
+<!-- SheetJS (Excel .xlsx en .xls parsing). Bewust van cdn.sheetjs.com: de versie op npm/jsdelivr
+     (0.18.5) wordt niet meer bijgewerkt en heeft bekende beveiligingslekken. -->
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 <!-- NL Design System Stijlen voor Onderwijs -->
 <link rel="stylesheet" href="style.css?v=20260924_v2">
 </head>
@@ -994,7 +995,7 @@
 <div id="print-bestelbon-area" style="display:none;"></div>
 
 <!-- Applicatie Script -->
-<script src="app.js?v=20261013_v1"></script>
+<script src="app.js?v=20261111_v1"></script>
 
 </body>
 </html>

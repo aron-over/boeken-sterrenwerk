@@ -7,13 +7,14 @@ on:
   workflow_dispatch:
 
 permissions:
+  contents: read
   actions: write
 
 jobs:
   ping:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Eén rij ophalen uit boeken
         run: |
           URL=$(grep -oP "SUPABASE_URL = '\K[^']+" app.js)

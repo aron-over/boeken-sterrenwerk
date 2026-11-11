@@ -10,6 +10,9 @@ ontvangst-workflow door de taalcoördinator, en een doorzoekbare catalogus.
 - **Database**: Supabase (Postgres), rechtstreeks vanuit de browser via `@supabase/supabase-js`
   met de **anon key** — die staat bewust in de broncode, dat hoort zo bij Supabase.
 - **Geen build/deploy-stap**: directe koppeling naar `style.css` en `app.js` in `index.html`. Wat op de `main`-branch staat, is direct live via GitHub Pages.
+- **Externe bibliotheken** (`<head>` van `index.html`): supabase-js en html5-qrcode staan op een vaste versie met
+  een `integrity`-controlegetal. Bij een versie-update moet dat controlegetal mee veranderen, anders laadt de
+  bibliotheek niet. SheetJS komt bewust van `cdn.sheetjs.com` (de npm-versie is verouderd en onveilig).
 - **Stijlgids & Componentenbibliotheek**: `stijlgids.html` toont alle componenten, knoppen, statussen en de 5 NL Design System huisregels interactief.
 
 ## Bestandsstructuur
