@@ -58,7 +58,8 @@ geen budget dit jaar, niet leverbaar, afgewezen, reeds aanwezig, anders) en opti
    thema. Elk boek heeft een gedeeld "boekentip"-veld (lesideeën van leraren, stapelt op,
    overschrijft niet).
 3. **Coördinator** — inloggen met e-mail + wachtwoord via Supabase Auth. De echte beveiliging zit in de database-RLS (`migratie_beveiliging.sql`):
-   anon mag alleen lezen, aanvragen indienen (status `aangevraagd`) en `boekentip` wijzigen;
+   anon mag alleen lezen, aanvragen indienen (status `aangevraagd`) en een boekentip toevoegen
+   (via de databasefunctie `voeg_boekentip_toe`; wijzigen/wissen van tips kan alleen de coördinator);
    alleen gebruikers in de tabel `coordinatoren` mogen de rest. Nieuwe coördinatoren uitnodigen
    kan vanaf de site via de Edge Function `supabase/functions/nodig-coordinator-uit` (handmatig
    gedeployed via het Supabase-dashboard; backup: uitnodigen in het dashboard + rij in

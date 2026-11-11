@@ -28,13 +28,25 @@ try {
   localStorage.removeItem('boeken_cache_test_time');
 } catch (e) {}
 
+// Het Jeelo-thema "Beleven van onze planeet" stond eerder met een typfout in de lijst. Boeken die
+// nog onder de oude naam in de database staan, behandelen we alsof ze de juiste naam hebben
+// (migratie_jeelo_typfout.sql corrigeert de database zelf).
+function corrigeerOudeThemanamen(books){
+  if (Array.isArray(books)){
+    books.forEach(b => {
+      if (b && b.jeelo_thema === 'Bebeleven van onze planeet') b.jeelo_thema = 'Beleven van onze planeet';
+    });
+  }
+  return books;
+}
+
 function loadCachedBooks(){
   try {
     const raw = localStorage.getItem(CACHE_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw);
     if (Array.isArray(parsed) && parsed.length > 0){
-      return parsed;
+      return corrigeerOudeThemanamen(parsed);
     }
   } catch (e) {
     console.warn('Fout bij uitlezen lokale cache:', e);
@@ -98,7 +110,7 @@ async function fetchAllRows(table, orderCol = 'titel', ascending = true){
 
 const GROEPEN = ['Groep 3','Groep 4','Groep 5','Groep 6','Groep 7','Groep 8'];
 const KLEUTERS_THEMAS = ['Baby familie','Beroepen','Boerderij','Bouwen','Carnaval','Dieren','Dikkie Dik',"Draken & Dino's",'Emoties','Gezondheid','Herfst','Jarig & Feest','Kermis','Kerst','Kikker','Koken en bakken','Koningshuis','Kunst','Lente','Liedjes & Versjes','Natuur','Pasen','Rekenen','Ruimte','Seizoenen','Sinterklaas','Sociaal emotioneel','Sporten','Sprookjes','Taal','Vakantie','Verkeer','Voorlezen','Vriendschap','Winter','Zoekboek'].sort((a, b) => a.localeCompare(b, 'nl'));
-const JEELO_THEMAS = ['Omgaan met elkaar','Maken van je eigen product','Leren voor later','Zorgen voor dieren','Bebeleven van onze planeet','Veilig in het verkeer','Zorgen voor jezelf en anderen','Omgaan met geld','Leren van personen van vroeger','Inrichten van je eigen omgeving','Omgaan met natuur','Veilig helpen'];
+const JEELO_THEMAS = ['Omgaan met elkaar','Maken van je eigen product','Leren voor later','Zorgen voor dieren','Beleven van onze planeet','Veilig in het verkeer','Zorgen voor jezelf en anderen','Omgaan met geld','Leren van personen van vroeger','Inrichten van je eigen omgeving','Omgaan met natuur','Veilig helpen'];
 const OVERIGE_THEMAS = ['Lessen taal','Gedichten',"Sprookjes (verhalen, legenden, mythen)",'Bekende personen','Engelse boeken','Andere talen','Geschiedenis','Oorlog','Aardrijkskunde','Burgerschap','Relaties en Seksualiteit','Gedrag','Kunst','Digitale geletterdheid','Hoogbegaafdheid','Voorleesboeken'];
 const ANDERS = '__anders__';
 
@@ -736,6 +748,34 @@ function initBoekentipModal(){
     saveBtn.disabled = true;
     saveBtn.textContent = 'Opslaan…';
 
+    // Nieuwe tip: via de databasefunctie die alleen kan toevoegen (en dus nooit tips van
+    // collega's kan wissen of overschrijven). Bestaat die functie nog niet in de database
+    // (migratie_beveiliging.sql nog niet opnieuw uitgevoerd), dan volgt hieronder de oude route.
+    if (!editingTipId){
+      const { data: nieuweTips, error: rpcError } = await client.rpc('voeg_boekentip_toe', {
+        p_boek_id: String(activeModalBookId), p_html: cleanHtml, p_author: author
+      });
+      const functieOntbreekt = rpcError && (rpcError.code === 'PGRST202' || /voeg_boekentip_toe/.test(rpcError.message || ''));
+      if (!rpcError && typeof nieuweTips === 'string'){
+        book.boekentip = nieuweTips;
+        saveCachedBooks(allBooksCache);
+        const tips = parseBoekentips(nieuweTips);
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Boekentip opslaan';
+        hideModalEditor();
+        renderModalTipsList(activeModalBookId, tips.length ? tips[tips.length - 1].id : null);
+        syncTipTriggersOutsideModal(activeModalBookId, tips.length);
+        return;
+      }
+      if (rpcError && !functieOntbreekt){
+        console.error('Boekentip toevoegen mislukt', rpcError);
+        alert('Opslaan is mislukt: ' + rpcError.message);
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Boekentip opslaan';
+        return;
+      }
+    }
+
     // Eerst de nieuwste tips uit de database ophalen: een collega kan intussen ook een tip
     // hebben toegevoegd, en die mag niet overschreven worden door onze (oudere) lokale kopie.
     try {
@@ -928,6 +968,7 @@ async function fetchAllBooks(forceReload = false){
     const { data, error } = await fetchAllRows('boeken', 'titel', true);
 
     if (!error && data){
+      corrigeerOudeThemanamen(data);
       // Snelle controle of de ontvangen data verschilt van wat we in het geheugen hebben
       const isDifferent = allBooksCache.length !== data.length ||
         (allBooksCache.length > 0 && data.length > 0 && (
