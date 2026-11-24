@@ -1985,6 +1985,14 @@ textarea:focus {
   padding-left: 10px;
   border-radius: 4px;
 }
+/* Compacte "Te bestellen" / "Onderweg": bewerkvelden in uitklapbare regel */
+.order-details .book-row {
+  border-bottom: none;
+  padding: 4px 0 0;
+}
+.book-row.no-checkbox { grid-template-columns: 1fr auto; }
+.order-details:has(.book-row.has-changes) > summary { border-left: 3px solid var(--gold); }
+
 /* Book Details (Alle boeken accordeon in Coördinator) */
 .book-details {
   border-bottom: 1px solid var(--line);
@@ -2550,6 +2558,8 @@ textarea:focus {
     margin-top: 10px;
     grid-column: 1;
   }
+  .book-row.no-checkbox { grid-template-columns: 1fr !important; }
+  .book-row.no-checkbox .row-fields { grid-column: 1; }
   .row-fields {
     grid-column: 2;
     min-width: 0;

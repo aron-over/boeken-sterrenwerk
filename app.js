@@ -3580,8 +3580,8 @@ function editableRowHtml(b, checkboxClass){
   const isCustom = veld ? !isBekendThema(b.categorie, b[veld]) : false;
   const customVal = (isCustom && veld) ? (b[veld] || '') : '';
   return `
-    <div class="book-row" data-id="${b.id}">
-      <input type="checkbox" class="${checkboxClass}" data-id="${b.id}">
+    <div class="book-row${checkboxClass ? '' : ' no-checkbox'}" data-id="${b.id}">
+      ${checkboxClass ? `<input type="checkbox" class="${checkboxClass}" data-id="${b.id}">` : ''}
       <div class="row-fields">
         <div class="field-line" style="justify-content:space-between; align-items:center;">
           <input type="text" class="titel-input" data-field="titel" data-id="${b.id}" value="${escapeHtml(b.titel)}" placeholder="Titel">
@@ -3776,6 +3776,8 @@ function wireEditableRow(row){
       if (saveBar) saveBar.style.display = 'none';
       row.classList.remove('has-changes');
       showSaveFeedback(badge);
+      const det = row.closest('.order-details');
+      if (det) updateSummaryHeader(det, currentBook);
       renderBudget();
       updateBulkInfo('aangevraagd');
       updateBulkInfo('besteld');
@@ -3804,32 +3806,59 @@ function wireEditableRow(row){
   });
 }
 
+// Compacte regel per boek (één regel), klik open om te bewerken
+function compactOrderRowHtml(b, checkboxClass){
+  return `
+    <details class="book-details order-details" data-id="${b.id}">
+      <summary>
+        <div class="summary-left">
+          <input type="checkbox" class="${checkboxClass}" data-id="${b.id}" aria-label="Selecteer ${escapeHtml(b.titel)}">
+          <div class="summary-text">
+            <span class="summary-titel">${escapeHtml(b.titel)}</span>
+            <span class="summary-meta">${renderSummaryMeta(b)}</span>
+          </div>
+        </div>
+        <span class="chevron">▶</span>
+      </summary>
+      <div class="book-details-body">
+        ${editableRowHtml(b, null)}
+      </div>
+    </details>
+  `;
+}
+
+function renderOrderList(lijst, containerId, checkboxClass, groep, legeTekst){
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  const openIds = new Set([...container.querySelectorAll('details[open]')].map(d => d.dataset.id));
+  const checkedIds = new Set([...container.querySelectorAll(`.${checkboxClass}:checked`)].map(cb => cb.dataset.id));
+  if (!lijst.length){
+    container.innerHTML = `<div class="empty-state">${legeTekst}</div>`;
+  } else {
+    container.innerHTML = lijst.map(b => compactOrderRowHtml(b, checkboxClass)).join('');
+    container.querySelectorAll('.order-details').forEach(det => {
+      if (openIds.has(det.dataset.id)) det.open = true;
+      const cb = det.querySelector(`.${checkboxClass}`);
+      if (cb){
+        if (checkedIds.has(det.dataset.id)) cb.checked = true;
+        cb.addEventListener('click', e => e.stopPropagation());
+        cb.addEventListener('change', () => updateBulkInfo(groep));
+      }
+      const row = det.querySelector('.book-row');
+      if (row) wireEditableRow(row);
+    });
+  }
+  updateBulkInfo(groep);
+}
+
 function renderTeBestellen(){
   const lijst = allBooksCache.filter(b => b.status === 'aangevraagd' || !b.status);
-  const container = document.getElementById('lijst-aangevraagd');
-  if (!container) return;
-  if (!lijst.length){
-    container.innerHTML = `<div class="empty-state">Niets te bestellen op dit moment.</div>`;
-  } else {
-    container.innerHTML = lijst.map(b => editableRowHtml(b, 'sel-aangevraagd')).join('');
-    container.querySelectorAll('.book-row').forEach(wireEditableRow);
-    container.querySelectorAll('.sel-aangevraagd').forEach(cb => cb.addEventListener('change', () => updateBulkInfo('aangevraagd')));
-  }
-  updateBulkInfo('aangevraagd');
+  renderOrderList(lijst, 'lijst-aangevraagd', 'sel-aangevraagd', 'aangevraagd', 'Niets te bestellen op dit moment.');
 }
 
 function renderOnderweg(){
   const lijst = allBooksCache.filter(b => b.status === 'besteld');
-  const container = document.getElementById('lijst-besteld');
-  if (!container) return;
-  if (!lijst.length){
-    container.innerHTML = `<div class="empty-state">Niets onderweg op dit moment.</div>`;
-  } else {
-    container.innerHTML = lijst.map(b => editableRowHtml(b, 'sel-besteld')).join('');
-    container.querySelectorAll('.book-row').forEach(wireEditableRow);
-    container.querySelectorAll('.sel-besteld').forEach(cb => cb.addEventListener('change', () => updateBulkInfo('besteld')));
-  }
-  updateBulkInfo('besteld');
+  renderOrderList(lijst, 'lijst-besteld', 'sel-besteld', 'besteld', 'Niets onderweg op dit moment.');
 }
 
 // ---------- Afwijzen / Uitstellen Modal Logica & Filters ----------
