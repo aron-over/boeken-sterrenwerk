@@ -111,7 +111,7 @@ async function fetchAllRows(table, orderCol = 'titel', ascending = true){
 const GROEPEN = ['Groep 3','Groep 4','Groep 5','Groep 6','Groep 7','Groep 8'];
 const KLEUTERS_THEMAS = ['Baby familie','Beroepen','Boerderij','Bouwen','Carnaval','Dieren','Dikkie Dik',"Draken & Dino's",'Emoties','Gezondheid','Herfst','Jarig & Feest','Kermis','Kerst','Kikker','Koken en bakken','Koningshuis','Kunst','Lente','Liedjes & Versjes','Natuur','Pasen','Rekenen','Ruimte','Seizoenen','Sinterklaas','Sociaal emotioneel','Sporten','Sprookjes','Taal','Vakantie','Verkeer','Voorlezen','Vriendschap','Winter','Zoekboek'].sort((a, b) => a.localeCompare(b, 'nl'));
 const JEELO_THEMAS = ['Omgaan met elkaar','Maken van je eigen product','Leren voor later','Zorgen voor dieren','Beleven van onze planeet','Veilig in het verkeer','Zorgen voor jezelf en anderen','Omgaan met geld','Leren van personen van vroeger','Inrichten van je eigen omgeving','Omgaan met natuur','Veilig helpen'];
-const OVERIGE_THEMAS = ['Lessen taal','Gedichten',"Sprookjes (verhalen, legenden, mythen)",'Bekende personen','Engelse boeken','Andere talen','Geschiedenis','Oorlog','Aardrijkskunde','Burgerschap','Relaties en Seksualiteit','Gedrag','Kunst','Digitale geletterdheid','Hoogbegaafdheid','Voorleesboeken'];
+const OVERIGE_THEMAS = ['Aardrijkskunde','Andere talen','Bekende personen','Burgerschap','Digitale geletterdheid','Engelse boeken','Feesten','Gedichten','Gedrag','Geschiedenis','Hoogbegaafdheid','Kunst','Lessen taal','Oorlog','Overige boeken','Rekenen','Relaties en seksualiteit','Sprookjes (verhalen, legenden, mythen)'];
 const ANDERS = '__anders__';
 
 function veldVoorCategorie(cat){
